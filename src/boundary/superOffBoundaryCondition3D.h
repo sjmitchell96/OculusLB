@@ -56,7 +56,7 @@ template<typename T, typename DESCRIPTOR>
 class sOffLatticeBoundaryCondition3D {
 public:
   /// Constructor
-  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001);
+  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001); //SM - original eps value = 0.0001
   /// Copy construction
   sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> const& rhs);
   /// Copy assignment

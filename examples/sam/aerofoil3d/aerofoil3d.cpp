@@ -59,27 +59,30 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 20;        // resolution of the model
-const T Re = 20.;       // Reynolds number
-const T maxPhysT = 10.; // max. simulation time in s, SI unit
+const int N = 10;        // resolution of the model
+const T Re = 100.;       // Reynolds number
+const T maxPhysT = 50.; // max. simulation time in s, SI unit
 const T physL = 0.045; //Physical reference length (m)
 const T tau = 0.53; //Lattice relaxation time
 
 const T lDomainPhysx = 0.45; //Length of domain in physical units (m)
-const T lDomainPhysy = 0.09;
-const T lDomainPhysz = 0.135;
+const T lDomainPhysy = 0.18;
+const T lDomainPhysz = 0.27;
+const int nRefinement = 1;	//Number of refinement levels (current max = 4)
+const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
 //Characteristics needed by Grid3D
 const Characteristics<T> PhysCharacteristics(
 		physL,
-		0.2,       //Reference velocity (m/s)
-		0.2*physL/Re,  //Kinematic viscosity (m2/s)
+		0.03,       //Reference velocity (m/s)
+		0.03*physL/Re,  //Kinematic viscosity (m2/s)
 		1.225);     //Density (kg/m3)
 
 
 // Stores data from stl file in geometry in form of material numbers
 void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid, Vector<T,3> const& origin,
-                      Vector<T,3> const& extend) {
+                      Vector<T,3> const& extend,
+                      STLreader<T>& stlReader) {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -90,94 +93,160 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid, Vector<T,3> const& origin,
 
   sGeometry.rename( 0,1);
 
+//////////////////////////first method - inlet/outlet inside sides ////////////
   //Set material number for inflow
-  //New scope for easy copy-pasting ;)
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + deltaX/2.};
-    const Vector<T,3> wallExtend {deltaX,
-                    extend[1] - deltaX,
-                    extend[2] - deltaX};
+	int method = 1;
 
-    IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 3, inflow);
-  }
-  //Outflow
-  {
-    const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + deltaX/2.};
-    const Vector<T,3> wallExtend {deltaX,
-                    extend[1] - deltaX,
-                    extend[2] - deltaX};
+	if(method==1){
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + deltaX/2.};
+	    const Vector<T,3> wallExtend {deltaX,
+	                    extend[1] - deltaX,
+	                    extend[2] - deltaX};
 
-    IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 4, outflow);
-  }
-  //Top wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + extend[1] - deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    deltaX,
-                    extend[2] + deltaX};
+	    IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 3, inflow);
+	  }
+	  //Outflow
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + deltaX/2.};
+	    const Vector<T,3> wallExtend {deltaX,
+	                    extend[1] - deltaX,
+	                    extend[2] - deltaX};
 
-    IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, topWall);
-  }
-  //Bottom wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    deltaX,
-                    extend[2] + deltaX};
+	    IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 4, outflow);
+	  }
+	  //Top wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + extend[1] - deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {origin[0] + extend[0] + deltaX,
+	                    origin[1] + deltaX,
+	                    origin[2] + extend[2] + deltaX};
 
-    IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, bottomWall);
-  }
-  //Left wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + extend[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    extend[1] - deltaX,
-                    deltaX};
+	    IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, topWall);
+	  }
+	  //Bottom wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] - deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    deltaX,
+	                    extend[2] + deltaX};
 
-    IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, leftWall);
-  }
-  //Right wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    extend[1] - deltaX,
-                    deltaX};
+	    IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, bottomWall);
+	  }
+	  //Left wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + extend[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    extend[1] - deltaX,
+	                    deltaX};
 
-    IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, rightWall);
-  }
+	    IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, leftWall);
+	  }
+	  //Right wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    extend[1] - deltaX,
+	                    deltaX};
 
+	    IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, rightWall);
+	  }
+	} else {
+////////////////////////////Second method - inlet/outlet cover entire front/back//////////////////////////////////////
+{
+	const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {deltaX,
+									extend[1] + deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
+	sGeometry.rename(1, 3, inflow);
+}
+//Outflow
+{
+	const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {deltaX,
+									extend[1] + deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
+	sGeometry.rename(1, 4, outflow);
+}
+//Top wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + extend[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {origin[0] + extend[0] - deltaX,
+									origin[1] + deltaX,
+									origin[2] + extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, topWall);
+}
+//Bottom wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, bottomWall);
+}
+//Left wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + deltaX/2.,
+									origin[2] + extend[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									extend[1] - deltaX,
+									deltaX};
+
+	IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, leftWall);
+}
+//Right wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									extend[1] - deltaX,
+									deltaX};
+
+	IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, rightWall);
+
+	}
+	}
   // Set material number for wing
+  sGeometry.rename(1, 5, stlReader);
 
-  //STLreader<T> stlReader( "lyonWing_smaller_domain.stl", 1.0 * deltaX, 0.001, 1, true );
-  //sGeometry.rename(1,5,stlReader);
-
-  //test cube
-  {
-    //const Vector<T,3> wallOrigin {0.09,0.045,0.045};
-    //const Vector<T,3> wallExtend {0.045,0.003,0.04};
-    //IndicatorCuboid3D<T> testCube(wallExtend, wallOrigin);
-
-    STLreader<T> stlReader( "lyonWing.stl", 1.0 * deltaX, 0.001);//, 1, true );
-    sGeometry.rename(1, 5, stlReader);
-  }
 
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
@@ -190,268 +259,277 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid, Vector<T,3> const& origin,
 }
 
 void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
-					 Vector<T,3> const& domainOrigin, Vector<T,3> const& domainExtend) {
+					 Vector<T,3> const& domainOrigin, Vector<T,3> const& domainExtend,
+           STLreader<T>& stlReader, const int n) {
 
 	OstreamManager clout(std::cout, "setupRefinement");
 	clout << "Setup Refinement ..." << std::endl;
 
   //Wing bounding box position (could get directly from stlReader...)
-  const Vector<T,3> wingOrigin = {0.09,0.045,0.045};
-  const Vector<T,3> wingExtend = {0.045,0.003,0.04};
+  //const Vector<T,3> wingOrigin = {0.09,0.045,0.045};
+  //const Vector<T,3> wingExtend = {0.045,0.003,0.04};
+
+	const Vector<T,3> wingOrigin = stlReader.getMin();
+	const Vector<T,3> wingExtend = stlReader.getMax() - stlReader.getMin();
+
   const T chord = 0.045;
   //Heights around wing box for each refinement level
 
   const Vector<T,3> hn4 = {-chord/20.,-chord/20.,-chord/20.}; //x,y,z heights in negative direction //Innermost
-  const Vector<T,3> hp4 = {chord/10.,chord/20.,chord/20.}; // '' positive
+  const Vector<T,3> hp4 = {chord/20.,chord/20.,chord/20.}; // '' positive
 
   const Vector<T,3> hn3 = {-chord/10.,-chord/10.,-chord/10.};
-  const Vector<T,3> hp3 = {chord/5.,chord/10.,chord/10.};
+  const Vector<T,3> hp3 = {chord/10.,chord/10.,chord/10.};
 
   const Vector<T,3> hn2 = {-chord/5.,-chord/5.,-chord/5.};
-  const Vector<T,3> hp2 = {chord/2.5,chord/5.,chord/5.};
+  const Vector<T,3> hp2 = {chord/1.,chord/5.,chord/5.};
 
-  const Vector<T,3> hn1 = {-chord/2.5,-chord/2.5,-chord/2.5}; //Outermost
-  const Vector<T,3> hp1 = {chord/1.,chord/2.5,chord/2.5};
+  const Vector<T,3> hn1 = {-chord/1,-chord/1,-chord/1}; //Outermost
+  const Vector<T,3> hp1 = {chord/0.25,chord/1,chord/1};
 
-  // Refinement around the wing box - level 1
-  const Vector<T,3> fineOrigin = wingOrigin + hn1;
-  const Vector<T,3> fineExtend = wingExtend + hp1 - hn1;
-  //const Vector<T,3> fineOrigin = {0.045,0.0225,0.0225};
-  //const Vector<T,3> fineExtend = {0.09,0.045,0.09};
+	if(n >= 1) {
+	  // Refinement around the wing box - level 1
+	  const Vector<T,3> fineOrigin = wingOrigin + hn1;
+	  const Vector<T,3> fineExtend = wingExtend + hp1 - hn1;
+		auto& fineGrid = coarseGrid.refine(fineOrigin, fineExtend,
+				false, false, false, false);
+		prepareGeometry(fineGrid, domainOrigin, domainExtend, stlReader);
 
-	auto& fineGrid = coarseGrid.refine(fineOrigin, fineExtend,
-			false, false, false, false);
-	prepareGeometry(fineGrid, domainOrigin, domainExtend);
-	{
-		const T coarseDeltaX = coarseGrid.getConverter().getPhysDeltaX();
-		const Vector<T,3> origin	= fineGrid.getOrigin();
-		const Vector<T,3> extend	= fineGrid.getExtend();
+		T coarseDeltaX = coarseGrid.getConverter().getPhysDeltaX();
+		Vector<T,3> origin	= fineGrid.getOrigin();
+		Vector<T,3> extend	= fineGrid.getExtend();
 
-    const Vector<T,3> extendXY  = {extend[0], extend[1], 0};
-		const Vector<T,3> extendXZ	= {extend[0], 0, extend[2]};
-		const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
+	  Vector<T,3> extendXY  = {extend[0], extend[1], 0};
+		Vector<T,3> extendXZ	= {extend[0], 0, extend[2]};
+		Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
 
-    coarseGrid.addFineCoupling(fineGrid, origin, extendXY);
+	  coarseGrid.addFineCoupling(fineGrid, origin, extendXY);
 		coarseGrid.addFineCoupling(fineGrid, origin, extendXZ);
 		coarseGrid.addFineCoupling(fineGrid, origin, extendYZ);
 
-		const Vector<T,3> extendX	= {extend[0], 0, 0};
-		const Vector<T,3> extendY	= {0, extend[1], 0};
-    const Vector<T,3> extendZ = {0, 0, extend[2]};
+		Vector<T,3> extendX	= {extend[0], 0, 0};
+		Vector<T,3> extendY	= {0, extend[1], 0};
+	  Vector<T,3> extendZ = {0, 0, extend[2]};
 
-    coarseGrid.addFineCoupling(fineGrid, origin + extendZ, extendXY);
+	  coarseGrid.addFineCoupling(fineGrid, origin + extendZ, extendXY);
 		coarseGrid.addFineCoupling(fineGrid, origin + extendX, extendYZ);
 		coarseGrid.addFineCoupling(fineGrid, origin + extendY, extendXZ);
 
-		const Vector<T,3> innerOrigin = origin
+		Vector<T,3> innerOrigin = origin
 							+ Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
 
-    const Vector<T,3> innerExtendXY = {extend[0] - 2*coarseDeltaX,
-                      extend[1] - 2*coarseDeltaX, 0};
-		const Vector<T,3> innerExtendXZ = {extend[0] - 2*coarseDeltaX,
+	  Vector<T,3> innerExtendXY = {extend[0] - 2*coarseDeltaX,
+	                    extend[1] - 2*coarseDeltaX, 0};
+		Vector<T,3> innerExtendXZ = {extend[0] - 2*coarseDeltaX,
 										   0, extend[2] - 2*coarseDeltaX};
-		const Vector<T,3> innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
+		Vector<T,3> innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
 										   extend[2] - 2*coarseDeltaX};
 
-    coarseGrid.addCoarseCoupling(fineGrid, innerOrigin, innerExtendXY);
+	  coarseGrid.addCoarseCoupling(fineGrid, innerOrigin, innerExtendXY);
 		coarseGrid.addCoarseCoupling(fineGrid, innerOrigin, innerExtendXZ);
 		coarseGrid.addCoarseCoupling(fineGrid, innerOrigin, innerExtendYZ);
 
-		const Vector<T,3> innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
-		const Vector<T,3> innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
-    const Vector<T,3> innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
+		Vector<T,3> innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
+		Vector<T,3> innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
+	  Vector<T,3> innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
 
 		coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendX, innerExtendYZ);
 		coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendY, innerExtendXZ);
-    coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendZ, innerExtendXY);
+	  coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendZ, innerExtendXY);
 
-		const Vector<T,3> refinedOrigin = origin
+		Vector<T,3> refinedOrigin = origin
 							+ Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
 											2*coarseDeltaX};
-		const Vector<T,3> refinedExtend = extend
+		Vector<T,3> refinedExtend = extend
 							- Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
 											4*coarseDeltaX};
 		IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
 		coarseGrid.getSuperGeometry().reset(refined);
+
+
+		if(n>=2) {
+		  // Refinement around the wing box - level 2
+		  const Vector<T,3> fineOrigin2 = wingOrigin + hn2;
+			const Vector<T,3> fineExtend2 = wingExtend + hp2 - hn2;
+			auto& fineGrid2 = fineGrid.refine(fineOrigin2, fineExtend2,
+					false, false, false, false);
+			prepareGeometry(fineGrid2, domainOrigin, domainExtend, stlReader);
+
+			coarseDeltaX = fineGrid.getConverter().getPhysDeltaX();
+			origin	= fineGrid2.getOrigin();
+      extend	= fineGrid2.getExtend();
+
+	    extendXY  = {extend[0], extend[1], 0};
+			extendXZ	= {extend[0], 0, extend[2]};
+			extendYZ	= {0, extend[1], extend[2]};
+
+	    fineGrid.addFineCoupling(fineGrid2, origin, extendXY);
+			fineGrid.addFineCoupling(fineGrid2, origin, extendXZ);
+			fineGrid.addFineCoupling(fineGrid2, origin, extendYZ);
+
+			extendX	= {extend[0], 0, 0};
+			extendY	= {0, extend[1], 0};
+	    extendZ = {0, 0, extend[2]};
+
+	    fineGrid.addFineCoupling(fineGrid2, origin + extendZ, extendXY);
+			fineGrid.addFineCoupling(fineGrid2, origin + extendX, extendYZ);
+			fineGrid.addFineCoupling(fineGrid2, origin + extendY, extendXZ);
+
+			innerOrigin = origin
+								+ Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
+
+	    innerExtendXY = {extend[0] - 2*coarseDeltaX,
+	                      extend[1] - 2*coarseDeltaX, 0};
+			innerExtendXZ = {extend[0] - 2*coarseDeltaX,
+											   0, extend[2] - 2*coarseDeltaX};
+			innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
+											   extend[2] - 2*coarseDeltaX};
+
+	    fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendXY);
+			fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendXZ);
+			fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendYZ);
+
+			innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
+			innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
+	    innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
+
+			fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendX, innerExtendYZ);
+			fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendY, innerExtendXZ);
+	    fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendZ, innerExtendXY);
+
+			refinedOrigin = origin
+								+ Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
+												2*coarseDeltaX};
+			refinedExtend = extend
+								- Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
+												4*coarseDeltaX};
+			IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
+			fineGrid.getSuperGeometry().reset(refined);
+
+
+			if(n>=3) {
+			  // Refinement around the wing box - level 3
+			  const Vector<T,3> fineOrigin3 = wingOrigin + hn3;
+				const Vector<T,3> fineExtend3 = wingExtend + hp3 - hn3;
+				auto& fineGrid3 = fineGrid2.refine(fineOrigin3, fineExtend3,
+						false, false, false, false);
+				prepareGeometry(fineGrid3, domainOrigin, domainExtend, stlReader);
+
+				coarseDeltaX = fineGrid2.getConverter().getPhysDeltaX();
+				origin	= fineGrid3.getOrigin();
+				extend	= fineGrid3.getExtend();
+
+		    extendXY  = {extend[0], extend[1], 0};
+				extendXZ	= {extend[0], 0, extend[2]};
+				extendYZ	= {0, extend[1], extend[2]};
+
+		    fineGrid2.addFineCoupling(fineGrid3, origin, extendXY);
+				fineGrid2.addFineCoupling(fineGrid3, origin, extendXZ);
+				fineGrid2.addFineCoupling(fineGrid3, origin, extendYZ);
+
+				extendX	= {extend[0], 0, 0};
+				extendY	= {0, extend[1], 0};
+		    extendZ = {0, 0, extend[2]};
+
+		    fineGrid2.addFineCoupling(fineGrid3, origin + extendZ, extendXY);
+				fineGrid2.addFineCoupling(fineGrid3, origin + extendX, extendYZ);
+				fineGrid2.addFineCoupling(fineGrid3, origin + extendY, extendXZ);
+
+				innerOrigin = origin
+									+ Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
+
+		    innerExtendXY = {extend[0] - 2*coarseDeltaX,
+		                      extend[1] - 2*coarseDeltaX, 0};
+				innerExtendXZ = {extend[0] - 2*coarseDeltaX,
+												   0, extend[2] - 2*coarseDeltaX};
+				innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
+												   extend[2] - 2*coarseDeltaX};
+
+		    fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendXY);
+				fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendXZ);
+				fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendYZ);
+
+				innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
+				innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
+		    innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
+
+				fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendX, innerExtendYZ);
+				fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendY, innerExtendXZ);
+		    fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendZ, innerExtendXY);
+
+				refinedOrigin = origin
+									+ Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
+													2*coarseDeltaX};
+				refinedExtend = extend
+									- Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
+													4*coarseDeltaX};
+				IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
+				fineGrid2.getSuperGeometry().reset(refined);
+
+
+				if(n>=4) {
+				  // Refinement around the wing box - level 4 (current innermost)
+				  const Vector<T,3> fineOrigin4 = wingOrigin + hn4;
+				  const Vector<T,3> fineExtend4 = wingExtend + hp4 - hn4;
+				  auto& fineGrid4 = fineGrid3.refine(fineOrigin4, fineExtend4,
+				      false, false, false, false);
+				  prepareGeometry(fineGrid4, domainOrigin, domainExtend, stlReader);
+
+			    coarseDeltaX = fineGrid3.getConverter().getPhysDeltaX();
+			    origin	= fineGrid4.getOrigin();
+			    extend	= fineGrid4.getExtend();
+
+			    extendXY  = {extend[0], extend[1], 0};
+			    extendXZ	= {extend[0], 0, extend[2]};
+			    extendYZ	= {0, extend[1], extend[2]};
+
+			    fineGrid3.addFineCoupling(fineGrid4, origin, extendXY);
+			    fineGrid3.addFineCoupling(fineGrid4, origin, extendXZ);
+			    fineGrid3.addFineCoupling(fineGrid4, origin, extendYZ);
+
+			    extendX	= {extend[0], 0, 0};
+			    extendY	= {0, extend[1], 0};
+			    extendZ = {0, 0, extend[2]};
+
+			    fineGrid3.addFineCoupling(fineGrid4, origin + extendZ, extendXY);
+			    fineGrid3.addFineCoupling(fineGrid4, origin + extendX, extendYZ);
+			    fineGrid3.addFineCoupling(fineGrid4, origin + extendY, extendXZ);
+
+			    innerOrigin = origin
+			              + Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
+
+			    innerExtendXY = {extend[0] - 2*coarseDeltaX,
+			                      extend[1] - 2*coarseDeltaX, 0};
+			    innerExtendXZ = {extend[0] - 2*coarseDeltaX,
+			                       0, extend[2] - 2*coarseDeltaX};
+			    innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
+			                       extend[2] - 2*coarseDeltaX};
+
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendXY);
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendXZ);
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendYZ);
+
+			    innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
+			    innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
+			    innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
+
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendX, innerExtendYZ);
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendY, innerExtendXZ);
+			    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendZ, innerExtendXY);
+
+			    refinedOrigin = origin
+			              + Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
+			                      2*coarseDeltaX};
+			    refinedExtend = extend
+			              - Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
+			                      4*coarseDeltaX};
+			    IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
+			    fineGrid3.getSuperGeometry().reset(refined);
+  			}
+			}
+		}
 	}
 
-  // Refinement around the wing box - level 2
-  const Vector<T,3> fineOrigin2 = wingOrigin + hn2;
-	const Vector<T,3> fineExtend2 = wingExtend + hp2 - hn2;
-	auto& fineGrid2 = fineGrid.refine(fineOrigin2, fineExtend2,
-			false, false, false, false);
-	prepareGeometry(fineGrid2, domainOrigin, domainExtend);
-	{
-		const T coarseDeltaX = fineGrid.getConverter().getPhysDeltaX();
-		const Vector<T,3> origin	= fineGrid2.getOrigin();
-		const Vector<T,3> extend	= fineGrid2.getExtend();
-
-
-    const Vector<T,3> extendXY  = {extend[0], extend[1], 0};
-		const Vector<T,3> extendXZ	= {extend[0], 0, extend[2]};
-		const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
-
-    fineGrid.addFineCoupling(fineGrid2, origin, extendXY);
-		fineGrid.addFineCoupling(fineGrid2, origin, extendXZ);
-		fineGrid.addFineCoupling(fineGrid2, origin, extendYZ);
-
-		const Vector<T,3> extendX	= {extend[0], 0, 0};
-		const Vector<T,3> extendY	= {0, extend[1], 0};
-    const Vector<T,3> extendZ = {0, 0, extend[2]};
-
-    fineGrid.addFineCoupling(fineGrid2, origin + extendZ, extendXY);
-		fineGrid.addFineCoupling(fineGrid2, origin + extendX, extendYZ);
-		fineGrid.addFineCoupling(fineGrid2, origin + extendY, extendXZ);
-
-		const Vector<T,3> innerOrigin = origin
-							+ Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
-
-    const Vector<T,3> innerExtendXY = {extend[0] - 2*coarseDeltaX,
-                      extend[1] - 2*coarseDeltaX, 0};
-		const Vector<T,3> innerExtendXZ = {extend[0] - 2*coarseDeltaX,
-										   0, extend[2] - 2*coarseDeltaX};
-		const Vector<T,3> innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
-										   extend[2] - 2*coarseDeltaX};
-
-    fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendXY);
-		fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendXZ);
-		fineGrid.addCoarseCoupling(fineGrid2, innerOrigin, innerExtendYZ);
-
-		const Vector<T,3> innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
-		const Vector<T,3> innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
-    const Vector<T,3> innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
-
-		fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendX, innerExtendYZ);
-		fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendY, innerExtendXZ);
-    fineGrid.addCoarseCoupling(fineGrid2, innerOrigin + innerExtendZ, innerExtendXY);
-
-		const Vector<T,3> refinedOrigin = origin
-							+ Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
-											2*coarseDeltaX};
-		const Vector<T,3> refinedExtend = extend
-							- Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
-											4*coarseDeltaX};
-		IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
-		fineGrid.getSuperGeometry().reset(refined);
-  }
-
-  // Refinement around the wing box - level 3
-  const Vector<T,3> fineOrigin3 = wingOrigin + hn3;
-	const Vector<T,3> fineExtend3 = wingExtend + hp3 - hn3;
-	auto& fineGrid3 = fineGrid2.refine(fineOrigin3, fineExtend3,
-			false, false, false, false);
-	prepareGeometry(fineGrid3, domainOrigin, domainExtend);
-	{
-		const T coarseDeltaX = fineGrid2.getConverter().getPhysDeltaX();
-		const Vector<T,3> origin	= fineGrid3.getOrigin();
-		const Vector<T,3> extend	= fineGrid3.getExtend();
-
-    const Vector<T,3> extendXY  = {extend[0], extend[1], 0};
-		const Vector<T,3> extendXZ	= {extend[0], 0, extend[2]};
-		const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
-
-    fineGrid2.addFineCoupling(fineGrid3, origin, extendXY);
-		fineGrid2.addFineCoupling(fineGrid3, origin, extendXZ);
-		fineGrid2.addFineCoupling(fineGrid3, origin, extendYZ);
-
-		const Vector<T,3> extendX	= {extend[0], 0, 0};
-		const Vector<T,3> extendY	= {0, extend[1], 0};
-    const Vector<T,3> extendZ = {0, 0, extend[2]};
-
-    fineGrid2.addFineCoupling(fineGrid3, origin + extendZ, extendXY);
-		fineGrid2.addFineCoupling(fineGrid3, origin + extendX, extendYZ);
-		fineGrid2.addFineCoupling(fineGrid3, origin + extendY, extendXZ);
-
-		const Vector<T,3> innerOrigin = origin
-							+ Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
-
-    const Vector<T,3> innerExtendXY = {extend[0] - 2*coarseDeltaX,
-                      extend[1] - 2*coarseDeltaX, 0};
-		const Vector<T,3> innerExtendXZ = {extend[0] - 2*coarseDeltaX,
-										   0, extend[2] - 2*coarseDeltaX};
-		const Vector<T,3> innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
-										   extend[2] - 2*coarseDeltaX};
-
-    fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendXY);
-		fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendXZ);
-		fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin, innerExtendYZ);
-
-		const Vector<T,3> innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
-		const Vector<T,3> innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
-    const Vector<T,3> innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
-
-		fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendX, innerExtendYZ);
-		fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendY, innerExtendXZ);
-    fineGrid2.addCoarseCoupling(fineGrid3, innerOrigin + innerExtendZ, innerExtendXY);
-
-		const Vector<T,3> refinedOrigin = origin
-							+ Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
-											2*coarseDeltaX};
-		const Vector<T,3> refinedExtend = extend
-							- Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
-											4*coarseDeltaX};
-		IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
-		fineGrid2.getSuperGeometry().reset(refined);
-  }
-
-  // Refinement around the wing box - level 4 (current innermost)
-  const Vector<T,3> fineOrigin4 = wingOrigin + hn4;
-  const Vector<T,3> fineExtend4 = wingExtend + hp4 - hn4;
-  auto& fineGrid4 = fineGrid3.refine(fineOrigin4, fineExtend4,
-      false, false, false, false);
-  prepareGeometry(fineGrid4, domainOrigin, domainExtend);
-  {
-    const T coarseDeltaX = fineGrid3.getConverter().getPhysDeltaX();
-    const Vector<T,3> origin	= fineGrid4.getOrigin();
-    const Vector<T,3> extend	= fineGrid4.getExtend();
-
-    const Vector<T,3> extendXY  = {extend[0], extend[1], 0};
-    const Vector<T,3> extendXZ	= {extend[0], 0, extend[2]};
-    const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
-
-    fineGrid3.addFineCoupling(fineGrid4, origin, extendXY);
-    fineGrid3.addFineCoupling(fineGrid4, origin, extendXZ);
-    fineGrid3.addFineCoupling(fineGrid4, origin, extendYZ);
-
-    const Vector<T,3> extendX	= {extend[0], 0, 0};
-    const Vector<T,3> extendY	= {0, extend[1], 0};
-    const Vector<T,3> extendZ = {0, 0, extend[2]};
-
-    fineGrid3.addFineCoupling(fineGrid4, origin + extendZ, extendXY);
-    fineGrid3.addFineCoupling(fineGrid4, origin + extendX, extendYZ);
-    fineGrid3.addFineCoupling(fineGrid4, origin + extendY, extendXZ);
-
-    const Vector<T,3> innerOrigin = origin
-              + Vector<T,3> {coarseDeltaX, coarseDeltaX, coarseDeltaX};
-
-    const Vector<T,3> innerExtendXY = {extend[0] - 2*coarseDeltaX,
-                      extend[1] - 2*coarseDeltaX, 0};
-    const Vector<T,3> innerExtendXZ = {extend[0] - 2*coarseDeltaX,
-                       0, extend[2] - 2*coarseDeltaX};
-    const Vector<T,3> innerExtendYZ = {0, extend[1] - 2*coarseDeltaX,
-                       extend[2] - 2*coarseDeltaX};
-
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendXY);
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendXZ);
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin, innerExtendYZ);
-
-    const Vector<T,3> innerExtendX = {extend[0] - 2*coarseDeltaX, 0, 0};
-    const Vector<T,3> innerExtendY = {0, extend[1] - 2*coarseDeltaX, 0};
-    const Vector<T,3> innerExtendZ = {0, 0, extend[2] - 2*coarseDeltaX};
-
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendX, innerExtendYZ);
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendY, innerExtendXZ);
-    fineGrid3.addCoarseCoupling(fineGrid4, innerOrigin + innerExtendZ, innerExtendXY);
-
-    const Vector<T,3> refinedOrigin = origin
-              + Vector<T,3> {2*coarseDeltaX, 2*coarseDeltaX,
-                      2*coarseDeltaX};
-    const Vector<T,3> refinedExtend = extend
-              - Vector<T,3> {4*coarseDeltaX, 4*coarseDeltaX,
-                      4*coarseDeltaX};
-    IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
-    fineGrid3.getSuperGeometry().reset(refined);
-  }
 
   // -----------------------
 	// Refinement at the outlet half
@@ -524,7 +602,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 }
 
 // Create lattice structures
-void prepareLattice(Grid3D<T,DESCRIPTOR>& grid) {
+void prepareLattice(Grid3D<T,DESCRIPTOR>& grid, STLreader<T>& stlReader) {
 
 	OstreamManager clout(std::cout, "prepareLattice");
 	clout << "Prepare lattice ..." << std::endl;
@@ -532,7 +610,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid) {
 	auto& converter = grid.getConverter();
 	auto& sGeometry = grid.getSuperGeometry();
 	auto& sLattice  = grid.getSuperLattice();
-	const T deltaX  = converter.getPhysDeltaX();
+	//const T deltaX  = converter.getPhysDeltaX();
 	const T omega	= converter.getLatticeRelaxationFrequency();
 
 	// Initialize dynamics
@@ -544,7 +622,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid) {
 	// Initialize boundary condition types
 	sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& bc =
 		grid.getOnLatticeBoundaryCondition();
-	createLocalBoundaryCondition3D<T,DESCRIPTOR>(bc);
+	createInterpBoundaryCondition3D<T,DESCRIPTOR>(bc);
 
 	sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
 		grid.getOffLatticeBoundaryCondition();
@@ -557,21 +635,29 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid) {
 
 	auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4});
 	sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
+
 	sLattice.defineDynamics(sGeometry, 5, &instances::getNoDynamics<T,DESCRIPTOR>());
 
 	// Define boundary conditions
-	//bc.addVelocityBoundary(sGeometry, 2, omega);
-  bc.addPressureBoundary(sGeometry, 2, omega);
+  bc.addVelocityBoundary(sGeometry, 2, omega);
+  //bc.addPressureBoundary(sGeometry, 2, omega);
 	bc.addVelocityBoundary(sGeometry, 3, omega);
 	bc.addPressureBoundary(sGeometry, 4, omega);
 
-  STLreader<T> stlReader( "lyonWing_smaller_domain.stl", 1.0 * deltaX, 0.001, 1, true );
-	offBc.addZeroVelocityBoundary(sGeometry, 5, stlReader);
+
+	if ( bouzidiOn ) {
+		// material=5 --> no dynamics + bouzidi zero velocity
+		sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
+		offBc.addZeroVelocityBoundary( sGeometry,5,stlReader );
+	} else {
+		// material=5 --> fullway bounceBack dynamics
+		sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
+	}
 
 	// Initial conditions
-	AnalyticalConst3D<T,T> rhoF {1.};
-	Vector<T,3> velocityV {0.};
-	//Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0, 0};
+	AnalyticalConst3D<T,T> rhoF {1.225};
+	//Vector<T,3> velocityV {0.};
+	Vector<T,3> velocityV {0.03, 0., 0.};
 	AnalyticalConst3D<T,T> uF(velocityV);
 
 	// Initialize all values of distribution functions to their local equilibrium
@@ -584,43 +670,43 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid) {
 	clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-// Set boundary values for start-scale inlet velocity
-void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
+// Set boundary values for start-scale inlet velocity - don't need anymore
+//void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 
-	OstreamManager clout(std::cout, "setBoundaryValues");
+//	OstreamManager clout(std::cout, "setBoundaryValues");
 
-	auto& converter	= grid.getConverter();
-	auto& sGeometry	= grid.getSuperGeometry();
-	auto& sLattice	= grid.getSuperLattice();
+//	auto& converter	= grid.getConverter();
+//	auto& sGeometry	= grid.getSuperGeometry();
+//	auto& sLattice	= grid.getSuperLattice();
 
 	// No of time steps for smooth start-up
-	int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
-	int iTupdate = 30;
+//	int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
+//	int iTupdate = 30;
 
-	if (iT%iTupdate == 0 && iT <= iTmaxStart) {
+//	if (iT%iTupdate == 0 && iT <= iTmaxStart) {
 		// Smooth start curve, sinus
 //		SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
 
 		// Smooth start curve, polynomial
-		PolynomialStartScale<T,int> StartScale(iTmaxStart, T( 1 ));
+	//	PolynomialStartScale<T,int> StartScale(iTmaxStart, T( 1 ));
 
 		// Creates and sets the Poiseuille inflow profile using functors
-		int iTvec[1] = {iT};
-		T frac[1] = {};
-		StartScale( frac,iTvec );
-		std::vector<T> maxVelocity(3, 0);
-		maxVelocity[0] = 1.5*frac[0]*converter.getCharLatticeVelocity();
+	//	int iTvec[1] = {iT};
+	//	T frac[1] = {};
+	//	StartScale( frac,iTvec );
+	//	std::vector<T> maxVelocity(3, 0);
+	//	maxVelocity[0] = frac[0]*converter.getCharLatticeVelocity();
 
-		T distance2Wall = converter.getConversionFactorLength()/2.;
+	//	T distance2Wall = converter.getConversionFactorLength()/2.;
 //		RectanglePoiseuille3D<T> poiseuilleU(sGeometry, 3, maxVelocity,
 //				distance2Wall, distance2Wall, distance2Wall);
-		Rectangle1DPoiseuille3D<T> poiseuilleU( sGeometry, 3, maxVelocity,
-				distance2Wall, 0 );
-		sLattice.defineU(sGeometry, 3, poiseuilleU);
+		//Rectangle1DPoiseuille3D<T> poiseuilleU( sGeometry, 3, maxVelocity,
+		//		distance2Wall, 0 );
+		//sLattice.defineU(sGeometry, 3, poiseuilleU);
 
-		clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
-	}
-}
+	//	clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
+//	}
+//}
 
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT) {
@@ -756,14 +842,15 @@ int main( int argc, char* argv[] ) {
   // === 2nd Step: Prepare Geometry ===
 
   //Instantiate stlReader and Layer indicators for wing
-  //STLreader<T> stlReader( "lyonWing_smaller_domain.stl", 1.0 * converter.getConversionFactorLength(), 0.001, 1, true );
+  const T finestPhysDx = coarseGrid.getConverter().getPhysDeltaX()*std::pow(0.5,4); //Assuming 4 refinement levels
+  STLreader<T> stlReader( "sphere_netgen_moderate.stl", finestPhysDx, 0.001, 1, true );
 
-  prepareGeometry(coarseGrid, domainOrigin, domainExtend);
+  prepareGeometry(coarseGrid, domainOrigin, domainExtend, stlReader);
 
-  setupRefinement(coarseGrid, domainOrigin, domainExtend);
+  setupRefinement(coarseGrid, domainOrigin, domainExtend, stlReader, nRefinement);
 
   // === 3rd Step: Prepare Lattice ===
-  coarseGrid.forEachGrid(prepareLattice);
+  coarseGrid.forEachGrid(prepareLattice,stlReader);
 
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() << std::endl;
 
@@ -781,7 +868,7 @@ int main( int argc, char* argv[] ) {
   for ( int iT = 0; iT < coarseGrid.getConverter().getLatticeTime( maxPhysT ); ++iT ) {
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( coarseGrid, iT);
+    //setBoundaryValues( coarseGrid, iT);
 
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();

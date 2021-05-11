@@ -841,7 +841,7 @@ void STLreader<T>::indicate1()
   int intersections = 0;
   int inside = 0;
   Octree<T>* node = nullptr;
-  T step = 1. / 1000. * _voxelSize;
+  T step = 1. / 1000. * _voxelSize; //SM - original value = 1./1000. * _voxelSize
   for (; it != leafs.end(); ++it) {
     inside = 0;
 
@@ -1091,7 +1091,7 @@ bool STLreader<T>::distance(T& distance, const Vector<T,3>& origin,
   Vector<T,3> q;
   Vector<T,3> s;
   Vector<T,3> center = _mesh.getMin() + 1 / 2. * extends;
-  T step = _voxelSize / 1000., a = 0;
+  T step = _voxelSize / 1000., a = 0; //SM - default value = 1/1000 * voxelSize
 
   for (int i = 0; i < 3; i++) {
     extends[i] /= 2.;

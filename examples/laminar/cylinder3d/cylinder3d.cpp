@@ -178,6 +178,7 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     PolynomialStartScale<T,int> StartScale( iTmaxStart, T( 1 ) );
 
     // Creates and sets the Poiseuille inflow profile using functors
+    //Gradual start-up to aid stability
     int iTvec[1] = {iT};
     T frac[1] = {};
     StartScale( frac,iTvec );
@@ -360,4 +361,3 @@ int main( int argc, char* argv[] ) {
   timer.stop();
   timer.printSummary();
 }
-
