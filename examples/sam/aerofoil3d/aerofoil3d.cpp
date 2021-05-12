@@ -63,19 +63,20 @@ const int N = 10;        // resolution of the model
 const T Re = 100.;       // Reynolds number
 const T maxPhysT = 50.; // max. simulation time in s, SI unit
 const T physL = 0.045; //Physical reference length (m)
-const T tau = 0.53; //Lattice relaxation time
+const T uC = 0.1 * 1./std::pow(3,0.5); //Lattice characteristic velocity
+const T physNu = 1.5*std::pow(10,-5); //Kinematic viscosity
 
 const T lDomainPhysx = 0.45; //Length of domain in physical units (m)
 const T lDomainPhysy = 0.18;
 const T lDomainPhysz = 0.27;
-const int nRefinement = 1;	//Number of refinement levels (current max = 4)
+const int nRefinement = 0;	//Number of refinement levels (current max = 4)
 const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
 //Characteristics needed by Grid3D
 const Characteristics<T> PhysCharacteristics(
 		physL,
-		0.03,       //Reference velocity (m/s)
-		0.03*physL/Re,  //Kinematic viscosity (m2/s)
+		Re*physNu/physL,       //Reference velocity (m/s)
+		physNu,  //Kinematic viscosity (m2/s)
 		1.225);     //Density (kg/m3)
 
 
@@ -828,10 +829,9 @@ int main( int argc, char* argv[] ) {
   // Construct a background coarse grid
   Grid3D<T,DESCRIPTOR> coarseGrid(
       coarseDomain,
-      RelaxationTime<T>(tau),
+      LatticeVelocity<T>(uC),
       N,
-      PhysCharacteristics,
-      false, false, true);
+      PhysCharacteristics);
 
   //Overall domain dimensions
   const Vector<T,3> domainOrigin =
