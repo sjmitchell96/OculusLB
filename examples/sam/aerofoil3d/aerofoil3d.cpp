@@ -59,18 +59,20 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 10;        // resolution of the model
+const int N = 25;        // resolution of the model
 const T Re = 100.;       // Reynolds number
-const T maxPhysT = 50.; // max. simulation time in s, SI unit
-const T physL = 0.045; //Physical reference length (m)
+const T maxPhysT = 10.; // max. simulation time in s, SI unit
+const T physL = 0.04523073645; //Physical reference length (m)
 const T uC = 0.1 * 1./std::pow(3,0.5); //Lattice characteristic velocity
-const T physNu = 1.5*std::pow(10,-5); //Kinematic viscosity
+const T physNu = 1.5*std::pow(10,-7); //Kinematic viscosity
 
-const T lDomainPhysx = 0.45; //Length of domain in physical units (m)
-const T lDomainPhysy = 0.18;
-const T lDomainPhysz = 0.27;
-const int nRefinement = 0;	//Number of refinement levels (current max = 4)
-const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
+const T lDomainPhysx = 16.*physL; //Length of domain in physical units (m)
+const T lDomainPhysy = 8.*physL;
+const T lDomainPhysz = 8.*physL;
+const int nRefinement = 1;	//Number of refinement levels (current max = 4)
+const bool bouzidiOn = false; //true = bouzidi, false = fullway bb
+const bool loadCheckpoint = true; //Load checkpoint at startup
+const bool saveCheckpoint = true; //Save checkpoints at intervals
 
 //Characteristics needed by Grid3D
 const Characteristics<T> PhysCharacteristics(
@@ -267,31 +269,35 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 	clout << "Setup Refinement ..." << std::endl;
 
   //Wing bounding box position (could get directly from stlReader...)
-  //const Vector<T,3> wingOrigin = {0.09,0.045,0.045};
-  //const Vector<T,3> wingExtend = {0.045,0.003,0.04};
+	//const Vector<T,3> wingMin = stlReader.getMesh().getMin();
+	//const Vector<T,3> wingMax = stlReader.getMesh().getMax();
 
-	const Vector<T,3> wingOrigin = stlReader.getMin();
-	const Vector<T,3> wingExtend = stlReader.getMax() - stlReader.getMin();
+	//Wing box dimensions
+  const T chord = 0.04523073645;
+	const T height = 0.00313686742;
+	const T span = 0.04;
 
-  const T chord = 0.045;
+	//Wing box positions at resting point (zero pitch)
+	const Vector<T,3> wingMin = {4*chord,4*chord-0.5*height,4*chord-0.5*span};
+	const Vector<T,3> wingMax = {4*chord+chord,4*chord-0.5*height+height,4*chord-0.5*span+span};
+
   //Heights around wing box for each refinement level
+  const Vector<T,3> hn4 = {0.05*chord,0.05*chord,0.05*chord}; //x,y,z heights in negative direction //Innermost
+  const Vector<T,3> hp4 = {0.05*chord,0.05*chord,0.05*chord}; // '' positive
 
-  const Vector<T,3> hn4 = {-chord/20.,-chord/20.,-chord/20.}; //x,y,z heights in negative direction //Innermost
-  const Vector<T,3> hp4 = {chord/20.,chord/20.,chord/20.}; // '' positive
+  const Vector<T,3> hn3 = {0.1*chord,0.1*chord,0.1*chord};
+  const Vector<T,3> hp3 = {0.1*chord,0.1*chord,0.1*chord};
 
-  const Vector<T,3> hn3 = {-chord/10.,-chord/10.,-chord/10.};
-  const Vector<T,3> hp3 = {chord/10.,chord/10.,chord/10.};
+  const Vector<T,3> hn2 = {0.2*chord,0.2*chord,0.2*chord};
+  const Vector<T,3> hp2 = {0.5*chord,0.2*chord,0.2*chord};
 
-  const Vector<T,3> hn2 = {-chord/5.,-chord/5.,-chord/5.};
-  const Vector<T,3> hp2 = {chord/1.,chord/5.,chord/5.};
-
-  const Vector<T,3> hn1 = {-chord/1,-chord/1,-chord/1}; //Outermost
-  const Vector<T,3> hp1 = {chord/0.25,chord/1,chord/1};
+  const Vector<T,3> hn1 = {0.4*chord,0.4*chord,0.4*chord}; //Outermost
+  const Vector<T,3> hp1 = {1.0*chord,0.4*chord,0.4*chord};
 
 	if(n >= 1) {
 	  // Refinement around the wing box - level 1
-	  const Vector<T,3> fineOrigin = wingOrigin + hn1;
-	  const Vector<T,3> fineExtend = wingExtend + hp1 - hn1;
+	  const Vector<T,3> fineOrigin = wingMin - hn1;
+	  const Vector<T,3> fineExtend = wingMax + hp1 - (wingMin - hn1);
 		auto& fineGrid = coarseGrid.refine(fineOrigin, fineExtend,
 				false, false, false, false);
 		prepareGeometry(fineGrid, domainOrigin, domainExtend, stlReader);
@@ -350,8 +356,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
 		if(n>=2) {
 		  // Refinement around the wing box - level 2
-		  const Vector<T,3> fineOrigin2 = wingOrigin + hn2;
-			const Vector<T,3> fineExtend2 = wingExtend + hp2 - hn2;
+		  const Vector<T,3> fineOrigin2 = wingMin - hn2;
+			const Vector<T,3> fineExtend2 = wingMax + hp2 - (wingMin - hn2);
 			auto& fineGrid2 = fineGrid.refine(fineOrigin2, fineExtend2,
 					false, false, false, false);
 			prepareGeometry(fineGrid2, domainOrigin, domainExtend, stlReader);
@@ -410,8 +416,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
 			if(n>=3) {
 			  // Refinement around the wing box - level 3
-			  const Vector<T,3> fineOrigin3 = wingOrigin + hn3;
-				const Vector<T,3> fineExtend3 = wingExtend + hp3 - hn3;
+			  const Vector<T,3> fineOrigin3 = wingMin - hn3;
+				const Vector<T,3> fineExtend3 = wingMax + hp3 - (wingMin - hn3);
 				auto& fineGrid3 = fineGrid2.refine(fineOrigin3, fineExtend3,
 						false, false, false, false);
 				prepareGeometry(fineGrid3, domainOrigin, domainExtend, stlReader);
@@ -470,8 +476,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
 				if(n>=4) {
 				  // Refinement around the wing box - level 4 (current innermost)
-				  const Vector<T,3> fineOrigin4 = wingOrigin + hn4;
-				  const Vector<T,3> fineExtend4 = wingExtend + hp4 - hn4;
+				  const Vector<T,3> fineOrigin4 = wingMin - hn4;
+				  const Vector<T,3> fineExtend4 = wingMax + hp4 - (wingMin - hn4);
 				  auto& fineGrid4 = fineGrid3.refine(fineOrigin4, fineExtend4,
 				      false, false, false, false);
 				  prepareGeometry(fineGrid4, domainOrigin, domainExtend, stlReader);
@@ -655,10 +661,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid, STLreader<T>& stlReader) {
 		sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
 	}
 
-	// Initial conditions
-	AnalyticalConst3D<T,T> rhoF {1.225};
+	// Initial conditions - characteristic physical velocity and density for inflow
+	AnalyticalConst3D<T,T> rhoF {converter.getPhysDensity()};
 	//Vector<T,3> velocityV {0.};
-	Vector<T,3> velocityV {0.03, 0., 0.};
+	Vector<T,3> velocityV {converter.getCharPhysVelocity(), 0., 0.};
 	AnalyticalConst3D<T,T> uF(velocityV);
 
 	// Initialize all values of distribution functions to their local equilibrium
@@ -670,44 +676,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid, STLreader<T>& stlReader) {
 
 	clout << "Prepare Lattice ... OK" << std::endl;
 }
-
-// Set boundary values for start-scale inlet velocity - don't need anymore
-//void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
-
-//	OstreamManager clout(std::cout, "setBoundaryValues");
-
-//	auto& converter	= grid.getConverter();
-//	auto& sGeometry	= grid.getSuperGeometry();
-//	auto& sLattice	= grid.getSuperLattice();
-
-	// No of time steps for smooth start-up
-//	int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
-//	int iTupdate = 30;
-
-//	if (iT%iTupdate == 0 && iT <= iTmaxStart) {
-		// Smooth start curve, sinus
-//		SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
-
-		// Smooth start curve, polynomial
-	//	PolynomialStartScale<T,int> StartScale(iTmaxStart, T( 1 ));
-
-		// Creates and sets the Poiseuille inflow profile using functors
-	//	int iTvec[1] = {iT};
-	//	T frac[1] = {};
-	//	StartScale( frac,iTvec );
-	//	std::vector<T> maxVelocity(3, 0);
-	//	maxVelocity[0] = frac[0]*converter.getCharLatticeVelocity();
-
-	//	T distance2Wall = converter.getConversionFactorLength()/2.;
-//		RectanglePoiseuille3D<T> poiseuilleU(sGeometry, 3, maxVelocity,
-//				distance2Wall, distance2Wall, distance2Wall);
-		//Rectangle1DPoiseuille3D<T> poiseuilleU( sGeometry, 3, maxVelocity,
-		//		distance2Wall, 0 );
-		//sLattice.defineU(sGeometry, 3, poiseuilleU);
-
-	//	clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
-//	}
-//}
 
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT) {
@@ -811,6 +779,60 @@ void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
   //}
 }
 
+// Capture the pressure around the wing, at chosen z-planes --- middle z
+void getPressure(Grid3D<T,DESCRIPTOR>& grid, int iT, STLreader<T>& wing) {
+	auto& sLattice = grid.getSuperLattice();
+	auto& converter = grid.getConverter();
+
+	SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
+	AnalyticalFfromSuperF3D<T> interpolatePressure(pressure, true);
+
+	const Vector<T,3> wingMin = wing.getMesh().getMin();
+	const Vector<T,3> wingMax = wing.getMesh().getMax();
+
+	const T wingSpan = 0.040;
+	//const T wingChord = 0.04523073645;
+	//const T wingHeight = 0.00313686742;
+
+	//Z-position and name-tag for each x-y plane to read pressure
+	const std::vector<T> z {0.5*wingSpan};
+	const std::vector<std::string> tags {"0.5span_"};
+
+	for(std::vector<std::string>::size_type i=0; i<tags.size(); ++i) {
+
+		ofstream myfile;
+		std::string filename {"tmp/pressure_" + tags[i] +  to_string(iT) + ".csv"};
+		myfile.open(filename, fstream::app);
+
+		//X-coordinates of current surface points (relative to local wing origin)
+		const std::vector<T> surface_x{0, 0.0000805780000000027, 0.000283419999999999,
+			 0.0029097721, 0.0107896067, 0.018852055, 0.0269683804, 0.0350313102,
+			 0.0429601641, 0.04501812925, 0.04521576125, 0.04506297569,
+			 0.0439259505, 0.0366446105, 0.0285898428, 0.020474961,
+			 0.0123952441, 0.0043404288, 0.000492062400000001,
+			 0.0001141131, 0.0000025481000000056, 0.009046147, 0.013569221,
+			 0.018092295, 0.022615368};
+
+		const std::vector<T> surface_y{0.0015917555461, 0.00178170221399999,
+			 0.00188643266799999, 0.00216398364599999, 0.00278718292,
+			 0.00310168391999999, 0.00308969873, 0.00275129778, 0.002099574308,
+			 0.00186987491699999, 0.00171069978199999, 0.001471687579,
+			 0.00128696748099999, 0.00113842089, 0.000492467779999999,
+			 0.0000890504999999999, 0.0000112311699999998, 0.00026105833,
+			 0.000836426680999999, 0.001227102473, 0.001322748836, 0.0015219141547,
+			 0.002676053, 0.002932016, 0.003085846, 0.003136704};
+
+		for(std::vector<T>::size_type j = 0; j < surface_x.size(); ++j) {
+			const T point[3] {wingMin[0] + surface_x[j], wingMin[1] + surface_y[j],
+				 		wingMin[2] + z[i]};
+			T pressureAtPoint {};
+			interpolatePressure(&pressureAtPoint, point);
+
+			myfile << surface_x[j] << "	" << pressureAtPoint << std::endl;
+		}
+	  myfile.close();
+ 	}
+}
 
 int main( int argc, char* argv[] ) {
 
@@ -842,8 +864,8 @@ int main( int argc, char* argv[] ) {
   // === 2nd Step: Prepare Geometry ===
 
   //Instantiate stlReader and Layer indicators for wing
-  const T finestPhysDx = coarseGrid.getConverter().getPhysDeltaX()*std::pow(0.5,4); //Assuming 4 refinement levels
-  STLreader<T> stlReader( "sphere_netgen_moderate.stl", finestPhysDx, 0.001, 1, true );
+  const T finestPhysDx = coarseGrid.getConverter().getPhysDeltaX()*std::pow(0.5,nRefinement); //Assuming 4 refinement levels
+  STLreader<T> stlReader( "lyonWing_netgen_moderate.stl", finestPhysDx, 0.001, 1, true );
 
   prepareGeometry(coarseGrid, domainOrigin, domainExtend, stlReader);
 
@@ -854,6 +876,8 @@ int main( int argc, char* argv[] ) {
 
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() << std::endl;
 
+	//Reference to finest grid containing wing
+	Grid3D<T,DESCRIPTOR>& wingGrid = coarseGrid.locate(stlReader.getMesh().getMin());
   // === 4th Step: Main Loop with Timer ===
   clout << "starting simulation..." << endl;
   Timer<T> timer(
@@ -861,11 +885,21 @@ int main( int argc, char* argv[] ) {
 			coarseGrid.getSuperGeometry().getStatistics().getNvoxel() );
   timer.start();
 
-  const int vtkIter   = coarseGrid.getConverter().getLatticeTime( .5 ); //Every 0.5s physical time
-  const int imageIter = coarseGrid.getConverter().getLatticeTime( .3 ); //Every 0.3s
-  const int statIter  = coarseGrid.getConverter().getLatticeTime( .1 );
+  const int vtkIter   	 = coarseGrid.getConverter().getLatticeTime( .5 ); //Every 0.5s physical time
+  const int imageIter 	 = coarseGrid.getConverter().getLatticeTime( .3 ); //Every 0.3s
+  const int statIter  	 = coarseGrid.getConverter().getLatticeTime( .1 );
+	const int pressureIter = coarseGrid.getConverter().getLatticeTime( .1 );
+	const int checkIter 	 = coarseGrid.getConverter().getLatticeTime( .1 );
 
   for ( int iT = 0; iT < coarseGrid.getConverter().getLatticeTime( maxPhysT ); ++iT ) {
+
+		// Load last checkpoint at startup
+		if (iT == 0 && loadCheckpoint) {
+			coarseGrid.forEachGrid("cylinder3D_even", [&](Grid3D<T,DESCRIPTOR>& grid,
+						const std::string& id)
+					{grid.getSuperLattice().load(id+".checkpoint");
+					 clout << "Checkpoint loaded." << std::endl;});
+		}
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
     //setBoundaryValues( coarseGrid, iT);
@@ -879,8 +913,24 @@ int main( int argc, char* argv[] ) {
       coarseGrid.forEachGrid("aerofoil3D", [&](Grid3D<T,DESCRIPTOR>& grid,
           const std::string& id)
         {getVTK(grid, id, iT); });
-      clout << "get results vtk" << endl;
+      clout << "Get results vtk" << endl;
     }
+
+		// Save checkpoint
+		if ( (iT % checkIter == 0) && (iT != 0) && saveCheckpoint) {
+			if (iT % (2 * checkIter) == 0) {
+				coarseGrid.forEachGrid("cylinder3D_even", [&](Grid3D<T,DESCRIPTOR>& grid,
+							const std::string& id)
+						{grid.getSuperLattice().save(id+".checkpoint");
+						 clout << "Even checkpoint saved." << std::endl;});
+			}
+			else {
+				coarseGrid.forEachGrid("cylinder3D_odd", [&](Grid3D<T,DESCRIPTOR>& grid,
+							const std::string& id)
+						{grid.getSuperLattice().save(id+".checkpoint");
+						 clout << "Odd checkpoint saved." << std::endl;});
+			}
+		}
 
     //if ( iT % imageIter == 0 ) {
     //  getImages(coarseGrid, iT);
@@ -889,8 +939,13 @@ int main( int argc, char* argv[] ) {
 
     if ( iT % statIter == 0 ) {
       getStats(coarseGrid, iT, timer);
-      clout << "get results stats" << endl;
+      clout << "Get results stats" << endl;
     }
+
+		if ( iT % pressureIter == 0 ) {
+			getPressure(wingGrid,iT,stlReader);
+			clout << "Get pressure" << endl;
+		}
 
   }
 
