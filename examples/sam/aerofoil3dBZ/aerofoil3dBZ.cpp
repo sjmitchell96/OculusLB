@@ -60,17 +60,17 @@ typedef double T;
 
 // Parameters for the simulation setup
 const int N = 25;        // resolution of the model
-const T Re = 50000.;       // Reynolds number
+const T Re = 100000.;       // Reynolds number
 const T maxPhysT = 1.; // max. simulation time in s, SI unit
 const T physL = 0.04523073645; //Physical reference length (m)
 const T uC = 0.1 * 1./std::pow(3,0.5); //Lattice characteristic velocity
-const T physNu = 1.468*std::pow(10,-5); //Kinematic viscosity
+const T physNu = 1.5*std::pow(10,-5); //Kinematic viscosity
 
-const T lDomainPhysx = 12.*physL; //Length of domain in physical units (m)
-const T lDomainPhysy = 6.*physL;
-const T lDomainPhysz = 7.*physL;
-const int nRefinement = 3;	//Number of refinement levels (current max = 4)
-const bool bouzidiOn = false; //true = bouzidi, false = fullway bb
+const T lDomainPhysx = 16.*physL; //Length of domain in physical units (m)
+const T lDomainPhysy = 8.*physL;
+const T lDomainPhysz = 8.*physL;
+const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 const bool loadCheckpoint = true; //Load checkpoint at startup
 const bool saveCheckpoint = true; //Save checkpoints at intervals
 
@@ -96,81 +96,160 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid, Vector<T,3> const& origin,
 
   sGeometry.rename( 0,1);
 
-//Set material number for inflow
- {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + deltaX/2.};
-    const Vector<T,3> wallExtend {deltaX,
-                    extend[1] - deltaX,
-                    extend[2] - deltaX};
+//////////////////////////first method - inlet/outlet inside sides ////////////
+  //Set material number for inflow
+	int method = 1;
 
-    IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 3, inflow);
-  }
-  //Outflow
-  {
-    const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + deltaX/2.};
-    const Vector<T,3> wallExtend {deltaX,
-                    extend[1] - deltaX,
-                    extend[2] - deltaX};
+	if(method==1){
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + deltaX/2.};
+	    const Vector<T,3> wallExtend {deltaX,
+	                    extend[1] - deltaX,
+	                    extend[2] - deltaX};
 
-    IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 4, outflow);
-  }
-  //Top wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + extend[1] - deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {origin[0] + extend[0] + deltaX,
-                    origin[1] + deltaX,
-                    origin[2] + extend[2] + deltaX};
+	    IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 3, inflow);
+	  }
+	  //Outflow
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + deltaX/2.};
+	    const Vector<T,3> wallExtend {deltaX,
+	                    extend[1] - deltaX,
+	                    extend[2] - deltaX};
 
-    IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, topWall);
-  }
-  //Bottom wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] - deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    deltaX,
-                    extend[2] + deltaX};
+	    IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 4, outflow);
+	  }
+	  //Top wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + extend[1] - deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {origin[0] + extend[0] + deltaX,
+	                    origin[1] + deltaX,
+	                    origin[2] + extend[2] + deltaX};
 
-    IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, bottomWall);
-  }
-  //Left wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] + extend[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    extend[1] - deltaX,
-                    deltaX};
+	    IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, topWall);
+	  }
+	  //Bottom wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] - deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    deltaX,
+	                    extend[2] + deltaX};
 
-    IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, leftWall);
-  }
-  //Right wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
-                    origin[1] + deltaX/2.,
-                    origin[2] - deltaX/2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
-                    extend[1] - deltaX,
-                    deltaX};
+	    IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, bottomWall);
+	  }
+	  //Left wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] + extend[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    extend[1] - deltaX,
+	                    deltaX};
 
-    IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, rightWall);
-  }
+	    IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, leftWall);
+	  }
+	  //Right wall
+	  {
+	    const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+	                    origin[1] + deltaX/2.,
+	                    origin[2] - deltaX/2.};
+	    const Vector<T,3> wallExtend {extend[0] + deltaX,
+	                    extend[1] - deltaX,
+	                    deltaX};
 
+	    IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
+	    sGeometry.rename(1, 2, rightWall);
+	  }
+	} else {
+////////////////////////////Second method - inlet/outlet cover entire front/back//////////////////////////////////////
+{
+	const Vector<T,3> wallOrigin {origin[0] - deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {deltaX,
+									extend[1] + deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
+	sGeometry.rename(1, 3, inflow);
+}
+//Outflow
+{
+	const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {deltaX,
+									extend[1] + deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
+	sGeometry.rename(1, 4, outflow);
+}
+//Top wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + extend[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {origin[0] + extend[0] - deltaX,
+									origin[1] + deltaX,
+									origin[2] + extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, topWall);
+}
+//Bottom wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] - deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									deltaX,
+									extend[2] + deltaX};
+
+	IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, bottomWall);
+}
+//Left wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + deltaX/2.,
+									origin[2] + extend[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									extend[1] - deltaX,
+									deltaX};
+
+	IndicatorCuboid3D<T> leftWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, leftWall);
+}
+//Right wall
+{
+	const Vector<T,3> wallOrigin {origin[0] + deltaX/2.,
+									origin[1] + deltaX/2.,
+									origin[2] - deltaX/2.};
+	const Vector<T,3> wallExtend {extend[0] - deltaX,
+									extend[1] - deltaX,
+									deltaX};
+
+	IndicatorCuboid3D<T> rightWall(wallExtend, wallOrigin);
+	sGeometry.rename(1, 2, rightWall);
+
+	}
+	}
   // Set material number for wing
   sGeometry.rename(1, 5, stlReader);
+
 
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
@@ -189,18 +268,23 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 	OstreamManager clout(std::cout, "setupRefinement");
 	clout << "Setup Refinement ..." << std::endl;
 
+  //Wing bounding box position (could get directly from stlReader...)
+	//const Vector<T,3> wingMin = stlReader.getMesh().getMin();
+	//const Vector<T,3> wingMax = stlReader.getMesh().getMax();
+
 	//Wing box dimensions
   const T chord = 0.04523073645;
 	const T height = 0.00313686742;
 	const T span = 0.04;
 
 	//Wing box positions at resting point (zero pitch)
-	const Vector<T,3> wingMin = {4*chord,0.5*domainExtend[1]-0.5*height,0.5*domainExtend[2]-0.5*span};
-	const Vector<T,3> wingMax = {4*chord+chord,0.5*domainExtend[1]-0.5*height+height,0.5*domainExtend[2]-0.5*span+span};
+	const Vector<T,3> wingMin = {4*chord,4*chord-0.5*height,4*chord-0.5*span};
+	const Vector<T,3> wingMax = {4*chord+chord,4*chord-0.5*height+height,4*chord-0.5*span+span};
 
+	/* OLD
   //Heights around wing box for each refinement level
-  //const Vector<T,3> hn4 = {0.05*chord,0.05*chord,0.05*chord}; //x,y,z heights in negative direction //Innermost
-  //const Vector<T,3> hp4 = {0.05*chord,0.05*chord,0.05*chord}; // '' positive
+  const Vector<T,3> hn4 = {0.05*chord,0.05*chord,0.05*chord}; //x,y,z heights in negative direction //Innermost
+  const Vector<T,3> hp4 = {0.05*chord,0.05*chord,0.05*chord}; // '' positive
 
   const Vector<T,3> hn3 = {0.1*chord,0.1*chord,0.1*chord};
   const Vector<T,3> hp3 = {0.1*chord,0.1*chord,0.1*chord};
@@ -210,29 +294,30 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   const Vector<T,3> hn1 = {0.4*chord,0.4*chord,0.4*chord}; //Outermost
   const Vector<T,3> hp1 = {1.0*chord,0.4*chord,0.4*chord};
-
+	*/
 
 	//NEW - FINER CONTROL OVER REFINEMENT PATCH SIZES
 	//Finest two refinement levels designed for boundary layer only
 	//Heights around wing box for each refinement level
+
 	//Voxel sizes of each refinement layer
-	//const T dxF0 = coarseGrid.getConverter().getPhysDeltaX();
-	//const T dxF1 = dxF0 * 0.5;
-	//const T dxF2 = dxF1 * 0.5;
-	//const T dxF3 = dxF2 * 0.5;
-	//const T dxF4 = dxF3 * 0.5;
+	const T dxF0 = coarseGrid.getConverter().getPhysDeltaX();
+	const T dxF1 = dxF0 * 0.5;
+	const T dxF2 = dxF1 * 0.5;
+	const T dxF3 = dxF2 * 0.5;
+	const T dxF4 = dxF3 * 0.5;
 
-	//const Vector<T,3> hn4 = {20*dxF4,20*dxF4,20*dxF4}; //x,y,z heights in negative direction //Innermost
-	//const Vector<T,3> hp4 = {20*dxF4,20*dxF4,20*dxF4}; // '' positive
+	const Vector<T,3> hn4 = {5*dxF4,5*dxF4,5*dxF4}; //x,y,z heights in negative direction //Innermost
+	const Vector<T,3> hp4 = {5*dxF4,5*dxF4,5*dxF4}; // '' positive
 
-	//const Vector<T,3> hn3 = {hn4[0]+20*dxF3,hn4[1]+20*dxF3,hn4[2]+20*dxF3};
-	//const Vector<T,3> hp3 = {hp4[0]+20*dxF3,hp4[1]+20*dxF3,hp4[2]+20*dxF3};
+	const Vector<T,3> hn3 = {hn4[0]+5*dxF3,hn4[1]+5*dxF3,hn4[2]+5*dxF3};
+	const Vector<T,3> hp3 = {hp4[0]+5*dxF3,hp4[1]+5*dxF3,hp4[2]+5*dxF3};
 
-	//const Vector<T,3> hn2 = {0.6*chord,0.6*chord,0.6*chord};
-	//const Vector<T,3> hp2 = {1.0*chord,0.6*chord,0.6*chord};
+	const Vector<T,3> hn2 = {0.2*chord,0.2*chord,0.2*chord};
+	const Vector<T,3> hp2 = {0.5*chord,0.2*chord,0.2*chord};
 
-	//const Vector<T,3> hn1 = {1.0*chord,1.0*chord,1.0*chord}; //Outermost
-	//const Vector<T,3> hp1 = {2.0*chord,1.0*chord,1.0*chord};
+	const Vector<T,3> hn1 = {0.4*chord,0.4*chord,0.4*chord}; //Outermost
+	const Vector<T,3> hp1 = {1.0*chord,0.4*chord,0.4*chord};
 
 	if(n >= 1) {
 	  // Refinement around the wing box - level 1
@@ -477,6 +562,74 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 		}
 	}
 
+
+  // -----------------------
+	// Refinement at the outlet half
+	//const Vector<T,3> outRefineExtend {0.2,
+	//							  domainExtend[1],
+	//							  domainExtend[2]};
+	//const Vector<T,3> outRefineOrigin {domainExtend[0] - outRefineExtend[0],
+	//							  domainOrigin[1],
+	//							  domainOrigin[2]};
+	// add periodicity as well
+	//auto& outRefineGrid = coarseGrid.refine(outRefineOrigin, outRefineExtend,
+	//		false, false, true, false);
+	//prepareGeometry(outRefineGrid, domainOrigin, domainExtend);
+	// add couplers manually
+	//{
+	//	const T coarseDeltaX = coarseGrid.getConverter().getPhysDeltaX();
+	//	const Vector<T,3> origin	= outRefineGrid.getOrigin()
+	//			+ Vector<T,3> {0., 0., 0.5*coarseDeltaX};
+	//	const Vector<T,3> extend	= outRefineGrid.getExtend()
+	//			- Vector<T,3> {0., 0., 0.5*coarseDeltaX};
+	//	const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
+	//	coarseGrid.addFineCoupling(outRefineGrid, origin, extendYZ);
+
+	//	const Vector<T,3> innerOrigin = origin
+	//						+ Vector<T,3> {coarseDeltaX, 0, 0};
+	//	coarseGrid.addCoarseCoupling(outRefineGrid, innerOrigin, extendYZ);
+
+	//	const Vector<T,3> refinedOrigin = origin
+	//			+ Vector<T,3> {2*coarseDeltaX, 0, -2*coarseDeltaX};
+	//	const Vector<T,3> refinedExtend = extend
+	//			- Vector<T,3> {2*coarseDeltaX, 0, -4*coarseDeltaX};
+	//	IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
+	//	coarseGrid.getSuperGeometry().reset(refined);
+	//}
+
+	// Refinement at the outlet half
+	//const Vector<T,3> outRefineExtend2 {0.1,
+	//							  domainExtend[1],
+	//							  domainExtend[2] + deltaX0};
+	//const Vector<T,3> outRefineOrigin2 {domainExtend[0] - outRefineExtend2[0],
+	//							  domainOrigin[1],
+	//							  domainOrigin[2] - deltaX0};
+	// add periodicity as well
+	//auto& outRefineGrid2 = outRefineGrid.refine(outRefineOrigin2, outRefineExtend2,
+	//		false, false, true, false);
+	//prepareGeometry(outRefineGrid2, domainOrigin, domainExtend);
+	// add couplers manually
+	//{
+	//	const T coarseDeltaX = outRefineGrid.getConverter().getPhysDeltaX();
+	//	const Vector<T,3> origin	= outRefineGrid2.getOrigin()
+	//			+ Vector<T,3> {0., 0., 0.5*coarseDeltaX};
+	//	const Vector<T,3> extend	= outRefineGrid2.getExtend()
+	//			- Vector<T,3> {0., 0., 0.5*coarseDeltaX};
+	//	const Vector<T,3> extendYZ	= {0, extend[1], extend[2]};
+	//	outRefineGrid.addFineCoupling(outRefineGrid2, origin, extendYZ);
+
+	//	const Vector<T,3> innerOrigin = origin
+	//						+ Vector<T,3> {coarseDeltaX, 0, 0};
+	//	outRefineGrid.addCoarseCoupling(outRefineGrid2, innerOrigin, extendYZ);
+
+	//	const Vector<T,3> refinedOrigin = origin
+	//			+ Vector<T,3> {2*coarseDeltaX, 0, -2*coarseDeltaX};
+	//	const Vector<T,3> refinedExtend = extend
+	//			- Vector<T,3> {2*coarseDeltaX, 0, -4*coarseDeltaX};
+	//	IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
+	//	outRefineGrid.getSuperGeometry().reset(refined);
+	//}
+
 	clout << "Setup Refinement ... OK" << std::endl;
 }
 
@@ -549,42 +702,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid, STLreader<T>& stlReader) {
 	clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-// Set boundary values for start-scale inlet velocity
-void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
-
-	OstreamManager clout(std::cout, "setBoundaryValues");
-
-	auto& converter	= grid.getConverter();
-	auto& sGeometry	= grid.getSuperGeometry();
-	auto& sLattice	= grid.getSuperLattice();
-
-	// No of time steps for smooth start-up
-  //int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
-	int iTmaxStart = 500;
-	int iTupdate = 10;
-
-	if (iT%iTupdate == 0 && iT <= iTmaxStart) {
-
-		// Smooth start curve, polynomial
-		PolynomialStartScale<T,int> StartScale(iTmaxStart, T( 1 ));
-
-		// Creates and sets the Poiseuille inflow profile using functors
-		int iTvec[1] = {iT};
-		T frac[1] = {};
-		StartScale( frac,iTvec );
-		std::vector<T> freestreamVelocity(3, 0);
-		freestreamVelocity[0] = frac[0]*converter.getCharPhysVelocity();
-		AnalyticalConst3D<T,T> uF(freestreamVelocity);
-
-		//Sides
-		sLattice.defineU(sGeometry, 2, uF);
-		//Inlet
-		sLattice.defineU(sGeometry, 3, uF);
-
-		clout << "step=" << iT << "; Freestream velocity=" << freestreamVelocity[0] << std::endl;
-	}
-}
-
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT) {
 
@@ -613,6 +730,27 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT) {
 	vtmWriter.write(iT);
 }
 
+// SPLIT INTO GET-IMAGES AND GET-STATS
+// Get gnuplot images
+void getImages( Grid3D<T,DESCRIPTOR>& grid, int iT) {
+
+  auto& sLattice  = grid.getSuperLattice();
+	auto& sGeometry = grid.getSuperGeometry();
+	auto& converter = grid.getConverter();
+
+  OstreamManager clout( std::cout,"getResults" );
+
+  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
+  SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
+  //SuperLatticeYplus3D<T, DESCRIPTOR> yPlus( sLattice, converter, superGeometry, stlReader, 5 );
+
+  //Write Image
+  SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+  BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+  // write output as JPEG
+  heatmap::write(planeReduction, iT);
+}
+
 void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
                Timer<T> timer) {
 
@@ -627,6 +765,43 @@ void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
 
     // Lattice statistics console output
     sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
+
+    // Drag, lift, pressure drop
+    //AnalyticalFfromSuperF3D<T> intpolatePressure( pressure, true );
+    //SuperLatticePhysDrag3D<T,DESCRIPTOR> drag( sLattice, sGeometry, 5, converter );
+
+    //std::vector<T> point1V = sGeometry.getStatistics().getCenterPhysR( 5 );
+    //std::vector<T> point2V = sGeometry.getStatistics().getCenterPhysR( 5 );
+    //T point1[3] = {};
+    //T point2[3] = {};
+    //for ( int i = 0; i<3; i++ ) {
+    //  point1[i] = point1V[i];
+    //  point2[i] = point2V[i];
+    //}
+    //point1[0] = sGeometry.getStatistics().getMinPhysR( 5 )[0] - converter.getConversionFactorLength();
+    //point2[0] = sGeometry.getStatistics().getMaxPhysR( 5 )[0] + converter.getConversionFactorLength();
+
+    //T p1, p2;
+    //intpolatePressure( &p1,point1 );
+    //intpolatePressure( &p2,point2 );
+
+    //clout << "pressure1=" << p1;
+    //clout << "; pressure2=" << p2;
+
+    //T pressureDrop = p1-p2;
+    //clout << "; pressureDrop=" << pressureDrop;
+
+    //T dragA[3];
+    //int input1[0];
+    //drag( dragA, input1 );
+    //clout << "; drag=" << dragA[0] << "; lift=" << dragA[1] << endl;
+
+    //int input[4] = {};
+    //SuperMax3D<T> yPlusMaxF( yPlus, superGeometry, 1 );
+    //T yPlusMax[1];
+    //yPlusMaxF( yPlusMax,input );
+    //clout << "yPlusMax=" << yPlusMax[0] << endl;
+  //}
 }
 
 // Capture the pressure around the wing, at chosen z-planes --- middle z
@@ -715,7 +890,10 @@ int main( int argc, char* argv[] ) {
 
   //Instantiate stlReader and Layer indicators for wing
   const T finestPhysDx = coarseGrid.getConverter().getPhysDeltaX()*std::pow(0.5,nRefinement); //Assuming 4 refinement levels
-  STLreader<T> stlReader( "lyonWing_netgen_moderate.stl", finestPhysDx, 0.001, 1, true );
+  STLreader<T> stlReader( "lyonWing_BZ.stl", finestPhysDx, 0.001, 1, true );
+
+	//Layer indicator around stl geometry
+	IndicatorLayer3D<T> extendedDomain( stlReader, converter.getConversionFactorLength() );
 
   prepareGeometry(coarseGrid, domainOrigin, domainExtend, stlReader);
 
@@ -736,6 +914,7 @@ int main( int argc, char* argv[] ) {
   timer.start();
 
   const int vtkIter   	 = 1000; //Every 10% of max physical time
+  const int imageIter 	 = 1000;
   const int statIter  	 = 100;
 	const int pressureIter = 1000;
 	const int checkIter 	 = 1000;
@@ -751,7 +930,7 @@ int main( int argc, char* argv[] ) {
 		}
 
     // === 5th Step: Definition of Initial and Boundary Conditions ===
-    setBoundaryValues( coarseGrid, iT);
+    //setBoundaryValues( coarseGrid, iT);
 
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();
@@ -780,6 +959,11 @@ int main( int argc, char* argv[] ) {
 						 clout << "Odd checkpoint saved." << std::endl;});
 			}
 		}
+
+    //if ( iT % imageIter == 0 ) {
+    //  getImages(coarseGrid, iT);
+    //  clout << "get results images" << endl;
+    //}
 
     if ( iT % statIter == 0 ) {
       getStats(coarseGrid, iT, timer);
