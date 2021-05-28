@@ -199,8 +199,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 	const Vector<T,3> wingMax = {4*chord+chord,0.5*domainExtend[1]-0.5*height+height,0.5*domainExtend[2]-0.5*span+span};
 
   //Heights around wing box for each refinement level
-  //const Vector<T,3> hn4 = {0.05*chord,0.05*chord,0.05*chord}; //x,y,z heights in negative direction //Innermost
-  //const Vector<T,3> hp4 = {0.05*chord,0.05*chord,0.05*chord}; // '' positive
+  const Vector<T,3> hn4 = {0.05*chord,0.05*chord,0.05*chord}; //x,y,z heights in negative direction //Innermost
+  const Vector<T,3> hp4 = {0.05*chord,0.05*chord,0.05*chord}; // '' positive
 
   const Vector<T,3> hn3 = {0.1*chord,0.1*chord,0.1*chord};
   const Vector<T,3> hp3 = {0.1*chord,0.1*chord,0.1*chord};
@@ -210,29 +210,6 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   const Vector<T,3> hn1 = {0.4*chord,0.4*chord,0.4*chord}; //Outermost
   const Vector<T,3> hp1 = {1.0*chord,0.4*chord,0.4*chord};
-
-
-	//NEW - FINER CONTROL OVER REFINEMENT PATCH SIZES
-	//Finest two refinement levels designed for boundary layer only
-	//Heights around wing box for each refinement level
-	//Voxel sizes of each refinement layer
-	//const T dxF0 = coarseGrid.getConverter().getPhysDeltaX();
-	//const T dxF1 = dxF0 * 0.5;
-	//const T dxF2 = dxF1 * 0.5;
-	//const T dxF3 = dxF2 * 0.5;
-	//const T dxF4 = dxF3 * 0.5;
-
-	//const Vector<T,3> hn4 = {20*dxF4,20*dxF4,20*dxF4}; //x,y,z heights in negative direction //Innermost
-	//const Vector<T,3> hp4 = {20*dxF4,20*dxF4,20*dxF4}; // '' positive
-
-	//const Vector<T,3> hn3 = {hn4[0]+20*dxF3,hn4[1]+20*dxF3,hn4[2]+20*dxF3};
-	//const Vector<T,3> hp3 = {hp4[0]+20*dxF3,hp4[1]+20*dxF3,hp4[2]+20*dxF3};
-
-	//const Vector<T,3> hn2 = {0.6*chord,0.6*chord,0.6*chord};
-	//const Vector<T,3> hp2 = {1.0*chord,0.6*chord,0.6*chord};
-
-	//const Vector<T,3> hn1 = {1.0*chord,1.0*chord,1.0*chord}; //Outermost
-	//const Vector<T,3> hp1 = {2.0*chord,1.0*chord,1.0*chord};
 
 	if(n >= 1) {
 	  // Refinement around the wing box - level 1
@@ -534,9 +511,9 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid, STLreader<T>& stlReader) {
 	}
 
 	// Initial conditions - characteristic physical velocity and density for inflow
-	AnalyticalConst3D<T,T> rhoF {converter.getPhysDensity()};
+	AnalyticalConst3D<T,T> rhoF {1};
 	//Vector<T,3> velocityV {0.};
-	Vector<T,3> velocityV {converter.getCharPhysVelocity(), 0., 0.};
+	Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0., 0.};
 	AnalyticalConst3D<T,T> uF(velocityV);
 
 	// Initialize all values of distribution functions to their local equilibrium
@@ -671,6 +648,8 @@ void getPressure(Grid3D<T,DESCRIPTOR>& grid, int iT, STLreader<T>& wing) {
 			 0.0000890504999999999, 0.0000112311699999998, 0.00026105833,
 			 0.000836426680999999, 0.001227102473, 0.001322748836, 0.0015219141547,
 			 0.002676053, 0.002932016, 0.003085846, 0.003136704};
+
+			 //Option to rotate above points by a specified pitch
 
 		for(std::vector<T>::size_type j = 0; j < surface_x.size(); ++j) {
 			const T point[3] {wingMin[0] + surface_x[j], wingMin[1] + surface_y[j],
