@@ -760,6 +760,150 @@ bool BlockLatticePhysWallShearStress3D<T, DESCRIPTOR>::operator()(T output[], co
   }
 }
 
+//SM - functor to return shear stress and pressure
+template <typename T, typename DESCRIPTOR>
+BlockLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>::BlockLatticePhysWallShearStressAndPressure3D(
+    BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+    BlockGeometryStructure3D<T>& blockGeometry,
+    int overlap,
+    int material,
+    const UnitConverter<T,DESCRIPTOR>& converter,
+    IndicatorF3D<T>& indicator)
+    : BlockLatticePhysF3D<T,DESCRIPTOR>(blockLattice,converter,2),
+      _blockGeometry(blockGeometry),
+      _overlap(overlap),
+      _material(material)
+      {
+
+  //cout << "WSS CONSTRUCT" << endl;
+  //cout << "-------------------------------" << endl;
+  this->getName() = "physWaillShearStressAndPressure";
+  const T scaling = this->_converter.getConversionFactorLength() * 0.1;
+  const T omega = 1. / this->_converter.getLatticeRelaxationTime();
+  const T dt = this->_converter.getConversionFactorTime();
+  _physFactor = -omega * descriptors::invCs2<T,DESCRIPTOR>() / dt * this->_converter.getPhysDensity() * this->_converter.getPhysViscosity();
+  std::vector<int> discreteNormalOutwards(4, 0);
+
+  for (int iX = 1 ; iX < _blockGeometry.getNx() - 1; iX++) {
+    _discreteNormal.resize(_blockGeometry.getNx() - 2);
+    _normal.resize(_blockGeometry.getNx() - 2);
+
+    for (int iY = 1; iY < _blockGeometry.getNy() - 1; iY++) {
+      _discreteNormal[iX-1].resize(_blockGeometry.getNy() - 2);
+      _normal[iX-1].resize(_blockGeometry.getNy() - 2);
+
+      for (int iZ = 1; iZ < _blockGeometry.getNz() - 1; iZ++) {
+        _discreteNormal[iX-1][iY-1].resize(_blockGeometry.getNz() - 2);
+        _normal[iX-1][iY-1].resize(_blockGeometry.getNz() - 2);
+
+        if (_blockGeometry.get(iX, iY, iZ) == _material) {
+	  //std::cout << "----------------------" << endl;
+	  //std::cout << "CELL IS MATERIAL" << std::endl;
+          discreteNormalOutwards = _blockGeometry.getStatistics().getType(iX, iY, iZ);
+	  //std::cout << "AFTER DISCRETE NORMAL" << std::endl;
+          _discreteNormal[iX - 1][iY - 1][iZ - 1].resize(3);
+          _normal[iX - 1][iY - 1][iZ - 1].resize(3);
+
+          _discreteNormal[iX - 1][iY- 1][iZ- 1][0] = -discreteNormalOutwards[1];
+          _discreteNormal[iX- 1][iY- 1][iZ- 1][1] = -discreteNormalOutwards[2];
+          _discreteNormal[iX- 1][iY- 1][iZ- 1][2] = -discreteNormalOutwards[3];
+
+          T physR[3];
+          _blockGeometry.getPhysR(physR,iX, iY, iZ);
+          Vector<T,3> origin(physR[0],physR[1],physR[2]);
+          Vector<T,3> direction(-_discreteNormal[iX- 1][iY- 1][iZ- 1][0] * scaling,
+                                -_discreteNormal[iX- 1][iY- 1][iZ- 1][1] * scaling,
+                                -_discreteNormal[iX- 1][iY- 1][iZ- 1][2] * scaling);
+          Vector<T,3> normal(0.,0.,0.);
+          origin[0] = physR[0];
+          origin[1] = physR[1];
+          origin[2] = physR[2];
+
+	  //std::cout << "BEFORE NORMAL" << endl;
+          indicator.normal(normal, origin, direction);
+          normal.normalize();
+	  //std::cout << "NORMAL " << normal[0] << " " << normal[1] << " " << normal[2] <<  std::endl;
+
+          _normal[iX- 1][iY- 1][iZ- 1][0] = normal[0];
+          _normal[iX- 1][iY- 1][iZ- 1][1] = normal[1];
+          _normal[iX- 1][iY- 1][iZ- 1][2] = normal[2];
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+bool BlockLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  //cout << "WSS ()" << endl;
+  output[0] = T();
+  output[1] = T();
+
+  if (input[0] + _overlap < 1 ||
+      input[1] + _overlap < 1 ||
+      input[2] + _overlap < 1 ||
+      input[0] + _overlap >= _blockGeometry.getNx()-1 ||
+      input[1] + _overlap >= _blockGeometry.getNy()-1 ||
+      input[2] + _overlap >= _blockGeometry.getNz()-1 ){
+
+#ifdef OLB_DEBUG
+    std::cout << "Input address not mapped by _discreteNormal, overlap too small" << std::endl;
+#endif
+    return true;
+  }
+
+  if (_blockGeometry.get(input[0]+_overlap,input[1]+_overlap,input[2]+_overlap) == _material) {
+
+    T traction[3];
+    T stress[6];
+    T rho = this->_blockLattice.get(input[0] + _overlap + _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0],
+                                    input[1] + _overlap + _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1],
+                                    input[2] + _overlap + _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2]).computeRho();
+     this->_blockLattice.get(input[0] + _overlap +   _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0],
+                      input[1] + _overlap +   _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1],
+                      input[2] + _overlap +   _discreteNormal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2]).computeStress(stress);
+
+    traction[0] = stress[0]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0] +
+                  stress[1]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1] +
+                  stress[2]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2];
+    traction[1] = stress[1]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0] +
+                  stress[3]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1] +
+                  stress[4]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2];
+    traction[2] = stress[2]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0] +
+                  stress[4]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1] +
+                  stress[5]*_physFactor/rho*_normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2];
+
+    T traction_normal_SP;
+    T tractionNormalComponent[3];
+    // scalar product of traction and normal vector
+    traction_normal_SP = traction[0] * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0] +
+                         traction[1] * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1] +
+                         traction[2] * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2];
+    tractionNormalComponent[0] = traction_normal_SP * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][0];
+    tractionNormalComponent[1] = traction_normal_SP * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][1];
+    tractionNormalComponent[2] = traction_normal_SP * _normal[input[0]+_overlap-1][input[1]+_overlap-1][input[2]+_overlap-1][2];
+
+    T WSS[3];
+    WSS[0] = traction[0] - tractionNormalComponent[0];
+    WSS[1] = traction[1] - tractionNormalComponent[1];
+    WSS[2] = traction[2] - tractionNormalComponent[2];
+    // magnitude of the wall shear stress vector
+    output[0] = sqrt(WSS[0]*WSS[0] + WSS[1]*WSS[1] + WSS[2]*WSS[2]);
+    // magnitude of normal component of traction vector (pressure) - incorrect since this is only viscous stress
+    //output[1] = sqrt(tractionNormalComponent[0]*tractionNormalComponent[0] + tractionNormalComponent[1]*tractionNormalComponent[1] + tractionNormalComponent[2]*tractionNormalComponent[2]);
+    //
+    //Pressure - approximate from adjacent cell density
+    T latticePressure = (rho-1.)/descriptors::invCs2<T,DESCRIPTOR>();
+    output[1] = this->_converter.getPhysPressure(latticePressure);
+    return true;
+  }
+  else {
+    return true;
+  }
+}
+
+
 
 template <typename T, typename DESCRIPTOR>
 BlockLatticePhysCorrBoundaryForce3D<T,DESCRIPTOR>::BlockLatticePhysCorrBoundaryForce3D(

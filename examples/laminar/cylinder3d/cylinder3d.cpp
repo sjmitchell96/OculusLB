@@ -59,7 +59,7 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 10;        // resolution of the model
+const int N = 80;        // resolution of the model
 const T Re = 20.;       // Reynolds number
 const T maxPhysT = 16.; // max. simulation time in s, SI unit
 
@@ -308,7 +308,7 @@ int main( int argc, char* argv[] ) {
 
   // Instantiation of the STLreader class
   // file name, voxel size in meter, stl unit in meter, outer voxel no., inner voxel no.
-  STLreader<T> stlReader( "cylinder3d.stl", converter.getConversionFactorLength(), 0.001 );
+  STLreader<T> stlReader( "cylinder3d_1.stl", converter.getConversionFactorLength(), 0.001, 2, true );
   IndicatorLayer3D<T> extendedDomain( stlReader, converter.getConversionFactorLength() );
 
   // Instantiation of a cuboidGeometry with weights

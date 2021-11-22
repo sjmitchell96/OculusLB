@@ -150,6 +150,50 @@ Grid3D<T,DESCRIPTOR>::Grid3D(FunctorPtr<IndicatorF3D<T>>&& domainF,
 	_converter->print();
 }
 
+//sm- definition of Grid3D class based on lattice velocity, with optional periodicity
+template <typename T, typename DESCRIPTOR>
+Grid3D<T,DESCRIPTOR>::Grid3D(FunctorPtr<IndicatorF3D<T>>&& domainF,
+							 LatticeVelocity<T> latticeVelocity,
+							 int resolution,
+							 Characteristics<T> characteristics,
+							 bool periodicityX,
+							 bool periodicityY,
+							 bool periodicityZ):
+	_domainF(std::move(domainF)),
+	_characteristics(characteristics),
+	_periodicityOn(periodicityX, periodicityY, periodicityZ),
+	_converter(new UnitConverterFromResolutionAndLatticeVelocity<T,DESCRIPTOR>(
+				resolution,
+				latticeVelocity,
+				characteristics.length,
+				characteristics.velocity,
+				characteristics.viscosity,
+				characteristics.density)),
+	_cuboids(new CuboidGeometry3D<T>(
+				*domainF,
+				_converter->getConversionFactorLength(),
+				periodicityX,
+				periodicityY,
+				periodicityZ,
+#ifdef PARALLEL_MODE_MPI
+				singleton::mpi().getSize()
+#else
+				1
+#endif
+				)),
+	_balancer(new HeuristicLoadBalancer<T>(
+				*_cuboids)),
+	_geometry(new SuperGeometry3D<T>(
+				*_cuboids,
+				*_balancer,
+				2)),
+	_lattice(new SuperLattice3D<T,DESCRIPTOR>(
+				*_geometry))
+{
+	_converter->print();
+}
+
+
 template <typename T, typename DESCRIPTOR>
 Grid3D<T,DESCRIPTOR>::Grid3D(FunctorPtr<IndicatorF3D<T>>&& domainF,
 							 RelaxationTime<T> tau,
@@ -328,7 +372,7 @@ Vector<T,3> Grid3D<T,DESCRIPTOR>::alignOriginToGrid(Vector<T,3> physR) const
 	Vector<int,4> latticeR{};
 	_cuboids->getLatticeR(physR, latticeR);
 //	T alignedPhysR[3] {};
-//	_cuboids->getPhysR(alignedPhysR, latticeR); 
+//	_cuboids->getPhysR(alignedPhysR, latticeR);
 //	return alignedPhysR;
 	return _cuboids->getPhysR(latticeR.toStdVector());
 }
@@ -377,7 +421,7 @@ void Grid3D<T,DESCRIPTOR>::forEachGrid(
 
 template <typename T, typename DESCRIPTOR>
 void Grid3D<T,DESCRIPTOR>::forEachGrid(
-		std::function<void(Grid3D<T,DESCRIPTOR>&, IndicatorF3D<T>&, 
+		std::function<void(Grid3D<T,DESCRIPTOR>&, IndicatorF3D<T>&,
 			STLreader<T>&)>&& f, IndicatorF3D<T>& indicator,
 		STLreader<T>& stlReader)
 {
@@ -409,6 +453,195 @@ void Grid3D<T,DESCRIPTOR>::forEachGrid(
 	}
 }
 
+//SM - version to calculate average quantities across all grids
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&,
+	 std::vector<T>&, std::vector<T>&)>&& f, std::vector<T>& v1, std::vector<T>& v2)
+{
+	f(*this, v1, v2);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), v1, v2);
+	}
+}
+
+//SM - version for preparelattice function of aerofoil
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+		std::function<void(Grid3D<T,DESCRIPTOR>&, STLreader<T>&, IndicatorF3D<T>&, const bool&,
+		const bool&)>&& f,
+		STLreader<T>& stlReader, IndicatorF3D<T>& extendedDomain, const bool& bouzidiOn,
+		const bool& startUpOn)
+{
+	f(*this, stlReader, extendedDomain, bouzidiOn,startUpOn);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), stlReader, extendedDomain, bouzidiOn,
+			startUpOn);
+	}
+}
+
+//SM - version for preparelattice function of sphere
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+		std::function<void(Grid3D<T,DESCRIPTOR>&, IndicatorSphere3D<T>&, const bool&,
+		const bool&)>&& f,
+		IndicatorSphere3D<T>& indicatorSphere, const bool& bouzidiOn,
+		const bool& startUpOn)
+{
+	f(*this, indicatorSphere, bouzidiOn,startUpOn);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), indicatorSphere, bouzidiOn,
+			startUpOn);
+	}
+}
+
+//SM - version for preparelattice function of DCA blade
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+  std::function<void(Grid3D<T,DESCRIPTOR>&, IndicatorBladeDca3D<T>&,
+	             const bool&)>&& f,
+  IndicatorBladeDca3D<T>& indicatorBlade, const bool& bouzidiOn){
+  f(*this, indicatorBlade, bouzidiOn);
+  for (auto& grid : _fineGrids) {
+    grid->forEachGrid(std::forward<decltype(f)>(f),
+		      indicatorBlade, bouzidiOn);
+  }
+}
+
+
+
+//SM - version to allocate vectors of functors  
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+				std::function<void(Grid3D<T,DESCRIPTOR>&,
+                                std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>&,
+			        std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>&,
+				STLreader<T>&,
+				int&)>&& f,
+				std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>& v1,
+				std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>& v2,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v3,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v4,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& v5,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& v6,
+				STLreader<T>& stlReader,
+				int& i_grid)
+{
+	f(*this, v1,v2,v3,v4,v5,v6,stlReader,i_grid);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), v1,v2,
+			v3,v4,v5,v6,stlReader,i_grid);
+	}
+}
+
+//SM - version to allocate vectors of functors, sphere geometry
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+				std::function<void(Grid3D<T,DESCRIPTOR>&,
+                                std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>&,
+			        std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>&,
+				IndicatorSphere3D<T>&,
+				int&)>&& f,
+				std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>& v1,
+				std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>& v2,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v3,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v4,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& v5,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& v6,
+				IndicatorSphere3D<T>& indicatorSphere,
+				int& i_grid)
+{
+	f(*this, v1,v2,v3,v4,v5,v6,indicatorSphere,i_grid);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), v1,v2,
+			v3,v4,v5,v6,indicatorSphere,i_grid);
+	}
+}
+
+//SM - version to allocate vectors of functors, blade geometry
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+				std::function<void(Grid3D<T,DESCRIPTOR>&,
+                                std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>&,
+			        std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>&,
+				IndicatorBladeDca3D<T>&,
+				int&)>&& f,
+				std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>& v1,
+				std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>& v2,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v3,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v4,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& v5,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v6,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& v7,
+				IndicatorBladeDca3D<T>& indicatorBlade,
+				int& i_grid)
+{
+	f(*this, v1,v2,v3,v4,v5,v6,v7,indicatorBlade,i_grid);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), v1,v2,
+			v3,v4,v5,v6,v7,indicatorBlade,i_grid);
+	}
+}
+
+
+
+//SM - version to add increment to time averaged data 
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(
+				std::function<void(Grid3D<T,DESCRIPTOR>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+				int&)>&& f,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v1,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v2,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& v3,
+				int& i_grid)
+{
+	f(*this, v1,v2,v3,i_grid);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f), v1,v2,v3,i_grid);
+	}
+}
+
+//SM - version for write vtk
+template <typename T, typename DESCRIPTOR>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(const std::string& id, 
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedVel,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedP,
+				std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& wss,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSP,
+				std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& yPlus,
+                       	        int& i_grid,
+				std::function<void(Grid3D<T,DESCRIPTOR>&,
+		        			   const std::string&,
+		       				   std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+		       				   std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+		       				   std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>&,
+		       				   std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
+		       				   std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>&,
+					           int&)>&& f)
+{
+	f(*this, id, sAveragedVel, sAveragedP, wss, sAveragedWSSP, yPlus, i_grid);
+	for(std::size_t i = 0; i < _fineGrids.size(); ++i) {
+		_fineGrids[i]->forEachGrid(id + "_" + std::to_string(i), sAveragedVel, sAveragedP, wss, sAveragedWSSP, yPlus, i_grid, 
+									std::forward<decltype(f)>(f));
+	}
+}
+
+
 template <typename T, typename DESCRIPTOR>
 Grid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::locate(Vector<T,3> pos)
 {
@@ -433,14 +666,14 @@ std::size_t Grid3D<T,DESCRIPTOR>::getActiveVoxelN() const
 
 template <typename T, typename DESCRIPTOR>
 RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
-		Vector<T,3> wantedOrigin, Vector<T,3> wantedExtend, 
-		bool periodicityX, bool periodicityY, bool periodicityZ, 
+		Vector<T,3> wantedOrigin, Vector<T,3> wantedExtend,
+		bool periodicityX, bool periodicityY, bool periodicityZ,
 		bool addCouplers)
 {
 	// addCouplers indicator the refined grid lay inside the stream
 	// therefore use BulkFineCoupler instead
 	if (addCouplers) {
-		auto& fineGrid = refine(wantedOrigin, wantedExtend, 
+		auto& fineGrid = refine(wantedOrigin, wantedExtend,
 				periodicityX, periodicityY, periodicityZ, false);
 
 		const T coarseDeltaX = getConverter().getPhysDeltaX();
@@ -450,7 +683,7 @@ RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
 		const Vector<T,3> extend = fineGrid.getExtend();
 
 		const Vector<T,3> extendX = {extend[0], 0, 0};
-		const Vector<T,3> extendY = {0, extend[1], 0}; 
+		const Vector<T,3> extendY = {0, extend[1], 0};
 		const Vector<T,3> extendZ = {0, 0, extend[2]};
 
 		const Vector<T,3> extendXY = {extend[0], extend[1], 0};
@@ -469,7 +702,7 @@ RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
 //		const Vector<T,3> origin = fineGrid.getOrigin() - coarseDeltaX;
 //		const Vector<T,3> extend = fineGrid.getExtend() + coarseDeltaX * 2;
 //
-//		const Vector<T,3> originX = {origin[0] + coarseDeltaX, 
+//		const Vector<T,3> originX = {origin[0] + coarseDeltaX,
 //									 origin[1], origin[2]};
 //		const Vector<T,3> originY = {origin[0], origin[1] + coarseDeltaX,
 //									 origin[2]};
@@ -477,7 +710,7 @@ RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
 //									 origin[2] + coarseDeltaX};
 //
 //		const Vector<T,3> extendX = {extend[0] - coarseDeltaX, 0, 0};
-//		const Vector<T,3> extendY = {0, extend[1] - coarseDeltaX, 0}; 
+//		const Vector<T,3> extendY = {0, extend[1] - coarseDeltaX, 0};
 //		const Vector<T,3> extendZ = {0, 0, extend[2] - coarseDeltaX};
 //
 //		const Vector<T,3> extendXY = {extend[0], extend[1], 0};
@@ -493,7 +726,7 @@ RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
 //		addBulkFineCoupling(fineGrid, origin + extendX, extendYZ, 2);
 //		addBulkFineCoupling(fineGrid, origin + extendY, extendXZ, 2);
 
-		// Fine to coarse --- not related to interpolation 
+		// Fine to coarse --- not related to interpolation
 		const Vector<T,3> innerOrigin = origin + 1*coarseDeltaX;
 		const Vector<T,3> innerExtend = extend - 2*coarseDeltaX;
 
@@ -535,7 +768,7 @@ RefiningGrid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::refine(
 //		_fineGrids.emplace_back(
 //				new RefiningGrid3D<T,DESCRIPTOR>(*this, origin, extend));
 		_fineGrids.emplace_back(
-				new RefiningGrid3D<T,DESCRIPTOR>(*this, origin, extend, 
+				new RefiningGrid3D<T,DESCRIPTOR>(*this, origin, extend,
 					periodicityX, periodicityY, periodicityZ));
 		RefiningGrid3D<T,DESCRIPTOR>& fineGrid = *_fineGrids.back();
 //		auto refinedOverlap = fineGrid.getRefinedOverlap();
@@ -566,7 +799,7 @@ RefiningGrid3D<T,DESCRIPTOR>::RefiningGrid3D(
 			std::unique_ptr<IndicatorF3D<T>>(new IndicatorCuboid3D<T>(extend, origin)),
 			RelaxationTime<T>(2*parentGrid.getConverter().getLatticeRelaxationTime() - 0.5),
 			2*parentGrid.getConverter().getResolution(),
-			parentGrid.getCharacteristics(), 
+			parentGrid.getCharacteristics(),
 			periodicityX,
 			periodicityY,
 			periodicityZ),

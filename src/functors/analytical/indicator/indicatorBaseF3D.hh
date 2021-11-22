@@ -147,7 +147,9 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
 
   S dist;
   distance(dist, origin, direction, iC);
-  
+  //std::cout << "DIST " << dist << std::endl;
+  //std::cout << "ORIGIN " << origin[0] << " " << origin[1] << " " << origin[2] << std::endl;
+
   S dirMag = const_cast<Vector<S,3>&> (direction).norm();
 #ifdef OLB_DEBUG
   std::cout << "magnitude = " << dirMag << std::endl;
@@ -160,6 +162,7 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
 
   /// find perpendicular vector to direction
   Vector<S,3> directionPerp;
+  //std::cout << "DIRECTION N " << directionN[0] << " " << directionN[1] << " " << directionN[2] << std::endl;
   if (    (util::nearZero(directionN[0]) && util::nearZero(directionN[1]) && !util::nearZero(directionN[2]))
           || (util::nearZero(directionN[0]) && !util::nearZero(directionN[1]) && util::nearZero(directionN[2]))    ) {
     directionPerp[0] = 1;
@@ -179,7 +182,6 @@ bool IndicatorF3D<S>::normal(Vector<S,3>& normal, const Vector<S,3>& origin, con
   }
 
   Vector<S,3> directionPerpN(directionPerp*(dirMag/(directionPerp).norm()));
-
 
   Vector<S,3> point1;
   Vector<S,3> point2;

@@ -274,6 +274,20 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+///SM - functor to get pointwise phys wall shear stress and pressure with a given material on local lattice
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysWallShearStressAndPressure3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  SuperGeometry3D<T>& _superGeometry;
+  const int _material;
+public:
+  SuperLatticePhysWallShearStressAndPressure3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                                    SuperGeometry3D<T>& superGeometry, const int material,
+                                    const UnitConverter<T,DESCRIPTOR>& converter,
+                                    IndicatorF3D<T>& indicator);
+  bool operator() (T output[], const int input[]) override;
+};
+
 /// functor to get pointwise phys force acting on a boundary with a given material on local lattice
 /// see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA
 template <typename T, typename DESCRIPTOR>

@@ -529,7 +529,503 @@ bool IndicatorCuboidRotate3D<S>::operator()(bool output[], const S input[])
   return output[0];
 }
 
+//SM - Indicator functor for DCA blade aligned with Z axis
 
+template<typename S>
+IndicatorBladeDca3D<S>::IndicatorBladeDca3D(Vector<S,3> origin, S chord, S thickness, S span, S radius1, S radius2, S xp, S theta)
+  :  _origin(origin), _chord(chord), _thickness(thickness), _span(span), _radius1(radius1), _radius2(radius2), _xp(xp), _theta(theta)
+{
+  init();
+}
+
+//Init
+template<typename S>
+void IndicatorBladeDca3D<S>::init()
+{ 
+  //Base vectors to define blade-local axes 
+  _I = {cos(_theta*M_PI/180),sin(_theta*M_PI/180),0.};
+  _J = {-sin(_theta*M_PI/180),cos(_theta*M_PI/180),0.};
+  _K = {0.,0.,1.};
+
+  //DCA circle centres in local reference frame
+  _xc2 = _chord/2 - _radius2;
+  _yc1 = _thickness/2 - _radius1;
+
+  //Basic min/max approx for now - corners of bounding box
+  this-> _myMin = {_origin[0]-0.5*_chord,_origin[1]-0.5*_thickness,_origin[2]};
+  this-> _myMax = {_origin[0]+0.5*_chord,_origin[1]+0.5*_thickness,_origin[2]+_span};
+}
+
+//operator()  
+template<typename S>
+bool IndicatorBladeDca3D<S>::operator()(bool output[], const S input[]) 
+{
+  //Transform input position to blade-local coordinates
+  S inputLocalX = (input[0]-_origin[0])*cos(_theta*M_PI/180) + (input[1]-_origin[1])*sin(_theta*M_PI/180);
+  S inputLocalY = -(input[0]-_origin[0])*sin(_theta*M_PI/180)  + (input[1]-_origin[1])*cos(_theta*M_PI/180);
+  S inputLocalZ = input[2] - _origin[2];
+
+  output[0] = false;
+  
+  if ((inputLocalZ >= 0) && (inputLocalZ <= _span)) {
+    if (inputLocalX == -_chord/2 ) {
+      if(inputLocalY == 0.) {
+        output[0] = true;
+	return true;
+      }
+    }
+    else if ((inputLocalX > -_chord/2) && (inputLocalX < -_xp)) {
+      if ((inputLocalY >= -sqrt(_radius2*_radius2-(inputLocalX+_xc2)*(inputLocalX+_xc2))) && (inputLocalY <= sqrt(_radius2*_radius2-(inputLocalX+_xc2)*(inputLocalX+_xc2)))) {
+        output[0] = true;
+	return true;
+      }
+    }
+    else if ((inputLocalX >= -_xp) && (inputLocalX <= _xp)) {
+      if ((inputLocalY >= -_yc1-sqrt(_radius1*_radius1-inputLocalX*inputLocalX)) && (inputLocalY <= _yc1+sqrt(_radius1*_radius1-inputLocalX*inputLocalX))) {
+        output[0] = true;
+	return true;
+      }
+    }
+    else if ((inputLocalX > _xp) && (inputLocalX < _chord/2)) {
+      if ((inputLocalY >= -sqrt(_radius2*_radius2-(inputLocalX-_xc2)*(inputLocalX-_xc2))) && (inputLocalY <= sqrt(_radius2*_radius2-(inputLocalX-_xc2)*(inputLocalX-_xc2)))) {
+        output[0] = true;
+	return true;
+      }
+    }
+    else if (inputLocalX == _chord/2) {
+      if (inputLocalY == 0.) {
+        output[0] = true;
+	return true;
+      }
+    }
+  }
+  return true;
+}
+
+/* OLD
+//Analytical distance functor for DCA blade
+//Only works for points outside blade - returns -1 if inside
+template<typename S>
+bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
+                                     const Vector<S,3>& direction, int iC)
+{
+  //std::cout << "-----------------------------------------------------" << endl;
+  //Convert input origin and direction to blade-local coordinates
+  const Vector<S,3> originLocal((origin[0]-_origin[0])*cos(_theta*M_PI/180) + (origin[1]-_origin[1])*sin(_theta*M_PI/180),
+                                  -(origin[0]-_origin[0])*sin(_theta*M_PI/180)  + (origin[1]-_origin[1])*cos(_theta*M_PI/180),
+                                  origin[2] - _origin[2]);
+
+  Vector<S,3> directionLocal(direction[0]*cos(_theta*M_PI/180) + direction[1]*sin(_theta*M_PI/180),
+  			       -direction[0]*sin(_theta*M_PI/180)  + direction[1]*cos(_theta*M_PI/180),
+                               direction[2]);
+
+  //std::cout << "DIRECTION LOCAL " << directionLocal[0] << " " << directionLocal[1] << " " << directionLocal[2] << endl;
+
+  //Normalise local direction vector
+  S dirMag = directionLocal[0]*directionLocal[0] + directionLocal[1]*directionLocal[1] + directionLocal[2]*directionLocal[2];
+  //std::cout << "DIRMAG" << dirMag << endl;
+  if (dirMag >= 0.) {
+    directionLocal[0] = directionLocal[0]/sqrt(dirMag);
+    directionLocal[1] = directionLocal[1]/sqrt(dirMag);
+    directionLocal[2] = directionLocal[2]/sqrt(dirMag);
+  }
+  else {
+    //std::cout << "ERROR: DIRECTION OF ZERO SPECIFIED" << endl;
+    distance = -1.;
+    return true;
+  }
+
+  //std::cout << "ORIGIN LOCAL " << originLocal[0] << " " << originLocal[1] << " " << originLocal[2] << endl; 
+  //std::cout << "DIRECTION LOCAL " << directionLocal[0] << " " << directionLocal[1] << " " << directionLocal[2] << endl;
+
+  //Lambdas to compute distance from cylinder and plane
+  auto cylDistance = [](S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
+  		       const Vector<S,3>& x1, const Vector<S,3>& x2, const S& r)
+  {
+    //std::cout << "ORIGIN CYL LAMBDA" << origin[0] << " " << origin[1] << " " << origin[2] << endl;
+    //Analytical solution via 3D point-line distance formula
+    S s1 = -x1[2]*direction[0]-direction[2]*x2[0]+x1[0]*direction[2]+direction[0]*x2[2];
+    S s2 = -x1[1]*direction[2]-direction[1]*x2[2]+x1[2]*direction[1]+direction[2]*x2[1];
+    S s3 = -x1[0]*direction[1]-direction[0]*x2[1]+x1[1]*direction[0]+direction[1]*x2[0];
+			            
+    S s4 = -origin[1]*x2[2]-x1[1]*origin[2]+x1[1]*x2[2]+origin[2]*x2[1]+x1[2]*origin[1]-x1[2]*x2[1];
+    S s5 = -origin[2]*x2[0]-x1[2]*origin[0]+x1[2]*x2[0]+origin[0]*x2[2]+x1[0]*origin[2]-x1[0]*x2[2];
+    S s6 = -origin[0]*x2[1]-x1[0]*origin[1]+x1[0]*x2[1]+origin[1]*x2[0]+x1[1]*origin[0]-x1[1]*x2[0];
+    S s7 = r*r*((x2[0]-x1[0])*(x2[0]-x1[0])+(x2[1]-x1[1])*(x2[1]-x1[1])+(x2[2]-x1[2])*(x2[2]-x1[2]));
+								            
+    S a = s1*s1 + s2*s2 + s3*s3;
+    S b = 2*(s4*s2+s1*s5+s3*s6);
+    S c = s4*s4+s5*s5+s6*s6-s7;
+    S sol1 = -1.;
+    S sol2 = -1.;
+
+    S discriminant = b*b - 4.*a*c;
+
+    if (discriminant >= 0.) {
+      sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+      sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+    }
+    else if (discriminant > -pow(10,-15)) {
+      discriminant = 0.;
+      //std::cout << "Set discriminant to zero!" << endl;
+      sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+      sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+    }
+    else {
+      //std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
+      distance = -1.;
+      return true;
+    }
+    if (sol1 >= 0. && sol2 >= 0.) {
+      distance = min(sol1,sol2);
+      //std::cout << "MIN(SOL1,SOL2)= " << distance << endl;
+    }
+    else {
+      //std::cout << "Origin point is inside cylinder " << sol1 << " " << sol2 << endl;
+      distance = -1.;
+      return true;
+    }
+    if (origin[2] + distance*direction[2] >= x1[2] - pow(10,-15) && origin[2] + distance*direction[2] <= x2[2] + pow(10,-15))     {
+      return true;
+    }
+    else {
+      //std::cout << "Distance is out of finite cylinder bounds " << origin[2] + distance*direction[2] << " " << x1[2] << " " << x2[2] << endl;
+      distance = -1.;
+      return true;
+    }
+  };
+
+  //Plane
+  auto planeDistance = [](S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
+  		       const Vector<S,3>& pOrigin, const Vector<S,3>& pNormal)
+  { 
+    //Ray-plane intersection formula
+    S denom = direction[0]*pNormal[0] + direction[1]*pNormal[1] + direction[2]*pNormal[2];
+    if (denom != 0.) {
+      distance = ((origin[0]-pOrigin[0])*pNormal[0]+(origin[1]-pOrigin[1])*pNormal[1]+(origin[2]-pOrigin[2])*pNormal[2])/denom;
+      return true;
+    }
+    else {
+      //std::cout << "Error: Direction perpendicular to plane" << endl;
+      distance = -1;
+      return true;
+    }
+  };
+
+  //Compare distances from different fundamental components of blade geometry
+  S d1, d2;
+  std::vector<S> cylDistances(4);
+  //Check if origin is bounded by blade in x-y
+  bool isInsideXY = false;
+
+  if (originLocal[0] == -_chord/2 ) {
+    if(originLocal[1] == 0.) {
+      isInsideXY = true;
+    }
+  }
+  else if ((originLocal[0] > -_chord/2) && (originLocal[0] < -_xp)) {
+    if ((originLocal[1] >= -sqrt(_radius2*_radius2-(originLocal[0]+_xc2)*(originLocal[0]+_xc2))) && (originLocal[1] <= sqrt(_radius2*_radius2-(originLocal[0]+_xc2)*(originLocal[0]+_xc2)))) {
+      isInsideXY = true;
+    }
+  }
+  else if ((originLocal[0] >= -_xp) && (originLocal[0] <= _xp)) {
+    if ((originLocal[1] >= -_yc1-sqrt(_radius1*_radius1-originLocal[0]*originLocal[0])) && (originLocal[1] <= _yc1+sqrt(_radius1*_radius1-originLocal[0]*originLocal[0]))) {
+      isInsideXY = true;
+    }
+  }
+  else if ((originLocal[0] > _xp) && (originLocal[0] < _chord/2)) {
+    if ((originLocal[1] >= -sqrt(_radius2*_radius2-(originLocal[0]-_xc2)*(originLocal[0]-_xc2))) && (originLocal[1] <= sqrt(_radius2*_radius2-(originLocal[0]-_xc2)*(originLocal[0]-_xc2)))) {
+      isInsideXY = true;
+    }
+  }
+  else if (originLocal[0] == _chord/2) {
+    if (originLocal[1] == 0.) {
+      isInsideXY = true;
+      }
+  }
+  //std::cout << isInsideXY << endl;
+  //std::cout << "posx vs -xp= " << originLocal[0]+_xp << endl;
+  //std::cout << "posx vs xp=" << originLocal[0]-_xp << endl;
+  //std::cout << "posx vs chord" << originLocal[0]+_chord/2 << endl;
+  //std::cout << "posx vs chord" << originLocal[0]-_chord/2 << endl;
+
+  if (isInsideXY && originLocal[2] <= 0.) {
+    planeDistance(d1, originLocal, directionLocal, Vector<S,3>{0.,0.,0.}, Vector<S,3>{0.,0.,-1.});
+    distance = d1;
+    //std::cout << "D1" << endl;
+    return true; 
+  }
+  else if (isInsideXY && originLocal[2] >= _span) {
+   planeDistance(d2, originLocal, directionLocal, Vector<S,3>{0.,0.,_span}, Vector<S,3>{0.,0.,1.});
+    distance = d2;
+    //std::cout << "D2" << endl;
+    return true; 
+  }
+  else {
+    cylDistance(cylDistances[0], originLocal, directionLocal, Vector<S,3>{-_xc2,0.,0.}, Vector<S,3>{-_xc2,0.,_span},_radius2);
+    S intersectCyl3x = originLocal[0] + cylDistances[0]*directionLocal[0];
+    if (intersectCyl3x < -_chord/2. - pow(10,-15) || intersectCyl3x > -_xp + pow(10,-15.)) {
+      cylDistances[0] = -1.; //Distance invalid as x intersect is outside of the cylinder bounds
+      //std::cout << "d3 invalid " << intersectCyl3x + _chord/2 << " "  << intersectCyl3x + _xp << endl;
+    }
+    cylDistance(cylDistances[1], originLocal, directionLocal, Vector<S,3>{0.,-_yc1,0.},Vector<S,3>{0.,-_yc1,_span},_radius1);
+    S intersectCyl4x = originLocal[0] + cylDistances[1]*directionLocal[0];
+    if (intersectCyl4x <= -_xp || intersectCyl4x >= _xp) {
+      cylDistances[1] = -1.; //Distance invalid as x intersect is outside of the cylinder bounds
+      //std::cout << "d4 invalid " << intersectCyl4x + _xp << " " << intersectCyl4x - _xp << endl;
+    }
+    cylDistance(cylDistances[2], originLocal, directionLocal, Vector<S,3>{0.,_yc1,0.}, Vector<S,3>{0.,_yc1,_span},_radius1); 
+    S intersectCyl5x = originLocal[0] + cylDistances[2]*directionLocal[0];
+    if (intersectCyl5x <= -_xp || intersectCyl5x >= _xp) {
+      cylDistances[2] = -1.; //Distance invalid as x intersect is outside of the cylinder bounds
+      //std::cout << "d5 invalid " << intersectCyl5x + _xp << " " << intersectCyl5x - _xp << endl;
+    }
+    cylDistance(cylDistances[3], originLocal, directionLocal, Vector<S,3>{_xc2,0.,0.}, Vector<S,3>{_xc2,0.,_span},_radius2);
+    S intersectCyl6x = originLocal[0] + cylDistances[3]*directionLocal[0];
+    if (intersectCyl6x < _xp - pow(10,-15) || intersectCyl6x > _chord/2. + pow(10,-15.)) {
+      cylDistances[3] = -1.; //Distance invalid as x intersect is outside of the cylinder bounds
+      //std::cout << "d6 invalid " << intersectCyl6x - _chord/2 << " " << intersectCyl6x - _xp << endl;
+    }
+    //std::cout << cylDistances[0] << " " <<  cylDistances[1] << " " << cylDistances[2] << " " <<  cylDistances[3] << endl;
+    if (cylDistances[0]<0. && cylDistances[1]<0. && cylDistances[2]<0. && cylDistances[3]<0.) {
+      //std::cout << "NO POSITIVE CYL DISTANCE FOUND" << endl;
+      distance = -1.;
+      return true;
+    } else {
+      //Get min valid distance
+      distance = -1.;
+      for (int i=0;i<4;++i) {
+        if (distance < 0. && cylDistances[i] >= 0.) {
+	  distance = cylDistances[i];
+	}
+	if (cylDistances[i] > 0. && cylDistances[i]<distance) {
+	  distance = cylDistances[i];
+	}
+      }
+      return true;
+    }
+  }
+}
+*/
+
+
+//Analytical distance functor for DCA blade
+template<typename S>
+bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
+                                     const Vector<S,3>& direction, int iC)
+{
+  //Convert input origin and direction to blade-local coordinates
+  const Vector<S,3> originLocal((origin[0]-_origin[0])*cos(_theta*M_PI/180) + (origin[1]-_origin[1])*sin(_theta*M_PI/180),
+                                  -(origin[0]-_origin[0])*sin(_theta*M_PI/180)  + (origin[1]-_origin[1])*cos(_theta*M_PI/180),
+                                  origin[2] - _origin[2]);
+
+  Vector<S,3> directionLocal(direction[0]*cos(_theta*M_PI/180) + direction[1]*sin(_theta*M_PI/180),
+  			       -direction[0]*sin(_theta*M_PI/180)  + direction[1]*cos(_theta*M_PI/180),
+                               direction[2]);
+
+  //Normalise local direction vector
+  S dirMag = directionLocal[0]*directionLocal[0] + directionLocal[1]*directionLocal[1] + directionLocal[2]*directionLocal[2];
+  if (dirMag >= 0.) {
+    directionLocal[0] = directionLocal[0]/sqrt(dirMag);
+    directionLocal[1] = directionLocal[1]/sqrt(dirMag);
+    directionLocal[2] = directionLocal[2]/sqrt(dirMag);
+  }
+  else {
+    //std::cout << "ERROR: DIRECTION OF ZERO SPECIFIED" << endl;
+    distance = -pow(10,6);
+    return true;
+  }
+  //Lambdas to compute distance from cylinder and plane
+  auto cylDistance = [](Vector<S,2>& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
+  		       const Vector<S,3>& x1, const Vector<S,3>& x2, const S& r)
+  {
+    //std::cout << "ORIGIN CYL LAMBDA" << origin[0] << " " << origin[1] << " " << origin[2] << endl;
+    //Analytical solution via 3D point-line distance formula
+    S s1 = -x1[2]*direction[0]-direction[2]*x2[0]+x1[0]*direction[2]+direction[0]*x2[2];
+    S s2 = -x1[1]*direction[2]-direction[1]*x2[2]+x1[2]*direction[1]+direction[2]*x2[1];
+    S s3 = -x1[0]*direction[1]-direction[0]*x2[1]+x1[1]*direction[0]+direction[1]*x2[0];
+			            
+    S s4 = -origin[1]*x2[2]-x1[1]*origin[2]+x1[1]*x2[2]+origin[2]*x2[1]+x1[2]*origin[1]-x1[2]*x2[1];
+    S s5 = -origin[2]*x2[0]-x1[2]*origin[0]+x1[2]*x2[0]+origin[0]*x2[2]+x1[0]*origin[2]-x1[0]*x2[2];
+    S s6 = -origin[0]*x2[1]-x1[0]*origin[1]+x1[0]*x2[1]+origin[1]*x2[0]+x1[1]*origin[0]-x1[1]*x2[0];
+    S s7 = r*r*((x2[0]-x1[0])*(x2[0]-x1[0])+(x2[1]-x1[1])*(x2[1]-x1[1])+(x2[2]-x1[2])*(x2[2]-x1[2]));
+								            
+    S a = s1*s1 + s2*s2 + s3*s3;
+    S b = 2*(s4*s2+s1*s5+s3*s6);
+    S c = s4*s4+s5*s5+s6*s6-s7;
+    S sol1 = -1.;
+    S sol2 = -1.;
+
+    S discriminant = b*b - 4.*a*c;
+
+    if (discriminant >= 0. && a > 0.) {
+      sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+      sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+      distance[0] = sol1;
+      distance[1] = sol2;
+      return true;
+    }
+    else if (discriminant > -pow(10,-15) && a > 0.) {
+      discriminant = 0.;
+      //std::cout << "Set discriminant to zero!" << endl;
+      sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+      sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+      distance[0] = sol1;
+      distance[1] = sol2;
+    }
+    else {
+      //std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
+      distance[0] = -pow(10,6);
+      distance[1] = -pow(10,6);
+      return true;
+    }
+    return true;
+  };
+  
+  //Plane
+  auto planeDistance = [](S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
+  		       const Vector<S,3>& pOrigin, const Vector<S,3>& pNormal)
+  { 
+    //Ray-plane intersection formula
+    S denom = direction[0]*pNormal[0] + direction[1]*pNormal[1] + direction[2]*pNormal[2];
+    if (denom != 0.) {
+      distance = ((origin[0]-pOrigin[0])*pNormal[0]+(origin[1]-pOrigin[1])*pNormal[1]+(origin[2]-pOrigin[2])*pNormal[2])/denom;
+      return true;
+    }
+    else {
+      //std::cout << "Error: Direction perpendicular to plane" << endl;
+      distance = -pow(10,6);
+      return true;
+    }
+  };
+
+  //Lambda to compare if point is inside X-Y bounds of blade
+  auto isInsideXY = [this](bool& isInside, const Vector<S,3>& origin)
+  { 
+    isInside = false; 
+    if (origin[0] == -_chord/2 ) {
+      if(origin[1] == 0.) {
+        isInside = true;
+      }
+    }
+    else if ((origin[0] > -_chord/2) && (origin[0] < -_xp)) {
+      if ((origin[1] >= -sqrt(_radius2*_radius2-(origin[0]+_xc2)*(origin[0]+_xc2))) && (origin[1] <= sqrt(_radius2*_radius2-(origin[0]+_xc2)*(origin[0]+_xc2)))) {
+        isInside = true;
+      }
+    }
+    else if ((origin[0] >= -_xp) && (origin[0] <= _xp)) {
+      if ((origin[1] >= -_yc1-sqrt(_radius1*_radius1-origin[0]*origin[0])) && (origin[1] <= _yc1+sqrt(_radius1*_radius1-origin[0]*origin[0]))) {
+        isInside = true;
+      }
+    }
+    else if ((origin[0] > _xp) && (origin[0] < _chord/2)) {
+      if ((origin[1] >= -sqrt(_radius2*_radius2-(origin[0]-_xc2)*(origin[0]-_xc2))) && (origin[1] <= sqrt(_radius2*_radius2-(origin[0]-_xc2)*(origin[0]-_xc2)))) {
+        isInside = true;
+      }
+    }
+    else if (origin[0] == _chord/2) {
+      if (origin[1] == 0.) {
+        isInside = true;
+      }
+    }
+  return true;
+  };
+
+  bool isInside;
+  S d1, d2;
+  Vector<S,2> d3;
+  Vector<S,2> d4;
+  Vector<S,2> d5;
+  Vector<S,2> d6;
+
+  planeDistance(d1, originLocal, directionLocal, Vector<S,3>{0.,0.,0.}, Vector<S,3>{0.,0.,-1.});
+  Vector<S,3> intersect1;
+  for(int i=0; i<3; ++i) {
+    intersect1[i] = originLocal[i] + d1 * directionLocal[i];
+  }
+  isInsideXY(isInside,intersect1);
+  if(!isInside) {
+    d1 = -pow(10,6);
+  }
+  planeDistance(d2, originLocal, directionLocal, Vector<S,3>{0.,0.,_span}, Vector<S,3>{0.,0.,1.});
+  Vector<S,3> intersect2;
+  for(int i=0; i<3; ++i) {
+    intersect2[i] = originLocal[i] + d2 * directionLocal[i];
+  }
+  isInsideXY(isInside,intersect2);
+  if(!isInside) {
+    d2 = -pow(10,6);
+  }
+  cylDistance(d3, originLocal, directionLocal, Vector<S,3>{-_xc2,0.,0.}, Vector<S,3>{-_xc2,0.,_span},_radius2);
+  Vector<S,2> intersectCyl3x;
+  for (int i=0;i<2;++i){
+    intersectCyl3x[i] = originLocal[0] + d3[i] * directionLocal[0];
+    if (intersectCyl3x[i] < -_chord/2. - pow(10,-15) || intersectCyl3x[i] > -_xp + pow(10,-15.)) {
+      d3[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
+    }
+  }
+  cylDistance(d4, originLocal, directionLocal, Vector<S,3>{0.,-_yc1,0.},Vector<S,3>{0.,-_yc1,_span},_radius1);
+  Vector<S,2> intersectCyl4x;
+  for (int i=0;i<2;++i){
+    intersectCyl4x[i] = originLocal[0] + d4[i] * directionLocal[0];
+    if (intersectCyl4x[i] <= -_xp || intersectCyl4x[i] >= _xp) {
+      d4[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
+    }
+  }
+  cylDistance(d5, originLocal, directionLocal, Vector<S,3>{0.,_yc1,0.}, Vector<S,3>{0.,_yc1,_span},_radius1); 
+  Vector<S,2> intersectCyl5x;
+  for (int i=0;i<2;++i){
+    intersectCyl5x[i] = originLocal[0] + d5[i] * directionLocal[0];
+    if (intersectCyl5x[i] <= -_xp || intersectCyl5x[i] >= _xp) {
+      d5[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
+    }
+  }
+  cylDistance(d6, originLocal, directionLocal, Vector<S,3>{_xc2,0.,0.}, Vector<S,3>{_xc2,0.,_span},_radius2);
+  Vector<S,2> intersectCyl6x;
+  for (int i=0;i<2;++i){
+    intersectCyl6x[i] = originLocal[0] + d6[i] * directionLocal[0];
+    if (intersectCyl6x[i] < _xp - pow(10,-15) || intersectCyl6x[i] > _chord/2. + pow(10,-15.)) {
+      d6[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
+    }
+  }
+  std::vector<S> absDistances;
+  absDistances.assign({abs(d1),abs(d2),abs(d3[0]),abs(d3[1]),abs(d4[0]),abs(d4[1]),abs(d5[0]),abs(d5[1]),abs(d6[0]),abs(d6[1])});
+  distance = *std::min_element(std::begin(absDistances),std::end(absDistances));
+  //std::cout << "ORIGIN LOCAL" << originLocal[0] << " " << originLocal[1] << " " << originLocal[2] << endl;;
+  //std::cout << "DIRECTION LOCAL" << directionLocal[0] << " " << directionLocal[1] << " " << directionLocal[2] << endl;
+  //std::cout << "DISTANCE" << distance << endl;
+  return true;
+}
+
+template<typename S> 
+Vector<S,3> const&  IndicatorBladeDca3D<S>::getOrigin() const 
+{
+  return _origin;
+}
+
+template<typename S> 
+S IndicatorBladeDca3D<S>::getChord() const 
+{
+  return _chord;
+}
+
+template<typename S> 
+S IndicatorBladeDca3D<S>::getThickness() const 
+{
+  return _thickness;
+}
+
+template<typename S> 
+S IndicatorBladeDca3D<S>::getSpan() const 
+{
+  return _span;
+}
+
+template<typename S> 
+S IndicatorBladeDca3D<S>::getTheta() const 
+{
+  return _theta;
+}
 
 ////// creator functions /////
 template <typename S>

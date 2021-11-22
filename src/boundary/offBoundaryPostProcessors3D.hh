@@ -56,7 +56,9 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
   opp = util::opposite<L>(iPop);
-  xN = x + c[0];
+  /*
+  //SM - OLD
+  xN = x + c[0]; 
   yN = y + c[1];
   zN = z + c[2];
 
@@ -73,12 +75,53 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
     q = 2*dist;
     iPop2 = iPop;
   }
+  */
   /*
+  //SM - NEW
+  xN = x; 
+  yN = y;
+  zN = z;
+
+  if (dist >= 0.5) {
+    xB = x;
+    yB = y;
+    zB = z;
+    q = 1./(2.*dist);
+    iPop2 = opp;
+  } else {
+    xB = x - c[0];
+    yB = y - c[1];
+    zB = z - c[2];
+    q = 2.*dist;
+    iPop2 = iPop;
+  }
+  */
+  //SM - NEW 2
+  //Assume solid node holds boundary pops (as already is assumed for original)
+  xN = x + c[0]; 
+  yN = y + c[1];
+  zN = z + c[2];
+
+  if (dist >= 0.5) {
+    xB = x + c[0];
+    yB = y + c[1];
+    zB = z + c[2];
+    q = 1./(2.*dist);
+    iPop2 = opp;
+  } else {
+    xB = x;
+    yB = y;
+    zB = z;
+    q = 2.*dist;
+    iPop2 = iPop;
+  }
+
+  
     std::cout << "ZeroVelocityLinear (" << x << "," << y << "," << z <<
       "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," << zN <<
       "), opp: " << opp << ", bP: (" << xB << "," << yB << "," << zB <<
       "), dist: " << dist << ", q: " << q << std::endl;
-  */
+  
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -94,8 +137,23 @@ template<typename T, typename DESCRIPTOR>
 void ZeroVelocityBouzidiLinearPostProcessor3D<T,DESCRIPTOR>::
 process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
+  
+  //std::cout << "f[xN][iPop] " << blockLattice.get(xN, yN, zN)[iPop]
+  //	  << " f[x][iPop]  " << blockLattice.get(x, y, z)[iPop]
+  //	  << " f[xB][iPop]  " << blockLattice.get(xB, yB, zB)[iPop2]
+//	  << " q " << q
+//	  << " dist " << dist
+//	  << endl;
+
   blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
                                    (1-q)*blockLattice.get(xB, yB, zB)[iPop2];
+
+ /* std::cout << "f[xN][iPop] " << blockLattice.get(xN, yN, zN)[iPop]
+  	    << " f[x][iPop]  " << blockLattice.get(x, y, z)[iPop]
+	    << " q " << q
+	    << " dist " << dist
+	    << endl;
+  */
 }
 
 template<typename T, typename DESCRIPTOR>

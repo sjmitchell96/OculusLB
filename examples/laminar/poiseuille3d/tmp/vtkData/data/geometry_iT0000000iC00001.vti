@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<ImageData WholeExtent="-1 15 -1 11 -1 22" Origin="-0.047619 0.52381 0" Spacing="0.047619 0.047619 0.047619">
+<Piece Extent="-1 15 -1 11 -1 22">
+<PointData>
+<DataArray type="Float32" Name="geometry" NumberOfComponents="1" format="binary" encoding="base64">
+AQAAAOBSAADgUgAApgAAAA==eJzt1bENwzAMRFFvFo+W0VOpSOeC4BH0+8BbQNJB1yWpuZuRtLbvh2rxvVZSeen3yQu2r7/S74LZ4ns9FpW+U/aL7/UYUvo+4Ambg17xP/IoKH2W0MXmoJfNQS+bg142B71sDnrZHPSyOehlc/BcyV4qFJQ+S3hiyl4qSp8l+8X/pmNI6ftgtvhOjkWl7xR7eVvpd7FR/I1XUn03I0mSCvoB7pLyrg==
+</DataArray>
+</PointData>
+</Piece>
+</ImageData>
+</VTKFile>

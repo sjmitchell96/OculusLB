@@ -77,6 +77,33 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+//SM - functor for drag adapted for blade case 
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysDragBlade3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  FunctorPtr<SuperIndicatorF3D<T>>              _indicatorF;
+  SuperGeometryFaces3D<T>                       _facesF;
+  SuperLatticePhysBoundaryForce3D<T,DESCRIPTOR> _pBoundForceF;
+  SuperSum3D<T,T>                               _sumF;
+  const T _factor;
+  T                                             _refArea;
+public:
+  SuperLatticePhysDragBlade3D(SuperLattice3D<T,DESCRIPTOR>&      sLattice,
+                         FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF,
+                         const UnitConverter<T,DESCRIPTOR>& converter,
+			 const T& refArea);
+  SuperLatticePhysDragBlade3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                         SuperGeometry3D<T>& superGeometry, int material,
+                         const UnitConverter<T,DESCRIPTOR>& converter,
+			 const T& refArea);
+  SuperLatticePhysDragBlade3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                         SuperGeometry3D<T>& superGeometry, std::vector<int> materials,
+                         const UnitConverter<T,DESCRIPTOR>& converter,
+			 const T& refArea);
+
+  bool operator() (T output[], const int input[]) override;
+};
+
 /// functor to get pointwise phys force acting on a indicated boundary on local lattice
 /**
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA

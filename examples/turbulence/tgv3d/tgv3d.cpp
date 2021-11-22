@@ -393,7 +393,7 @@ int main(int argc, char* argv[])
 #if defined(WALE)
   std::list<int> mat;
   mat.push_back(1);
-  std::unique_ptr;SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
+  std::unique_ptr<SuperLatticeF3D<T, DESCRIPTOR>> functor(new SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR>(superGeometry, sLattice, mat));
 #endif
 
   /// === 4th Step: Main Loop with Timer ===

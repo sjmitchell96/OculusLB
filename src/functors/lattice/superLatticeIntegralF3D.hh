@@ -89,6 +89,72 @@ bool SuperLatticePhysDrag3D<T, DESCRIPTOR>::operator()(T output[], const int inp
 }
 
 template<typename T, typename DESCRIPTOR>
+SuperLatticePhysDragBlade3D<T, DESCRIPTOR>::SuperLatticePhysDragBlade3D(
+  SuperLattice3D<T, DESCRIPTOR>&     sLattice,
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF,
+  const UnitConverter<T,DESCRIPTOR>& converter,
+  const T& refArea)
+  : SuperLatticePhysF3D<T, DESCRIPTOR>(sLattice, converter, 3),
+    _indicatorF(std::move(indicatorF)),
+    _facesF(*_indicatorF, converter),
+    _pBoundForceF(sLattice, *_indicatorF, converter),
+    _sumF(_pBoundForceF, *_indicatorF),
+    _factor(2./( converter.getPhysDensity()*converter.getCharPhysVelocity()*converter.getCharPhysVelocity() )),
+    _refArea(refArea)
+{
+  this->getName() = "physDrag";
+
+  for (int iC = 0; iC < this->getSuperStructure().getLoadBalancer().size(); ++iC) {
+    this->_blockF.emplace_back(
+      new BlockLatticePhysDrag3D<T,DESCRIPTOR>(
+        sLattice.getBlockLattice(iC),
+        indicatorF->getBlockIndicatorF(iC),
+        converter)
+    );
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+SuperLatticePhysDragBlade3D<T, DESCRIPTOR>::SuperLatticePhysDragBlade3D(
+  SuperLattice3D<T, DESCRIPTOR>& sLattice,
+  SuperGeometry3D<T>& superGeometry, const int material,
+  const UnitConverter<T,DESCRIPTOR>& converter,
+  const T& refArea)
+  : SuperLatticePhysDragBlade3D(sLattice,
+                           superGeometry.getMaterialIndicator(material),
+                           converter,refArea)
+{ }
+
+//THIRD CONSTRUCTOR HERE
+template<typename T, typename DESCRIPTOR>
+SuperLatticePhysDragBlade3D<T, DESCRIPTOR>::SuperLatticePhysDragBlade3D(
+  SuperLattice3D<T, DESCRIPTOR>& sLattice,
+  SuperGeometry3D<T>& superGeometry, std::vector<int> materials,
+  const UnitConverter<T,DESCRIPTOR>& converter,
+  const T& refArea)
+  : SuperLatticePhysDragBlade3D(sLattice,
+                           superGeometry.getMaterialIndicator(std::move(materials)),
+                           converter,refArea)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+bool SuperLatticePhysDragBlade3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  T faces[7] = { };
+  T sum[4]   = { };
+  _sumF(sum, input);
+  _facesF(faces, input);
+
+  output[0] = _factor * sum[0] / _refArea; //faces[0];
+  output[1] = _factor * sum[1] / _refArea;//faces[1];
+  output[2] = _factor * sum[2] / _refArea;//faces[2];
+
+  return true;
+}
+
+
+
+template<typename T, typename DESCRIPTOR>
 SuperLatticePhysCorrDrag3D<T, DESCRIPTOR>::SuperLatticePhysCorrDrag3D(
   SuperLattice3D<T, DESCRIPTOR>&     sLattice,
   FunctorPtr<SuperIndicatorF3D<T>>&& indicatorF,

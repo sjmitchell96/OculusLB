@@ -202,6 +202,36 @@ public:
     bool operator() (bool output[], const S input[]);
 };
 
+//SM - Indicator for DCA blade - aligned with z axis and arbitrary pitch
+template <typename S>
+class IndicatorBladeDca3D : public IndicatorF3D<S> {
+private:
+  Vector<S,3> _origin;
+  Vector<S,3> _I;
+  Vector<S,3> _J;
+  Vector<S,3> _K;
+  S _chord;
+  S _thickness;
+  S _span;
+  S _radius1;
+  S _radius2;
+  S _xp;
+  S _yc1;
+  S _xc2;
+  S _theta;
+  void init();
+public:
+  IndicatorBladeDca3D(Vector<S,3> origin, S chord, S thickness, S span, S radius1, S radius2, S xp, S theta);
+  bool operator() (bool output[], const S input[]) override;
+  bool distance(S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1) override;
+  Vector<S,3> const& getOrigin() const;
+  S getChord() const;
+  S getThickness() const;
+  S getSpan() const;
+  S getTheta() const;
+};
+
+
 /////////creatorFunctions//////////////////////
 // creator function for geometric primitives
 template <typename S>

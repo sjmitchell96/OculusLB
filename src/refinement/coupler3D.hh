@@ -35,20 +35,15 @@ Coupler3D<T,DESCRIPTOR>::Coupler3D(Grid3D<T,DESCRIPTOR>& coarse,
 		Grid3D<T,DESCRIPTOR>& fine, Vector<T,3> origin, Vector<T,3> extend):
 	_coarse(coarse),
 	_fine(fine),
-	// if extend[0] is 0, then y-z, use extend[1]
-	// lx / dx + 1 is discretized total points
 	_coarseSize_a(std::floor((util::nearZero(extend[0]) ? extend[1] :
-		extend[0]) / coarse.getConverter().getPhysDeltaX() + 0.5) + 1),
-	// if extend[0] or extend[1] is 0, then must be x-z or y-z
-	// if extend[0] or extend[1] is not 0, then must be x-y
-	_coarseSize_b(std::floor((util::nearZero(extend[0] * extend[1]) ? 
-			extend[2] : extend[1]) / coarse.getConverter().getPhysDeltaX() 
-			+ 0.5) + 1),
+					extend[0]) / coarse.getConverter().getPhysDeltaX() + 0.5) + 1),
+	// add overlapped points for easy coupling
+	_coarseSize_b(std::floor((util::nearZero(extend[0]*extend[1]) ? extend[2] :
+					extend[1]) / coarse.getConverter().getPhysDeltaX() + 0.5) + 5), 
 	_fineSize_a(2*_coarseSize_a - 1),
-	_fineSize_b(2*_coarseSize_b - 1),
+	_fineSize_b(2*_coarseSize_b - 8),
 	_physOrigin(_coarse.alignOriginToGrid(origin)),
-	_coarseLatticeR(_coarseSize_a, 
-			std::vector<Vector<int,4>>(_coarseSize_b)),
+	_coarseLatticeR(_coarseSize_a, std::vector<Vector<int,4>>(_coarseSize_b)),
 	_fineLatticeR(_fineSize_a, std::vector<Vector<int,4>>(_fineSize_b))
 {
 	OLB_ASSERT( util::nearZero(extend[0]) || util::nearZero(extend[1]) || 
@@ -62,18 +57,32 @@ Coupler3D<T,DESCRIPTOR>::Coupler3D(Grid3D<T,DESCRIPTOR>& coarse,
 	const Vector<T,3> stepPhysR_a = (util::nearZero(extend[0])) ? 
 									Vector<T,3> {0, deltaX, 0} :
 									Vector<T,3> {deltaX, 0, 0};
-	const Vector<T,3> stepPhysR_b = (util::nearZero(extend[0] * 
-				extend[1])) ? Vector<T,3> {0, 0, deltaX} : 
-							Vector<T,3> {0, deltaX, 0};
+	const Vector<T,3> stepPhysR_b = (util::nearZero(extend[0] * extend[1])) ?
+									Vector<T,3> {0, 0, deltaX} :
+									Vector<T,3> {0, deltaX, 0};
 	// fulfil latticeR matrix
+//	for (int i = 0; i < _fineSize_a; ++i) {
+//		for (int j = 0; j < _fineSize_b; ++j) {
+//			if ((i % 2 == 0) && (j % 2 == 0)) {
+//				coarseGeometry.getLatticeR(_physOrigin + i*stepPhysR_a + j*stepPhysR_b,
+//									   _coarseLatticeR[i/2][j/2]);
+//			}
+//			fineGeometry.getLatticeR(_physOrigin + i*stepPhysR_a + j*stepPhysR_b,
+//									 _fineLatticeR[i][j]);
+//		}
+//	}
+	// mapping physR to latticeR for coarseGrid
+	for (int i = 0; i < _coarseSize_a; ++i) {
+		for (int j = 0; j < _coarseSize_b; ++j) {
+			coarseGeometry.getLatticeR(_physOrigin + 2*i*stepPhysR_a + 2*(j-2)*stepPhysR_b,
+										_coarseLatticeR[i][j]);
+		}
+	}
+	// mapping physR to latticeR for fineGrid
 	for (int i = 0; i < _fineSize_a; ++i) {
-		for (int j = 0; j < _fineSize_b; ++j) {
-			if ((i % 2 == 0) && (j % 2 == 0)) {
-				coarseGeometry.getLatticeR(_physOrigin + i*stepPhysR_a + 
-						j*stepPhysR_b, _coarseLatticeR[i/2][j/2]);
-			}
-			fineGeometry.getLatticeR(_physOrigin + i*stepPhysR_a + 
-					j*stepPhysR_b, _fineLatticeR[i][j]);
+		for (int j = 0; j < _fineSize_b;  ++j) {
+			fineGeometry.getLatticeR(_physOrigin + i*stepPhysR_a + (j-1)*stepPhysR_b,
+										_fineLatticeR[i][j]);
 		}
 	}
 }
@@ -189,7 +198,14 @@ void FineCoupler3D<T,DESCRIPTOR>::store()
 #endif
 	for (int i = 0; i < this->_coarseSize_a; ++i) {
 		for (int j = 0; j < this->_coarseSize_b; ++j) {
-			const auto pos = this->getCoarseLatticeR(i, j);
+			int j_mapped {j};
+			if ( (j==0) || (j==1) ) {
+				j_mapped = j + this->_coarseSize_b - 4;
+			}
+			else if ( (j==this->_coarseSize_b - 1) || (j==this->_coarseSize_b - 2) ) {
+				j_mapped = j - this->_coarseSize_b + 4;
+			}
+			const auto pos = this->getCoarseLatticeR(i, j_mapped);
 			T rho{};
 			T u[DESCRIPTOR::d] {};
 			T fNeq[DESCRIPTOR::q] {};
@@ -517,8 +533,15 @@ void FineCoupler3D<T,DESCRIPTOR>::interpolate()
 #endif
 	for (int i = 0; i < this->_coarseSize_a; ++i) {
 		for (int j = 0; j < this->_coarseSize_b; ++j) {
+			int j_mapped {j};
+			if ( (j==0) || (j==1) ) {
+				j_mapped = j + this->_coarseSize_b - 4;
+			}
+			else if ( (j==this->_coarseSize_b - 1) || (j==this->_coarseSize_b - 2) ) {
+				j_mapped = j - this->_coarseSize_b + 4;
+			}
 			Cell<T,DESCRIPTOR> coarseCell;
-			coarseLattice.get(this->getCoarseLatticeR(i,j), coarseCell);
+			coarseLattice.get(this->getCoarseLatticeR(i,j_mapped), coarseCell);
 
 			T rho{};
 			T u[DESCRIPTOR::d] {};
@@ -550,6 +573,8 @@ void FineCoupler3D<T,DESCRIPTOR>::interpolate()
 }
 
 // Coupling step --- from coarse to fine, including interpolation
+//
+// Updated with periodic boundary condition on j
 template <typename T, typename DESCRIPTOR>
 void FineCoupler3D<T,DESCRIPTOR>::couple()
 {
@@ -560,414 +585,193 @@ void FineCoupler3D<T,DESCRIPTOR>::couple()
 #ifdef PARALLEL_MODE_OMP
 	#pragma omp parallel for
 #endif
-	for (int i = 0; i < this->_coarseSize_a; ++i) {
-		for (int j = 0; j < this->_coarseSize_b; ++j) {
-//			const auto& coarsePos = this->getCoarseLatticeR(i, j);
-			const auto& finePos = this->getFineLatticeR(2*i, 2*j);
+	for (int i = 0; i < this->_fineSize_a; i+=2) {
+		for (int j = 1; j < this->_fineSize_b; j+=2) {
+			// mapping fine position to coarse
+			const int i_c = (int) (i/2 + 0.5);
+			const int j_c = (int) ( (j - 1)/2 + 2.5);
 
-			// coupling of feq
-//			T rho{};
-//			T u[DESCRIPTOR::d] {};
-//			T fEq[DESCRIPTOR::q] {};
-//			Cell<T,DESCRIPTOR> coarseCell;
-//			coarseLattice.get(coarsePos, coarseCell);
-//			coarseCell.computeRhoU(rho, u);
-//			const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
-
-			// Wait, shouldn't we use _c2f_rho and _c2f_u?
+			// calculate feq based on coarse rho and u
 			T fEq[DESCRIPTOR::q] {};
-			const T uSqr = _c2f_u[i][j][0]*_c2f_u[i][j][0]
-						 + _c2f_u[i][j][1]*_c2f_u[i][j][1]
-						 + _c2f_u[i][j][2]*_c2f_u[i][j][2];
-//			lbHelpers<T,DESCRIPTOR>::computeFeq(coarseCell, fEq);
+			const T uSqr = _c2f_u[i_c][j_c][0]*_c2f_u[i_c][j_c][0]
+						 + _c2f_u[i_c][j_c][1]*_c2f_u[i_c][j_c][1]
+						 + _c2f_u[i_c][j_c][2]*_c2f_u[i_c][j_c][2];
 			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-//				fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
-				fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, _c2f_rho[i][j][0], _c2f_u[i][j].data, uSqr);
+				fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, _c2f_rho[i_c][j_c][0], _c2f_u[i_c][j_c].data, uSqr);
 			}
 
-			// couling of fneq and assign the value back
+			// coupling of fneq and assign the value back
+			const auto& finePos = this->getFineLatticeR(i,j);
 			Cell<T,DESCRIPTOR> fineCell;
 			fineLattice.get(finePos, fineCell);
 			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-				fineCell[iPop] = fEq[iPop] + this->getScalingFactor() * _c2f_fneq[i][j][iPop];
+				fineCell[iPop] = fEq[iPop] + this->getScalingFactor() * _c2f_fneq[i_c][j_c][iPop];
 			}
 			fineLattice.set(finePos, fineCell);
 		}
 	}
 
-	// coupling of 1d centre points --- y aligned
+	// coupling of 1D centre points --- lay on y axis
 #ifdef PARALLEL_MODE_OMP
 	#pragma omp parallel for
 #endif
-	for (int i = 0; i < this->_coarseSize_a-1; ++i) {
-		for (int j = 0; j < this->_coarseSize_b; ++j) {
-			// left edge
-			if ( i == 0 ) {
-				// interpolation 
-				const auto rho	= order4interpolation1DEdge(_c2f_rho, i, j, false, true);
-				const auto u	= order4interpolation1DEdge(_c2f_u, i, j, false, true);
-				const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i, j, false, true);
-				// get position and calculate new populations 
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i+1, 2*j);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
+	for (int i = 0; i < this->_fineSize_a; i+=2) {
+		for (int j = 0; j < this->_fineSize_b; j+=2) {
+			// mapping fine position to coarse
+			const int i_c = (int) (i/2 + 0.5);
+			const int j_c = (int) (j/2 + 1.5);
 
-			// right edge
-			else if ( i == this->_coarseSize_a-2) {
-				// interpolation
-				const auto rho	= order4interpolation1DEdge(_c2f_rho, i, j, false, false);
-				const auto u	= order4interpolation1DEdge(_c2f_u, i, j, false, false);
-				const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i, j, false, false);
-				// get position and calculate new populations 
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i+1, 2*j);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
-
-			// inner points
-			else {
-				// interpolation
-				const auto rho	= order4interpolation1DCentre(_c2f_rho, i, j, false);
-				const auto u	= order4interpolation1DCentre(_c2f_u, i, j, false);
-				const auto fneq	= order4interpolation1DCentre(_c2f_fneq, i, j, false);
-				// get position and calculate new populations 
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i+1, 2*j);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
-		}
-	}
-
-	// coupling of 1d inner points --- x aligned
-#ifdef PARALLEL_MODE_OMP
-	#pragma omp parallel for
-#endif
-	for (int i = 0; i < this->_coarseSize_a; ++i) {
-		for (int j = 0; j < this->_coarseSize_b-1; ++j) {
-			// bottom edge
-			if ( j == 0 ) {
-				// interpolation
-				const auto rho	= order4interpolation1DEdge(_c2f_rho, i, j, true, true);
-				const auto u	= order4interpolation1DEdge(_c2f_u, i, j, true, true);
-				const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i, j, true, true);
-
-				// use periodic interpolation instead
-//				const auto rho	= order4interpolation1DEdgePeriodic(_c2f_rho, i, true);
-//				const auto u	= order4interpolation1DEdgePeriodic(_c2f_u, i, true);
-//				const auto fneq	= order4interpolation1DEdgePeriodic(_c2f_fneq, i, true);
-
-				// get position and calculate new populations
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i, 2*j+1);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
-
-			// top edge
-			else if ( j == this->_coarseSize_b-2 ) {
-				// interpolation
-				const auto rho	= order4interpolation1DEdge(_c2f_rho, i, j, true, false);
-				const auto u	= order4interpolation1DEdge(_c2f_u, i, j, true, false);
-				const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i, j, true, false);
-
-				// use periodic interpolation instead
-//				const auto rho	= order4interpolation1DEdgePeriodic(_c2f_rho, i, false);
-//				const auto u	= order4interpolation1DEdgePeriodic(_c2f_u, i, false);
-//				const auto fneq	= order4interpolation1DEdgePeriodic(_c2f_fneq, i, false);
-
-				// get position and calculate new populations
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i, 2*j+1);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
-
-			// inner points
-			else {
-				// interpolation
-				const auto rho	= order4interpolation1DCentre(_c2f_rho, i, j, true);
-				const auto u	= order4interpolation1DCentre(_c2f_u, i, j, true);
-				const auto fneq	= order4interpolation1DCentre(_c2f_fneq, i, j, true);
-				// get position and calculate new populations
-				const T uSqr = u*u;
-				const auto finePos = this->getFineLatticeR(2*i, 2*j+1);
-				Cell<T,DESCRIPTOR> fineCell;
-				fineLattice.get(finePos, fineCell);
-				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-					fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
-							u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-				}
-				// update populations
-				fineLattice.set(finePos, fineCell);
-			}
-		}
-	}
-
-	//// coupling of 2d inner points
-	// inner points
-#ifdef PARALLEL_MODE_OMP
-	#pragma omp parallel for
-#endif
-	for (int i = 1; i < this->_coarseSize_a-2; ++i) {
-		for (int j = 1; j < this->_coarseSize_b-2; ++j) {
-			// interpolation
-			const auto rho	= order4interpolation2DCentre(_c2f_rho, i, j);
-			const auto u	= order4interpolation2DCentre(_c2f_u, i, j);
-			const auto fneq	= order4interpolation2DCentre(_c2f_fneq, i, j);
-			// get position and calculate new populations
+			// calculate the interpolated value for rho and u
+			const auto rho	= order4interpolation1DCentre(_c2f_rho, i_c, j_c, true);
+			const auto u	= order4interpolation1DCentre(_c2f_u, i_c, j_c, true);
+			const auto fneq	= order4interpolation1DCentre(_c2f_fneq, i_c, j_c, true);
+			// coupling
 			const T uSqr = u*u;
-			const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
+			const auto finePos = this->getFineLatticeR(i,j);
 			Cell<T,DESCRIPTOR> fineCell;
 			fineLattice.get(finePos, fineCell);
 			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
 						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
 			}
-			// update populations
 			fineLattice.set(finePos, fineCell);
 		}
 	}
-	// bottom edge
+
+	// coupling of 1D centre points --- lay on x axis
 #ifdef PARALLEL_MODE_OMP
 	#pragma omp parallel for
 #endif
-	for (int i = 1; i < this->_coarseSize_a-2; ++i) {
-		int j {0};
-		// interpolation
-		const auto rho	= order4interpolation2DEdge(_c2f_rho, i, j, false, false);
-		const auto u	= order4interpolation2DEdge(_c2f_u, i, j, false, false);
-		const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i, j, false, false);
-
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DEdgePeriodic(_c2f_rho, i, true);
-//		const auto u	= order4interpolation2DEdgePeriodic(_c2f_u, i, true);
-//		const auto fneq	= order4interpolation2DEdgePeriodic(_c2f_fneq, i, true);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+	for (int j = 1; j < this->_fineSize_b; j+=2) {
+		// mapping fine position to coarse 
+		const int j_c {(int) ( (j-1)/2 + 2.5)};
+		
+		// first couple x = 1
+		{
+			const int i {1};
+			const int i_c {0};
+			// interpolation --- not vertical, ascending
+			const auto rho	= order4interpolation1DEdge(_c2f_rho, i_c, j_c, false, true);
+			const auto u	= order4interpolation1DEdge(_c2f_u, i_c, j_c, false, true);
+			const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i_c, j_c, false, true);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
 		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
+
+		// then couple x = _fineSize_a - 2 
+		{
+			const int i {this->_fineSize_a - 2};
+			const int i_c {this->_coarseSize_a - 2};
+			// interpolation --- not vertical, not ascending
+			const auto rho	= order4interpolation1DEdge(_c2f_rho, i_c, j_c, false, false);
+			const auto u	= order4interpolation1DEdge(_c2f_u, i_c, j_c, false, false);
+			const auto fneq	= order4interpolation1DEdge(_c2f_fneq, i_c, j_c, false, false);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
+		}
+
+		// finally the inner points
+		for (int i = 3; i < this->_fineSize_a - 2; i+=2) {
+			const int i_c {(int) ( (i-1)/2 + 0.5)};
+			// interpolation --- not vertical
+			const auto rho	= order4interpolation1DCentre(_c2f_rho, i_c, j_c, false);
+			const auto u	= order4interpolation1DCentre(_c2f_u, i_c, j_c, false);
+			const auto fneq	= order4interpolation1DCentre(_c2f_fneq, i_c, j_c, false);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
+		}
 	}
-	// top edge
+
+	// coupling of 2d centre points
 #ifdef PARALLEL_MODE_OMP
 	#pragma omp parallel for
 #endif
-	for (int i = 1; i < this->_coarseSize_a-2; ++i) {
-		int j {this->_coarseSize_b-2};
-		// interpolation
-		const auto rho	= order4interpolation2DEdge(_c2f_rho, i, j, false, true);
-		const auto u	= order4interpolation2DEdge(_c2f_u, i, j, false, true);
-		const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i, j, false, true);
+	for (int j = 0; j < this->_fineSize_b; j+=2) {
+		// mapping fine position to coarse
+		const int j_c {(int) (j/2 + 1.5)};
 
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DEdgePeriodic(_c2f_rho, i, false);
-//		const auto u	= order4interpolation2DEdgePeriodic(_c2f_u, i, false);
-//		const auto fneq	= order4interpolation2DEdgePeriodic(_c2f_fneq, i, false);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+		// first couple x = 1
+		{
+			const int i {1};
+			const int i_c {0};
+			// interpolation --- vertical centre, ascending (not descending)
+			const auto rho	= order4interpolation2DEdge(_c2f_rho, i_c, j_c, true, false);
+			const auto u	= order4interpolation2DEdge(_c2f_u, i_c, j_c, true, false);
+			const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i_c, j_c, true, false);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
 		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-	// left edge
-#ifdef PARALLEL_MODE_OMP
-	#pragma omp parallel for
-#endif
-	for (int j = 1; j < this->_coarseSize_b-2; ++j) {
-		int i {0};
-		// interpolation
-		const auto rho	= order4interpolation2DEdge(_c2f_rho, i, j, true, false);
-		const auto u	= order4interpolation2DEdge(_c2f_u, i, j, true, false);
-		const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i, j, true, false);
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+
+		// then couple x = _fineSize_a - 2
+		{
+			const int i {this->_fineSize_a - 2};
+			const int i_c {this->_coarseSize_a - 2};
+			// interpolation --- vertical centre, not ascending (descending)
+			const auto rho	= order4interpolation2DEdge(_c2f_rho, i_c, j_c, true, true);
+			const auto u	= order4interpolation2DEdge(_c2f_u, i_c, j_c, true, true);
+			const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i_c, j_c, true, true);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
 		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-	// right edge
-#ifdef PARALLEL_MODE_OMP
-	#pragma omp parallel for
-#endif
-	for (int j = 1; j < this->_coarseSize_b-2; ++j) {
-		int i {this->_coarseSize_a-2};
-		// interpolation
-		const auto rho	= order4interpolation2DEdge(_c2f_rho, i, j, true, true);
-		const auto u	= order4interpolation2DEdge(_c2f_u, i, j, true, true);
-		const auto fneq	= order4interpolation2DEdge(_c2f_fneq, i, j, true, true);
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+
+		// finally the inner points
+		for (int i = 3; i < this->_fineSize_a - 2; i+=2) {
+			const int i_c {(int) ( (i-1)/2 + 0.5)};
+			// interpolation --- 2D centre
+			const auto rho	= order4interpolation2DCentre(_c2f_rho, i_c, j_c);
+			const auto u	= order4interpolation2DCentre(_c2f_u, i_c, j_c);
+			const auto fneq	= order4interpolation2DCentre(_c2f_fneq, i_c, j_c);
+			// coupling
+			const T uSqr = u*u;
+			const auto finePos = this->getFineLatticeR(i,j);
+			Cell<T,DESCRIPTOR> fineCell;
+			fineLattice.get(finePos, fineCell);
+			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+				fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0], 
+						u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
+			}
+			fineLattice.set(finePos, fineCell);
 		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-
-	// left bottom corner
-	{
-		int i {0};
-		int j {0};
-		// interpolation
-		const auto rho	= order4interpolation2DCorner(_c2f_rho, i, j, false, false);
-		const auto u	= order4interpolation2DCorner(_c2f_u, i, j, false, false);
-		const auto fneq	= order4interpolation2DCorner(_c2f_fneq, i, j, false, false);
-
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DCornerPeriodic(_c2f_rho, i, true);
-//		const auto u	= order4interpolation2DCornerPeriodic(_c2f_u, i, true);
-//		const auto fneq	= order4interpolation2DCornerPeriodic(_c2f_fneq, i, true);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-
-	// right bottom corner
-	{
-		int i {this->_coarseSize_a-2};
-		int j {0};
-		// interpolation
-		const auto rho	= order4interpolation2DCorner(_c2f_rho, i, j, true, false);
-		const auto u	= order4interpolation2DCorner(_c2f_u, i, j, true, false);
-		const auto fneq	= order4interpolation2DCorner(_c2f_fneq, i, j, true, false);
-
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DCornerPeriodic(_c2f_rho, i, true);
-//		const auto u	= order4interpolation2DCornerPeriodic(_c2f_u, i, true);
-//		const auto fneq	= order4interpolation2DCornerPeriodic(_c2f_fneq, i, true);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-
-	// left top corner
-	{
-		int i {0};
-		int j {this->_coarseSize_b-2};
-		// interpolation
-		const auto rho	= order4interpolation2DCorner(_c2f_rho, i, j, false, true);
-		const auto u	= order4interpolation2DCorner(_c2f_u, i, j, false, true);
-		const auto fneq	= order4interpolation2DCorner(_c2f_fneq, i, j, false, true);
-
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DCornerPeriodic(_c2f_rho, i, false);
-//		const auto u	= order4interpolation2DCornerPeriodic(_c2f_u, i, false);
-//		const auto fneq	= order4interpolation2DCornerPeriodic(_c2f_fneq, i, false);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
-	}
-
-	// right top corner
-	{
-		int i {this->_coarseSize_a-2};
-		int j {this->_coarseSize_b-2};
-		// interpolation
-		const auto rho	= order4interpolation2DCorner(_c2f_rho, i, j, true, true);
-		const auto u	= order4interpolation2DCorner(_c2f_u, i, j, true, true);
-		const auto fneq	= order4interpolation2DCorner(_c2f_fneq, i, j, true, true);
-
-		// use periodic interpolation
-//		const auto rho	= order4interpolation2DCornerPeriodic(_c2f_rho, i, false);
-//		const auto u	= order4interpolation2DCornerPeriodic(_c2f_u, i, false);
-//		const auto fneq	= order4interpolation2DCornerPeriodic(_c2f_fneq, i, false);
-
-		// get position and calculate new populations
-		const T uSqr = u*u;
-		const auto finePos = this->getFineLatticeR(2*i+1, 2*j+1);
-		Cell<T,DESCRIPTOR> fineCell;
-		fineLattice.get(finePos, fineCell);
-		for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-			fineCell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho[0],
-					u.data, uSqr) + this->getScalingFactor() * fneq[iPop];
-		}
-		// update populations
-		fineLattice.set(finePos, fineCell);
 	}
 }
 
@@ -1253,8 +1057,8 @@ void CoarseCoupler3D<T,DESCRIPTOR>::couple()
 	#pragma omp parallel for
 #endif
 	for (int i = 0; i < this->_coarseSize_a; ++i) {
-		for (int j = 0; j < this->_coarseSize_b; ++j) {
-			const auto& finePos		= this->getFineLatticeR(2*i, 2*j);
+		for (int j = 2; j < this->_coarseSize_b - 2; ++j) {
+			const auto& finePos		= this->getFineLatticeR(2*i, 2*j - 3);
 			const auto& coarsePos	= this->getCoarseLatticeR(i, j);
 
 			T rho {};
@@ -1264,16 +1068,15 @@ void CoarseCoupler3D<T,DESCRIPTOR>::couple()
 			T pi[util::TensorVal<DESCRIPTOR>::n] {};
 			Cell<T,DESCRIPTOR> fineCell;
 			fineLattice.get(finePos, fineCell);
-//			fineCell.computeRhoU(rho, u);
 			fineCell.computeAllMomenta(rho, u, pi);
 			const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
 //			const T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
 			for (int iPop=0; iPop < descriptors::q<DESCRIPTOR>(); ++iPop) {
 				fEq[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
 			}
-			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-				fNeq[iPop] = firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
-			}
+//			for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+//				fNeq[iPop] = firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
+//			}
 
 //			T fEq[DESCRIPTOR::q] {};
 //			Cell<T,DESCRIPTOR> fineCell;
@@ -1289,16 +1092,14 @@ void CoarseCoupler3D<T,DESCRIPTOR>::couple()
 
 //			if ( (i == 0) || (i == this->_coarseSize_a-1) 
 //					|| (j == 0) || (j == this->_coarseSize_b-1) ) {
-//			if ( (i == 0) || (i == this->_coarseSize_a-1) ) {
-//				lbHelpers<T,DESCRIPTOR>::computeRhoU(fineCell, rho, u);
-//				lbHelpers<T,DESCRIPTOR>::computeFneq(fineCell, fNeq, rho, u);
-//				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
-//					fNeq[iPop] = firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
-//				}
-//			}
-//			else {
-//				computeRestrictedFneq(fineLattice, finePos, fNeq);
-//			}
+			if ( (i == 0) || (i == this->_coarseSize_a-1) ) {
+				for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop) {
+					fNeq[iPop] = firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
+				}
+			}
+			else {
+				computeRestrictedFneq(fineLattice, finePos, fNeq);
+			}
 			
 			Cell<T,DESCRIPTOR> coarseCell;
 			coarseLattice.get(coarsePos, coarseCell);

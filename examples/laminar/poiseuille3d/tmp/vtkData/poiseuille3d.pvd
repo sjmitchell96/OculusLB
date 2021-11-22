@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
+<Collection>
+<DataSet timestep="0" group="" part="" file="data/poiseuille3d_iT0000000.vtm"/>
+<DataSet timestep="441" group="" part="" file="data/poiseuille3d_iT0000441.vtm"/>
+<DataSet timestep="882" group="" part="" file="data/poiseuille3d_iT0000882.vtm"/>
+<DataSet timestep="1030" group="" part="" file="data/poiseuille3d_iT0001030.vtm"/>
+</Collection>
+</VTKFile>

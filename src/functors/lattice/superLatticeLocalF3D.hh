@@ -676,6 +676,42 @@ bool SuperLatticePhysWallShearStress3D<T, DESCRIPTOR>::operator() (T output[],
   }
 }
 
+//SM - version for return both shear stress and pressure
+template<typename T, typename DESCRIPTOR>
+SuperLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>::SuperLatticePhysWallShearStressAndPressure3D(
+  SuperLattice3D<T, DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
+  const int material, const UnitConverter<T,DESCRIPTOR>& converter,
+  IndicatorF3D<T>& indicator)
+  : SuperLatticePhysF3D<T, DESCRIPTOR>(sLattice, converter, 2),
+    _superGeometry(superGeometry), _material(material)
+{
+  this->getName() = "physWallShearStressAndPressure";
+  const int maxC = this->_sLattice.getLoadBalancer().size();
+  this->_blockF.reserve(maxC);
+  for (int iC = 0; iC < maxC; iC++) {
+    this->_blockF.emplace_back(
+      new BlockLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>(
+        this->_sLattice.getExtendedBlockLattice(iC),
+        _superGeometry.getExtendedBlockGeometry(iC),
+        this->_sLattice.getOverlap(),
+        _material,
+        this->_converter,
+        indicator)
+    );
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+bool SuperLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>::operator() (T output[],
+    const int input[])
+{
+  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
+    return this->getBlockF(this->_sLattice.getLoadBalancer().loc(input[0]))(output, &input[1]);
+  } else {
+    return false;
+  }
+}
+
 
 template<typename T, typename DESCRIPTOR>
 SuperLatticePhysCorrBoundaryForce3D<T, DESCRIPTOR>::SuperLatticePhysCorrBoundaryForce3D(

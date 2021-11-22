@@ -301,6 +301,27 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+//SM - Functor to return pointwise phys wall shear stress and pressure
+//Same as above but extended to return pressure too
+template <typename T, typename DESCRIPTOR>
+class BlockLatticePhysWallShearStressAndPressure3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  BlockGeometryStructure3D<T>& _blockGeometry;
+  const int _overlap;
+  const int _material;
+  std::vector<std::vector<std::vector<std::vector<int>>>> _discreteNormal;
+  std::vector<std::vector<std::vector<std::vector<T>>>> _normal;
+  T _physFactor;
+public:
+  BlockLatticePhysWallShearStressAndPressure3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                                    BlockGeometryStructure3D<T>& blockGeometry,
+                                    int overlap,
+                                    int material,
+                                    const UnitConverter<T,DESCRIPTOR>& converter,
+                                    IndicatorF3D<T>& indicator);
+  bool operator() (T output[], const int input[]) override;
+};
+
 /**
  *  functor returns pointwise phys force acting on a indicated boundary on local lattice
  *  see: Caiazzo, Junk: Boundary Forces in lattice Boltzmann: Analysis of MEA

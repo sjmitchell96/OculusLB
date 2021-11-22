@@ -707,7 +707,10 @@ void WallFunctionBoundaryProcessor3D<T,DESCRIPTOR>::computeFneqRNEBB(Cell<T,DESC
     fneq_bc[iPop] = cell[iPop] - dynamics -> computeEquilibrium(iPop,rho_bc,u_bc,uSqr_bc);
   }
   for (unsigned fIndex=0; fIndex<normalInwardsIndices.size(); ++fIndex) {
-    fneq_bc[normalInwardsIndices[fIndex]] = fneq_bc[DESCRIPTOR::opposite[normalInwardsIndices[fIndex]]];
+
+   
+  fneq_bc[normalInwardsIndices[fIndex]] = fneq_bc[util::opposite<DESCRIPTOR>(normalInwardsIndices[fIndex])];
+
   }
 
   computeRFneqfromFneq(fneq_bc);
