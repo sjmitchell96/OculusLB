@@ -86,7 +86,7 @@ SUBDIRS         := src/boundary \
                    src/particles/forces \
                    src/particles/boundaries \
                    src/utilities \
-				   src/refinement \
+				       src/refinement \
 
 EXAMPLEDIRS     := examples/laminar/bstep2d \
                    examples/laminar/bstep3d \
