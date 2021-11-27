@@ -642,7 +642,7 @@ int main( int argc, char* argv[] ) {
 
   //Characteristics needed by Grid3D
   const Characteristics<T> PhysCharacteristics(
-          physL,
+    physL,
 	  Re*physNu/physL,       //Reference velocity (m/s)
 	  physNu,  //Kinematic viscosity (m2/s)
 	  rho);     //Density (kg/m3)
@@ -661,7 +661,7 @@ int main( int argc, char* argv[] ) {
 
   // Indicator for blade
   IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, span, r1, r2, xp,
-		               theta);
+    theta);
 
   // Construct a background coarse grid
   Grid3D<T,DESCRIPTOR> coarseGrid(
@@ -682,7 +682,9 @@ int main( int argc, char* argv[] ) {
   setupRefinement(coarseGrid, domainOrigin, domainExtend, blade, nRefinement);
 
   // === 3rd Step: Prepare Lattice ===
+  //OLD coarseGrid.forEachGrid(prepareLattice,blade,bouzidiOn);
   coarseGrid.forEachGrid(prepareLattice,blade,bouzidiOn);
+  /*
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() 
 	<< std::endl;
 
@@ -890,4 +892,5 @@ int main( int argc, char* argv[] ) {
   }
   timer.stop();
   timer.printSummary();
+  */
 }
