@@ -1,6 +1,6 @@
 #  This file is part of the OpenLB library
 #
-#  Copyright (C) 2017 Markus Mohrhard
+#  Copyright (C) 2007 Mathias Krause
 #  E-mail contact: info@openlb.net
 #  The most recent release of OpenLB can be downloaded at
 #  <http://www.openlb.net/>
@@ -20,10 +20,11 @@
 #  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 #  Boston, MA  02110-1301, USA.
 
-current_dir := $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 
-include global.mk
-include rules.mk
-include $(addsuffix definitions.mk, $(current_dir))
+###########################################################################
+###########################################################################
+## DEFINITIONS TO BE CHANGED
 
-$(eval $(call sample,$(current_dir)$(OUTPUT),$(addprefix $(current_dir), $(SRC))))
+ROOT            := ../../..
+SRC             := dcaBlade3d.cpp
+OUTPUT          := dcaBlade3d
