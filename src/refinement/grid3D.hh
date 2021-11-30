@@ -388,7 +388,17 @@ Vector<T,3> Grid3D<T,DESCRIPTOR>::alignExtendToGrid(Vector<T,3> extend) const
 	};
 }
 
-template <typename T, typename DESCRIPTOR>
+template<typename T, typename DESCRIPTOR>
+template<typename F, typename... Args>
+void Grid3D<T,DESCRIPTOR>::forEachGrid(F&& f, Args&&... args) {
+	std::forward<decltype(f)>(f)(*this, std::forward<Args>(args)...);
+	for (auto& grid : _fineGrids) {
+		grid->forEachGrid(std::forward<decltype(f)>(f),
+		                  std::forward<Args>(args)...);
+    }
+}
+
+/*foreach old: template <typename T, typename DESCRIPTOR>
 void Grid3D<T,DESCRIPTOR>::forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&)>&& f)
 {
 	f(*this);
@@ -640,7 +650,7 @@ void Grid3D<T,DESCRIPTOR>::forEachGrid(const std::string& id,
 									std::forward<decltype(f)>(f));
 	}
 }
-
+*/
 
 template <typename T, typename DESCRIPTOR>
 Grid3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::locate(Vector<T,3> pos)

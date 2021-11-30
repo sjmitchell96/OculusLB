@@ -131,7 +131,7 @@ public:
 		   Characteristics<T> characteristics,
 		   bool periodicityX,
 		   bool periodicityY,
-		   bool periodicityZ); //sm - constructor for lattice velocity with periodicity
+		   bool periodicityZ); 
 
 	// constructor based on Re
 	Grid3D(FunctorPtr<IndicatorF3D<T>>&& domainF,
@@ -177,6 +177,10 @@ public:
 			bool periodicityX, bool periodicityY, bool periodicityZ,
 			bool addCouplers=true);
 
+    template<typename F, typename ...Args>
+	void forEachGrid(F&& f, Args&&... args);
+
+/* OLD FOREACH
 	// process function f on every grid including the coarse one and fine ones
 	void forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&)>&& f);
 	void forEachGrid(const std::string& id, std::function<void(Grid3D<T,DESCRIPTOR>&,
@@ -289,7 +293,7 @@ public:
 							std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>&,
 							std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>&,
 							int&)>&& f); //SM - version for writing vtk files including time-averaged functors
-
+    */
 
 	/// Returns the finest grid representing a physical position
 	/**

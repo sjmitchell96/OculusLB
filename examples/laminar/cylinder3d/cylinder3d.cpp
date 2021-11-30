@@ -59,7 +59,7 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const int N = 80;        // resolution of the model
+const int N = 10;        // resolution of the model
 const T Re = 20.;       // Reynolds number
 const T maxPhysT = 16.; // max. simulation time in s, SI unit
 

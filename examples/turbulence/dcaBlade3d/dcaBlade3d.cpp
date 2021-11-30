@@ -63,7 +63,7 @@ using namespace std;
 typedef double T;
 
 //Turbulence model choice
-#define WALE
+//#define WALE
 #define Smagorinsky
 
 #ifdef WALE
@@ -683,10 +683,10 @@ int main( int argc, char* argv[] ) {
 
   // === 3rd Step: Prepare Lattice ===
   //OLD coarseGrid.forEachGrid(prepareLattice,blade,bouzidiOn);
-  coarseGrid.forEachGrid(prepareLattice,blade,bouzidiOn);
-  /*
+  coarseGrid.forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&,
+    IndicatorBladeDca3D<T>&, const bool&)>(prepareLattice),blade,bouzidiOn);
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() 
-	<< std::endl;
+	      << std::endl;
 
   //Reference to finest grid containing wing
   Grid3D<T,DESCRIPTOR>& wingGrid = coarseGrid.locate(
@@ -701,7 +701,7 @@ int main( int argc, char* argv[] ) {
     T,DESCRIPTOR>>> wssp;
   std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
   std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
-
+/*
   //Pass functor vectors and create new averaged functors for each grid 
   int i_grid = 0;
   coarseGrid.forEachGrid([&](
