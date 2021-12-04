@@ -679,9 +679,8 @@ bool SuperLatticePhysWallShearStress3D<T, DESCRIPTOR>::operator() (T output[],
 //SM - version for return both shear stress and pressure
 template<typename T, typename DESCRIPTOR>
 SuperLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>::SuperLatticePhysWallShearStressAndPressure3D(
-  SuperLattice3D<T, DESCRIPTOR>& sLattice, SuperGeometry3D<T>& superGeometry,
-  const int material, const UnitConverter<T,DESCRIPTOR>& converter,
-  IndicatorF3D<T>& indicator)
+  SuperLattice3D<T, DESCRIPTOR>& sLattice, const UnitConverter<T,DESCRIPTOR>& converter, SuperGeometry3D<T>& superGeometry,
+  const int material, IndicatorF3D<T>& indicator)
   : SuperLatticePhysF3D<T, DESCRIPTOR>(sLattice, converter, 2),
     _superGeometry(superGeometry), _material(material)
 {

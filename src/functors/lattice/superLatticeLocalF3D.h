@@ -282,8 +282,8 @@ private:
   const int _material;
 public:
   SuperLatticePhysWallShearStressAndPressure3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
-                                    SuperGeometry3D<T>& superGeometry, const int material,
                                     const UnitConverter<T,DESCRIPTOR>& converter,
+                                    SuperGeometry3D<T>& superGeometry, const int material,
                                     IndicatorF3D<T>& indicator);
   bool operator() (T output[], const int input[]) override;
 };

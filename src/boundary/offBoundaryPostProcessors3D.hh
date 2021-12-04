@@ -117,10 +117,10 @@ ZeroVelocityBouzidiLinearPostProcessor3D(int x_, int y_, int z_, int iPop_, T di
   }
 
   
-    std::cout << "ZeroVelocityLinear (" << x << "," << y << "," << z <<
+    /*std::cout << "ZeroVelocityLinear (" << x << "," << y << "," << z <<
       "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," << zN <<
       "), opp: " << opp << ", bP: (" << xB << "," << yB << "," << zB <<
-      "), dist: " << dist << ", q: " << q << std::endl;
+      "), dist: " << dist << ", q: " << q << std::endl;*/
   
 }
 
