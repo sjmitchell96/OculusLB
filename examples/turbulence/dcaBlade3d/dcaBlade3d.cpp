@@ -504,7 +504,9 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   if (iT==0) {
      vtmWriter.createMasterFile();
   }
+
   vtmWriter.write(iT);
+
 }
 
 //2D VTK WRITE
@@ -611,12 +613,12 @@ int main( int argc, char* argv[] ) {
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
-  const int N = 40;        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
+  const int N = 20;        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 2;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
-  const T maxPhysT = 10000000.; // max. simulation time in s, SI unit
+  const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
@@ -631,9 +633,9 @@ int main( int argc, char* argv[] ) {
 
   //Time-loop options
   const int vtkIter   	   = 20; //Every 10% of max physical time
-  const int vtk2DIter      = 20;
+  //const int vtk2DIter      = 20;
   const int statIter  	   = 10;
-  const int checkIter 	   = 1000;
+  const int checkIter 	   = 20;
   const int bladeForceIter = 1;
   const int timeAvgIter    = 1;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
@@ -695,8 +697,7 @@ int main( int argc, char* argv[] ) {
 
   // === 3rd Step: Prepare Lattice ===
   coarseGrid.forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&,
-    IndicatorBladeDca3D<T>&, const bool&)>(prepareLattice),blade,bouzidiOn);
-  
+    IndicatorBladeDca3D<T>&, const bool&)>(prepareLattice),blade,bouzidiOn); 
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() 
 	      << std::endl;
 
@@ -704,241 +705,158 @@ int main( int argc, char* argv[] ) {
   Grid3D<T,DESCRIPTOR>& wingGrid = coarseGrid.locate(
     Vector<T,3>(bladeOrigin[0],bladeOrigin[1],bladeOrigin[2]+span/2.));
 
-  //Instantiate vector of functors for time-averaged quantities
-  std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
-  std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
-  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedVel;
-  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedP;
-  std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
-    T,DESCRIPTOR>>> wssp;
-  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
-  std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
- 
-  //Pass functor vectors and create new averaged functors for each grid 
-  //int i_grid = 0;
-  //coarseGrid.forEachGrid([&](
-  //  Grid3D<T,DESCRIPTOR>& grid,
-  //  std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<
-  //    T,DESCRIPTOR>>>& sVel,
-  //  std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>& sP,
-  //  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedVel,
-  //  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedP,
-  //  std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
-  //    T,DESCRIPTOR>>>& wssp,
-  //  std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSP,
-  //  std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& yPlus,
-  //  IndicatorBladeDca3D<T>& indicatorBlade,
-  //  int& i_grid) {
-  //    auto& sGeometry = grid.getSuperGeometry();
-  //    auto& sLattice = grid.getSuperLattice();
-  //    auto& converter = grid.getConverter();
-  //    sVel.push_back(std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>(
-  //      new SuperLatticePhysVelocity3D<T,DESCRIPTOR>(sLattice, converter)));
-  //    sAveragedVel.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
-  //      new SuperLatticeTimeAveragedF3D<T>(*sVel.back())));
-  //    sP.push_back(std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>(
-  //      new SuperLatticePhysPressure3D<T,DESCRIPTOR>(sLattice, converter)));
-  //    sAveragedP.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
-  //      new SuperLatticeTimeAveragedF3D<T>(*sP.back())));
-  //    wssp.push_back(std::unique_ptr<
-  //      SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>(
-  //        new SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>(
-	//    sLattice, sGeometry, 6, converter, indicatorBlade)));
-  //    yPlus.push_back(std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>(
-  //      new SuperLatticeYplus3D<T,DESCRIPTOR>(sLattice, converter, sGeometry,
-  //        indicatorBlade, 6)));
-  //    sAveragedWSSP.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
-  //      new SuperLatticeTimeAveragedF3D<T>(*wssp.back())));
-  //   i_grid++;}, sVel, sP, sAveragedVel, sAveragedP, wssp, sAveragedWSSP,
-  //  yPlus, blade, i_grid);
+	//Instantiate vector of functors for time-averaged quantities, wall shear stress and wall pressure
+	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
+	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
+	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedVel;
+	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedP;
+	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>> wssp;
+	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
+	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
 
-  auto initialiseVTKfunctors = [] (Grid3D<T,DESCRIPTOR>& grid, int&& funcMode, auto&& funcVec, auto&& funcVec2, auto&& ...args) {
-    auto& sLattice = grid.getSuperLattice();
-    auto& converter = grid.getConverter();
-    auto& sGeometry = grid.getSuperGeometry();
-    typedef typename std::remove_reference<decltype(funcVec)>::
-      type::value_type ptrType;
-    typedef typename ptrType::element_type funcType;
-    switch (funcMode) {
-      case 0:
-        funcVec.push_back(ptrType(new funcType(sLattice,converter, args...)));
-      case 1:
-        funcVec.push_back(ptrType(new funcType(sLattice, converter, sGeometry,
-         args...)));
-      case 2:
-        funcVec.push_back(ptrType(new funcType(*funcVec2.back(), args...)));
-    }
-  };
-  
-//Optional initialisation of vtk results functors
-if(writeVel)
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 0, sVel, 0);
-if(writeP)
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 0, sP, 0);
-if(writeWSSP) 
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 1, wssp, 0, 6, blade);
-if(writeYplus)
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 1, yPlus, 0, blade, 6);
-if(writeVelTA)
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 2, sAveragedVel, sVel);
-if(writePTA) 
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 2, sAveragedP, sP);
-if(writeWSSPTA)
-  coarseGrid.forEachGrid(initialiseVTKfunctors, 2, sAveragedWSSP, wssp);
+	//Pass functor vectors and create new averaged functors for each grid in similar way to 1.4 example
+	int i_grid = 0;
+	coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
+		std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>>& sVel,
+		std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>>& sP,
+		std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedVel,
+		std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedP,
+		std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& wssp,
+		std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSP,
+		std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& yPlus,
+		IndicatorBladeDca3D<T>& indicatorBlade,
+		int& i_grid) {
+			auto& sGeometry = grid.getSuperGeometry();
+			auto& sLattice = grid.getSuperLattice();
+			auto& converter = grid.getConverter();
+			sVel.push_back(std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>(
+				new SuperLatticePhysVelocity3D<T,DESCRIPTOR>(sLattice, converter)));
+			sAveragedVel.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
+			new SuperLatticeTimeAveragedF3D<T>(*sVel.back())));
+			sP.push_back(std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>(
+				new SuperLatticePhysPressure3D<T,DESCRIPTOR>(sLattice, converter)));
+			sAveragedP.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
+			new SuperLatticeTimeAveragedF3D<T>(*sP.back())));
+			wssp.push_back(std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>(
+			new SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>(sLattice,converter, sGeometry,6,indicatorBlade)));
+			yPlus.push_back(std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>(
+			new SuperLatticeYplus3D<T,DESCRIPTOR>(sLattice,converter,sGeometry,indicatorBlade,6)));
+			sAveragedWSSP.push_back(std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>(
+			new SuperLatticeTimeAveragedF3D<T>(*wssp.back())));
+			i_grid++;
+		},sVel, sP, sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus, blade, i_grid);
 
-  /*
+	// === 4th Step: Main Loop with Timer ===
+	clout << "starting simulation..." << endl;
+	Timer<T> timer(
+		coarseGrid.getConverter().getLatticeTime(maxPhysT),
+		coarseGrid.getSuperGeometry().getStatistics().getNvoxel() );
+  	timer.start();
 
-  // === 4th Step: Main Loop with Timer ===
-  clout << "starting simulation..." << endl;
-  Timer<T> timer(coarseGrid.getConverter().getLatticeTime(maxPhysT),
-		 coarseGrid.getSuperGeometry().getStatistics().getNvoxel());
-  timer.start();
+	// Convergence tracer every physical second
+	util::ValueTracer<T> rhoTracer(/*coarseGrid.getConverter().getLatticeTime(0.01)*/1000, 1e-5);
 
-  for ( int iT = 0; iT < 100000; ++iT ) {
-    // Load last checkpoint at startup
-    if (iT == 0) {
-      coarseGrid.forEachGrid("cylinder3D_"+checkpoint,
-		             [&](Grid3D<T,DESCRIPTOR>& grid,
-				 const std::string& id){
-			           grid.getSuperLattice().load(
-				     id+".checkpoint");
-				   clout << checkpoint + " checkpoint loaded."
-				         << std::endl;
-				 });
-    }
+  	for ( int iT = 0; iT < 100000/*coarseGrid.getConverter().getLatticeTime( maxPhysT )*/; ++iT ) {
 
-  // === 6th Step: Collide and Stream Execution ===
-  coarseGrid.collideAndStream();
-
-  // === 7th Step: Computation and Output of the Results ===
-  //Add ensemble to time-averaged functors
-  if ( iT % timeAvgIter == 0) {
-    i_grid = 0;
-    coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
-		       	       std::vector<std::unique_ptr<
-			         SuperLatticeTimeAveragedF3D<T>>>& sAveragedVel,
-			       std::vector<std::unique_ptr<
-			         SuperLatticeTimeAveragedF3D<T>>>& sAveragedP,
-			       std::vector<std::unique_ptr<
-			         SuperLatticeTimeAveragedF3D<
-				   T>>>& sAveragedWSSP,
-			       int& i_grid) {
-			         auto& sLattice = grid.getSuperLattice();
-		                 sLattice.communicate();
-				 sAveragedVel[i_grid]->addEnsemble();
-				 sAveragedP[i_grid]->addEnsemble();
-				 sAveragedWSSP[i_grid]->addEnsemble();
-				 i_grid++;
-				 },
-				 sAveragedVel, sAveragedP, sAveragedWSSP,
-				 i_grid);
-  }
-
-  //Add time-averaged functor vector into getVTK functions
-  if ( iT % vtkIter == 0 ) {
-    i_grid = 0;	
-    coarseGrid.forEachGrid("aerofoil3D", sAveragedVel, sAveragedP, wssp,
-			   sAveragedWSSP, yPlus, i_grid,
-			   [&](Grid3D<T,DESCRIPTOR>& grid,
-		           const std::string& id,
-			   std::vector<
-			     std::unique_ptr<
-			       SuperLatticeTimeAveragedF3D<
-			         T>>>& sAveragedVelVector,
-			   std::vector<std::unique_ptr<
-			     SuperLatticeTimeAveragedF3D<
-			       T>>>& sAveragedPVector,
-			   std::vector<std::unique_ptr<
-			     SuperLatticePhysWallShearStressAndPressure3D<
-			       T,DESCRIPTOR>>>& wsspVector,
-			   std::vector<std::unique_ptr<
-			     SuperLatticeTimeAveragedF3D<
-			       T>>>& sAveragedWSSPVector,
-			   std::vector<std::unique_ptr<SuperLatticeYplus3D<
-			     T,DESCRIPTOR>>>& yPlusVector, int& i_grid){
-			     SuperLatticeTimeAveragedF3D<T>& sAveragedVel = 
-			       *sAveragedVelVector[i_grid]; 
-			     SuperLatticeTimeAveragedF3D<T>& sAveragedP =
-			       *sAveragedPVector[i_grid]; 
-			     SuperLatticePhysWallShearStressAndPressure3D<
-			       T,DESCRIPTOR>& wssp = *wsspVector[i_grid];
-			     SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP =
-			       *sAveragedWSSPVector[i_grid];
-			     SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus =
-			       *yPlusVector[i_grid];
-			     getVTK(grid, id, iT, sAveragedVel, sAveragedP, wssp,
-			            sAveragedWSSP, yPlus);
-			     i_grid++;
-			    });
-      			   clout << "Get results vtk" << endl;
-    }
-
-    if ( iT % vtk2DIter == 0 ) {
+		// Load last checkpoint at startup
+		if (iT == 0) {
       i_grid = 0;
-      coarseGrid.forEachGrid("aerofoil3Dplane1", sAveragedVel, sAveragedP,
-			     wssp, sAveragedWSSP, yPlus, i_grid,
-			     [&](Grid3D<T,DESCRIPTOR>& grid,
-          		     const std::string& id,
-			     std::vector<std::unique_ptr<
-			       SuperLatticeTimeAveragedF3D<
-			         T>>>& sAveragedVelVector,
-			     std::vector<std::unique_ptr<
-			       SuperLatticeTimeAveragedF3D<
-			         T>>>& sAveragedPVector,
-                             std::vector<std::unique_ptr<
-			       SuperLatticePhysWallShearStressAndPressure3D<
-			         T,DESCRIPTOR>>>& wsspVector,
-			     std::vector<std::unique_ptr<
-			       SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSPVector,
-                             std::vector<std::unique_ptr<
-			       SuperLatticeYplus3D<T,DESCRIPTOR>>>& yPlusVector,
-			     int& i_grid){
-                       	       SuperLatticeTimeAveragedF3D<T>& sAveragedVel =
-			         *sAveragedVelVector[i_grid];  
-                       	       SuperLatticeTimeAveragedF3D<T>& sAveragedP =
-			         *sAveragedPVector[i_grid];
-			       SuperLatticePhysWallShearStressAndPressure3D<
-			         T,DESCRIPTOR>& wssp = *wsspVector[i_grid];
-                       	       SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP =
-			         *sAveragedWSSPVector[i_grid];
-			       SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus 
-			         = *yPlusVector[i_grid];
-			       getVTK2D(grid, id, iT, sAveragedVel, sAveragedP,
-					wssp, sAveragedWSSP, yPlus);
-			       i_grid++;
-			       });
-      			       clout << "Get results vtk" << endl;
-    }
+			coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
+				 std::string&& id, int& i_grid)
+					{grid.getSuperLattice().load(id+".checkpoint");
+					 clout << checkpoint + " checkpoint loaded." << std::endl;
+           i_grid++;
+           id = "dcaBlade3d_"+std::to_string(i_grid)+"_"+checkpoint;},"dcaBlade3d_"+std::to_string(i_grid)+"_"+checkpoint, i_grid);
+		}
 
-    // Save checkpoint
-    if ( (iT % checkIter == 0) && (iT != 0)) {
-      if (iT % (2 * checkIter) == 0) {
-        coarseGrid.forEachGrid("cylinder3D_even", [&](
-			       Grid3D<T,DESCRIPTOR>& grid,
-			       const std::string& id){ 
-			         grid.getSuperLattice().save(id+".checkpoint");
-				 clout << "Even checkpoint saved." 
-				       << std::endl;});
-       }
-       else {
-         coarseGrid.forEachGrid("cylinder3D_odd", [&](
-				Grid3D<T,DESCRIPTOR>& grid,
-				const std::string& id){ 
-			          grid.getSuperLattice().save(id+".checkpoint");
-				  clout << "Odd checkpoint saved." 
-				        << std::endl;});
-	    }
-    }
-    if ( iT % statIter == 0 ){ 
-      getStats(coarseGrid, iT, timer);
-      clout << "Get results stats" << endl;
-    }
+    		// === 6th Step: Collide and Stream Execution ===
+    		coarseGrid.collideAndStream();
 
-    if (iT % bladeForceIter == 0) {
-      getBladeForce(wingGrid,bladeForceFile,blade);
-    }
+    		// === 7th Step: Computation and Output of the Results ===
+
+		//Add ensemble to time-averaged functors
+		if ( iT % timeAvgIter == 0) {
+			i_grid = 0;
+			coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
+		       		std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedVel,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedP,
+				std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSP,
+				int& i_grid) {
+					auto& sLattice = grid.getSuperLattice();
+		                	sLattice.communicate();
+					sAveragedVel[i_grid]->addEnsemble();
+					sAveragedP[i_grid]->addEnsemble();
+					sAveragedWSSP[i_grid]->addEnsemble();
+					i_grid++;
+				},sAveragedVel, sAveragedP, sAveragedWSSP, i_grid);
+		}
+
+		//Add time-averaged functor vector into getVTK functions
+    		if ( iT % vtkIter == 0 ) {
+			i_grid = 0;	
+      			coarseGrid.forEachGrid(
+						[&](Grid3D<T,DESCRIPTOR>& grid,
+          					std::string&& id,
+						std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedVelVector,
+						std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedPVector,
+						std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>>& wsspVector,
+						std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>>& sAveragedWSSPVector,
+
+						std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>>& yPlusVector,
+
+						int& i_grid){
+							SuperLatticeTimeAveragedF3D<T>& sAveragedVel = *sAveragedVelVector[i_grid]; 
+							SuperLatticeTimeAveragedF3D<T>& sAveragedP = *sAveragedPVector[i_grid]; 
+							SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp= *wsspVector[i_grid];
+							SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
+							SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus = *yPlusVector[i_grid];
+							getVTK(grid, id, iT, sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus);
+							i_grid++;
+              id = "dcaBlade3d_"+std::to_string(i_grid);
+							},"dcaBlade3d_"+std::to_string(i_grid),sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus, i_grid);
+      						clout << "Get results vtk" << endl;
+		}
+
+		// Save checkpoint
+		if ( (iT % checkIter == 0) && (iT != 0)) {
+			if (iT % (2 * checkIter) == 0) {
+        i_grid = 0;
+				coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
+					std::string&& id, int& i_grid)
+					{grid.getSuperLattice().save(id+".checkpoint");
+					 clout << "Even checkpoint saved." << std::endl;
+           i_grid++;
+           id = "dcaBlade3d"+std::to_string(i_grid)+"_even";}, "dcaBlade3d_"+std::to_string(i_grid)+"_even", i_grid);
+			}
+			else {
+        i_grid = 0;
+				coarseGrid.forEachGrid([&](Grid3D<T,DESCRIPTOR>& grid,
+					std::string&& id, int& i_grid)
+					{grid.getSuperLattice().save(id+".checkpoint");
+					 clout << "Odd checkpoint saved." << std::endl;
+           i_grid++;
+           id = "dcaBlade3d"+std::to_string(i_grid)+"_odd";}, "dcaBlade3d"+std::to_string(i_grid)+"_odd", i_grid);
+			}
+		}
+
+		if ( iT % statIter == 0 ){ 
+			getStats(coarseGrid, iT, timer);
+			clout << "Get results stats" << endl;
+   		}
+
+		if (iT % bladeForceIter == 0) {
+			getBladeForce(wingGrid,bladeForceFile,blade);
+		}
+
   }
-  timer.stop();
-  timer.printSummary();
-  */
+	timer.stop();
+	timer.printSummary();
 }
+
+
+
+
+
+
+
+
