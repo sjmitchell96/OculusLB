@@ -1,2 +1,6 @@
 build/
 .vscode/
+examples/turbulence/dcaBlade3d/dcaBlade3d.o
+examples/turbulence/dcaBlade3d/dcaBlade3d.d
+examples/turbulence/dcaBlade3d/dcaBlade3d
+examples/turbulence/dcaBlade3d/.tmpfile
