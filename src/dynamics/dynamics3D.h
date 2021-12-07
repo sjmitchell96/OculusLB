@@ -38,6 +38,7 @@
 #include "freeEnergyDynamics.h"
 #include "freeEnergyPostProcessor3D.h"
 #include "interactionPotential.h"
+#include "kbcDynamics.h"
 #include "latticeDescriptors.h"
 #include "mrtDynamics.h"
 #include "mrtLatticeDescriptors.h"
