@@ -57,10 +57,7 @@ private:
   //Some methods here for computing other collision parameters?
 
   T beta; ///Relaxation parameter
-}
-
-
+};
 
 }
-
 #endif
