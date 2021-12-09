@@ -60,7 +60,7 @@ void KBCdynamics<T, DESCRIPTOR>::collide(
   //Compute rho, u
   T rho, u[DESCRIPTOR::d];
   *this -> _momenta.computeRhoU(cell, rho, u);
-  T uSqr = kbcLbh::kbcCollision(cell, rho, u, _beta);
+  T uSqr = kbcLbh::kbcCollision(cell, rho, u);
 
   //In helper instead ...
   //T uSqr = util::normSqr<T,L::d>(u);

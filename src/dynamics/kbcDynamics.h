@@ -45,8 +45,8 @@ public:
   /// Constructor
   KBCdynamics(T beta, Momenta<T, DESCRIPTOR>& momenta);
   /// Compute equilibrium distribution 
-  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr)
-    const override;
+  //T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr)
+  //  const override;
   /// Collision
   void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics);
   /// Get local relaxation parameter 
