@@ -55,7 +55,8 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-#define DESCRIPTOR D3Q19<>
+//#define DESCRIPTOR D3Q19<>
+#define DESCRIPTOR D3Q27descriptorKBC
 
 
 // Parameters for the simulation setup
@@ -209,7 +210,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   vtmWriter.addFunctor( pressure );
   vtmWriter.addFunctor( yPlus );
 
-  const int vtkIter  = converter.getLatticeTime( .3 );
+  const int vtkIter  = converter.getLatticeTime( .01 );
   const int statIter = converter.getLatticeTime( .1 );
 
   if ( iT==0 ) {
@@ -225,13 +226,13 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   }
 
   // Writes the vtk files
-  if ( iT%vtkIter == 0 ) {
+  if ( iT%1/*vtkIter*/ == 0 ) {
     vtmWriter.write( iT );
 
-    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+  //  SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+  //  BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
     // write output as JPEG
-    heatmap::write(planeReduction, iT);
+  //  heatmap::write(planeReduction, iT);
   }
 
   // Writes output on the console
@@ -329,12 +330,13 @@ int main( int argc, char* argv[] ) {
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
-  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  //BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  KBCdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   // choose between local and non-local boundary condition
   sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
-  createInterpBoundaryCondition3D<T,DESCRIPTOR>( sBoundaryCondition );
-  // createLocalBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
+  //createInterpBoundaryCondition3D<T,DESCRIPTOR>( sBoundaryCondition );
+  createLocalBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
 
   sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
   createBouzidiBoundaryCondition3D<T, DESCRIPTOR> ( sOffBoundaryCondition );
@@ -356,6 +358,7 @@ int main( int argc, char* argv[] ) {
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, converter, iT, superGeometry, timer, stlReader );
+
   }
 
   timer.stop();

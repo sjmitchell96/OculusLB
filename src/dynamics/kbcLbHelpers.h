@@ -39,8 +39,14 @@ struct kbcLbHelpers {
     std::is_same<typename DESCRIPTOR::category_tag, descriptors::tag::KBC>::value,
     "DESCRIPTOR is tagged as KBC");
 
-  static T kbcCollision(Cell<T, DESCRIPTOR>& cell, T rho, T u);
+  static void computeFeq ( T fEq[DESCRIPTOR::q], T rho, const T u[DESCRIPTOR::d]); 
+
+  static void computeFneq ( Cell<T,DESCRIPTOR> const& cell,
+                            T fNeq[DESCRIPTOR::q], T rho, const T u[DESCRIPTOR::d]);
+
+  static T kbcCollision(Cell<T, DESCRIPTOR>& cell, T rho, T u[DESCRIPTOR::d], const T& beta);
   //Only D3Q27 specialisation implemented currently - see kbcLbHelpersD3Q27.h    
+
   
 
 
@@ -64,9 +70,10 @@ struct kbcLbHelpers {
     //
   
 
-}
+};
 
+} //namespace olb
 
-}
+#include "kbcLbHelpersD3Q27.h"
 
 #endif

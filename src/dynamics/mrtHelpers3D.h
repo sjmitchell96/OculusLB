@@ -31,8 +31,6 @@
 
 namespace olb {
 
- 
-
 // Efficient specialization for D3Q19 lattice
 template<typename T>
 struct mrtHelpers<T, descriptors::MRTD3Q19Descriptor> {

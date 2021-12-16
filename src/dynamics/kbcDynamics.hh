@@ -33,22 +33,30 @@
 #include "kbcDynamics.h"
 #include "kbcLbHelpers.h"
 
+namespace olb {
+
 //==============================================================================//
 /////////////////////////// Class KBCdynamics ///////////////////////////////
 //==============================================================================//
 
 template<typename T, typename DESCRIPTOR>
 KBCdynamics<T, DESCRIPTOR>::KBCdynamics(
-  T beta_, Momenta<T, DESCRIPTOR>& momenta)
+  T omega, Momenta<T, DESCRIPTOR>& momenta)
   : BasicDynamics<T, DESCRIPTOR>(momenta),
-    _beta(beta)
+    _omega(omega), _beta(0.5 * omega)
 { }
 
+//template<typename T, typename DESCRIPTOR>
+//T KBCdynamics<T, DESCRIPTOR>::computeEquilibrium(
+//  int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+//{
+//  return kbcLbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u);
+//}
+
 template<typename T, typename DESCRIPTOR>
-T KBCdynamics<T, DESCRIPTOR>::computeEquilibrium(
-  int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
+T KBCdynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
 {
-  return kbcLbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u);
+  return kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -59,8 +67,25 @@ void KBCdynamics<T, DESCRIPTOR>::collide(
 
   //Compute rho, u
   T rho, u[DESCRIPTOR::d];
-  *this -> _momenta.computeRhoU(cell, rho, u);
-  T uSqr = kbcLbh::kbcCollision(cell, rho, u);
+  this -> _momenta.computeRhoU(cell, rho, u);
+
+ //std::cout << "--------------------" << std::endl;
+  //std::cout << "RHO BEFORE KBC COLLIDE " << rho << std::endl;
+  //std::cout << "UX BEFORE KBC COLLIDE " << u[0] << std::endl;
+  //std::cout << "UY BEFORE KBC COLLIDE " << u[1] << std::endl;
+  //std::cout << "UZ BEFORE KBC COLLIDE " << u[2] << std::endl;
+
+  T uSqr = kbcLbH::kbcCollision(cell, rho, u, _beta);
+
+  //T rhoDummy, uDummy[DESCRIPTOR::d];
+  //this -> _momenta.computeRhoU(cell, rhoDummy, uDummy);
+
+  //std::cout << "RHO AFTER KBC COLLIDE " << rhoDummy << std::endl;
+  //std::cout << "UX AFTER KBC COLLIDE " << uDummy[0] << std::endl;
+  //std::cout << "UY AFTER KBC COLLIDE " << uDummy[1] << std::endl;
+  //std::cout << "UZ AFTER KBC COLLIDE " << uDummy[2] << std::endl;
+
+  //std::cout << "--------------------" << std::endl;
 
   //In helper instead ...
   //T uSqr = util::normSqr<T,L::d>(u);
@@ -78,15 +103,17 @@ void KBCdynamics<T, DESCRIPTOR>::collide(
 }
 
 template<typename T, typename DESCRIPTOR>
-T KBCdynamics<T, DESCRIPTOR>::getBeta() const
+T KBCdynamics<T, DESCRIPTOR>::getOmega() const
 {
-  return _beta;
+  return _omega;
 }
 
 template<typename T, typename DESCRIPTOR>
-void KBCdynamics<T, DESCRIPTOR>::setBeta(T beta) 
+void KBCdynamics<T, DESCRIPTOR>::setOmega(T omega) 
 {
-  _beta = beta;
+  _omega = omega;
 }
+
+} //namespace
 
 #endif

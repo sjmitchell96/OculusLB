@@ -43,20 +43,20 @@ template <typename T, typename DESCRIPTOR>
 class KBCdynamics : public BasicDynamics<T, DESCRIPTOR> {
 public:
   /// Constructor
-  KBCdynamics(T beta, Momenta<T, DESCRIPTOR>& momenta);
+  KBCdynamics(T omega, Momenta<T, DESCRIPTOR>& momenta);
   /// Compute equilibrium distribution 
-  //T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr)
-  //  const override;
+  T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
   /// Collision
   void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics);
   /// Get local relaxation parameter 
-  T getBeta() const;
+  T getOmega() const override;
   /// Set local relaxation parameter
-  void setBeta(T beta);
+  void setOmega(T omega) override;
 private:
   //Some methods here for computing other collision parameters?
 
-  T _beta; ///Relaxation parameter
+  T _omega; ///Relaxation parameter
+  T _beta; //Relaxation parameter in EMRT form
 };
 
 }
