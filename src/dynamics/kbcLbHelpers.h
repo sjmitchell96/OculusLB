@@ -29,6 +29,7 @@
 #ifndef KBC_LB_HELPERS_H
 #define KBC_LB_HELPERS_H
 
+#include <cmath>
 #include "kbcLatticeDescriptors.h"
 
 namespace olb {
@@ -39,36 +40,12 @@ struct kbcLbHelpers {
     std::is_same<typename DESCRIPTOR::category_tag, descriptors::tag::KBC>::value,
     "DESCRIPTOR is tagged as KBC");
 
-  static void computeFeq ( T fEq[DESCRIPTOR::q], T rho, const T u[DESCRIPTOR::d]); 
+  static T equilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], const T uSqr);
 
-  static void computeFneq ( Cell<T,DESCRIPTOR> const& cell,
-                            T fNeq[DESCRIPTOR::q], T rho, const T u[DESCRIPTOR::d]);
+  static void computeFneq(Cell<T,DESCRIPTOR> const& cell, T fNeq[DESCRIPTOR::q], T rho, const T u[DESCRIPTOR::d]);
 
   static T kbcCollision(Cell<T, DESCRIPTOR>& cell, T rho, T u[DESCRIPTOR::d], const T& beta);
   //Only D3Q27 specialisation implemented currently - see kbcLbHelpersD3Q27.h    
-
-  
-
-
-  //general templates ... not optimised ... for loops etc. - delibaretely leave empty for now?? (use specialised only...)
-  // Or maybe just one big specialised collision method here for d3q27 - don't even bother with seperate Eq, gamma functions ??? - decide tmrw
-  // Probably go with above - avoid generalisation as don't need! - leave general collision function empty and go straight to inline specialisation??
-
-  //computeEquilibrium (rho, u, uSqr)
-  //static void computeEquilibrium(T fEq[DESCRIPTOR::q], T rho, T u, T uSqr) 
-  //{
-  
-
-  //}  
-  //computeGamma(rho, u)
-
-
-
-  //Collision (cell, rho, u) - One big specialised function for d3q27 (in kbcLbHelpers3D.h), and leave this default empty for now?
-    //compute feq (rho, u)
-    //compute gamma (rho, u)
-    //
-  
 
 };
 

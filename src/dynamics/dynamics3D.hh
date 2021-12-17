@@ -37,6 +37,7 @@
 #include "freeEnergyPostProcessor3D.hh"
 #include "interactionPotential.hh"
 #include "kbcDynamics.hh" 
+#include "kbcMomenta.hh"
 #include "mrtDynamics.hh"
 //#include "mrtLatticeDescriptors.hh"
 #include "navierStokesAdvectionDiffusionCouplingPostProcessor3D.hh"

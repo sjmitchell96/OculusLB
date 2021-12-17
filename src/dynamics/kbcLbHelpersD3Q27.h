@@ -34,15 +34,35 @@
 namespace olb {
 
 // Efficient specialisation for D3Q27 lattice
-
 template<typename T>
 struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
+
+  static T equilibrium(int iPop, T rho, const T u[3], const T uSqr)
+  {
+    typedef descriptors::D3Q27descriptorKBC L;
+
+    return rho * descriptors::t<T,L>(iPop) * (2. - sqrt(1. + 3. * u[0] * u[0])) *
+           (2. - sqrt(1. + 3. * u[1] * u[1])) * (2. - sqrt(1. + 3. * u[2] * u[2])) *
+           pow((2. * u[0] + sqrt(1. + 3. * u[0] * u[0])) / (1. - u[0]), descriptors::c<L>(iPop,0)) *
+           pow((2. * u[1] + sqrt(1. + 3. * u[1] * u[1])) / (1. - u[1]), descriptors::c<L>(iPop,1)) *
+           pow((2. * u[2] + sqrt(1. + 3. * u[2] * u[2])) / (1. - u[2]), descriptors::c<L>(iPop,2))
+           - descriptors::t<T,L>(iPop);
+  }
+
+  static void computeFneq (
+    Cell<T, descriptors::D3Q27descriptorKBC>& cell, T fNeq[27], T rho, const T u[3] )
+  {
+    const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
+    for (int iPop=0; iPop < 27; ++iPop) {
+      fNeq[iPop] = cell[iPop] - equilibrium(iPop, rho, u, uSqr);
+    }
+  }
 
   static T kbcCollision(Cell<T, descriptors::D3Q27descriptorKBC>& cell, T rho, T u[3], const T& beta) {
 
   typedef descriptors::D3Q27descriptorKBC L;
    
-  //std::cout << "SPECIAL KBC COLLIDE" << std::endl;
+//  std::cout << "SPECIALIZED KBC COLLIDE" << std::endl;
 
   //Compute feq
     //Subexpressions
@@ -191,64 +211,60 @@ struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
   T ds21 = ds8;
   T ds22 = ds9;
 
-  T dh[27];
-  dh[0] = df[0];
-  dh[1] = df[1] - ds1; 
-  dh[2] = df[2] - ds2; 
-  dh[3] = df[3] - ds3; 
-  dh[4] = df[4] - ds4; 
-  dh[5] = df[5] - ds5; 
-  dh[6] = df[6] - ds6; 
-  dh[7] = df[7] - ds7; 
-  dh[8] = df[8] - ds8; 
-  dh[9] = df[9] - ds9; 
-  dh[10] = df[10];
-  dh[11] = df[11];
-  dh[12] = df[12];
-  dh[13] = df[13];
-  dh[14] = df[14] - ds14; 
-  dh[15] = df[15] - ds15; 
-  dh[16] = df[16] - ds16; 
-  dh[17] = df[17] - ds17; 
-  dh[18] = df[18] - ds18; 
-  dh[19] = df[19] - ds19; 
-  dh[20] = df[20] - ds20; 
-  dh[21] = df[21] - ds21; 
-  dh[22] = df[22] - ds22; 
-  dh[23] = df[23];
-  dh[24] = df[24];
-  dh[25] = df[25];
-  dh[26] = df[26];
+//std :: cout << "df" << df[0] << " " << df[5] << " " << df[10] << " " << df[15] << " " << df[20] << " " << df[25] << std::endl;
+//std :: cout << "ds" << ds5 << " " << ds15 << " " << ds20 << std::endl;
+
+T dh1 = df[1] - ds1; 
+T dh2 = df[2] - ds2; 
+T dh3 = df[3] - ds3; 
+T dh4 = df[4] - ds4; 
+T dh5 = df[5] - ds5; 
+T dh6 = df[6] - ds6; 
+T dh7 = df[7] - ds7; 
+T dh8 = df[8] - ds8; 
+T dh9 = df[9] - ds9; 
+T dh14 = df[14] - ds14; 
+T dh15 = df[15] - ds15; 
+T dh16 = df[16] - ds16; 
+T dh17 = df[17] - ds17; 
+T dh18 = df[18] - ds18; 
+T dh19 = df[19] - ds19; 
+T dh20 = df[20] - ds20; 
+T dh21 = df[21] - ds21; 
+T dh22 = df[22] - ds22; 
+
 
   //Stabiliser (gamma)
   T dhInvFeq[27];
-  dhInvFeq[0] = dh[0] /fEq[0]; 
-  dhInvFeq[1] = dh[1] /fEq[1]; 
-  dhInvFeq[2] = dh[2] /fEq[2]; 
-  dhInvFeq[3] = dh[3] /fEq[3]; 
-  dhInvFeq[4] = dh[4] /fEq[4]; 
-  dhInvFeq[5] = dh[5] /fEq[5]; 
-  dhInvFeq[6] = dh[6] /fEq[6]; 
-  dhInvFeq[7] = dh[7] /fEq[7]; 
-  dhInvFeq[8] = dh[8] /fEq[8]; 
-  dhInvFeq[9] = dh[9] /fEq[9]; 
-  dhInvFeq[10] = dh[10] /fEq[10]; 
-  dhInvFeq[11] = dh[11] /fEq[11]; 
-  dhInvFeq[12] = dh[12] /fEq[12]; 
-  dhInvFeq[13] = dh[13] /fEq[13]; 
-  dhInvFeq[14] = dh[14] /fEq[14]; 
-  dhInvFeq[15] = dh[15] /fEq[15]; 
-  dhInvFeq[16] = dh[16] /fEq[16]; 
-  dhInvFeq[17] = dh[17] /fEq[17]; 
-  dhInvFeq[18] = dh[18] /fEq[18]; 
-  dhInvFeq[19] = dh[19] /fEq[19]; 
-  dhInvFeq[20] = dh[20] /fEq[20]; 
-  dhInvFeq[21] = dh[21] /fEq[21]; 
-  dhInvFeq[22] = dh[22] /fEq[22]; 
-  dhInvFeq[23] = dh[23] /fEq[23]; 
-  dhInvFeq[24] = dh[24] /fEq[24]; 
-  dhInvFeq[25] = dh[25] /fEq[25]; 
-  dhInvFeq[26] = dh[26] /fEq[26]; 
+  dhInvFeq[0] = df[0] /fEq[0]; 
+  dhInvFeq[1] = dh1 /fEq[1]; 
+  dhInvFeq[2] = dh2 /fEq[2]; 
+  dhInvFeq[3] = dh3 /fEq[3]; 
+  dhInvFeq[4] = dh4 /fEq[4]; 
+  dhInvFeq[5] = dh5 /fEq[5]; 
+  dhInvFeq[6] = dh6 /fEq[6]; 
+  dhInvFeq[7] = dh7 /fEq[7]; 
+  dhInvFeq[8] = dh8 /fEq[8]; 
+  dhInvFeq[9] = dh9 /fEq[9]; 
+  dhInvFeq[10] = df[10] /fEq[10]; 
+  dhInvFeq[11] = df[11] /fEq[11]; 
+  dhInvFeq[12] = df[12] /fEq[12]; 
+  dhInvFeq[13] = df[13] /fEq[13]; 
+  dhInvFeq[14] = dh14 /fEq[14]; 
+  dhInvFeq[15] = dh15 /fEq[15]; 
+  dhInvFeq[16] = dh16 /fEq[16]; 
+  dhInvFeq[17] = dh17 /fEq[17]; 
+  dhInvFeq[18] = dh18 /fEq[18]; 
+  dhInvFeq[19] = dh19 /fEq[19]; 
+  dhInvFeq[20] = dh20 /fEq[20]; 
+  dhInvFeq[21] = dh21 /fEq[21]; 
+  dhInvFeq[22] = dh22 /fEq[22]; 
+  dhInvFeq[23] = df[23] /fEq[23]; 
+  dhInvFeq[24] = df[24] /fEq[24]; 
+  dhInvFeq[25] = df[25] /fEq[25]; 
+  dhInvFeq[26] = df[26] /fEq[26]; 
+
+//  std :: cout << "dh" << dh[0] << " " << dh[5] << " " << dh[10] << " " << dh[15] << " " << dh[20] << " " << dh[25] << std::endl;
 
   T entProd1 = ds1 * dhInvFeq[1] + ds2 * dhInvFeq[2] +
                ds3 * dhInvFeq[3] + ds4 * dhInvFeq[4] + ds5 * dhInvFeq[5] +
@@ -259,56 +275,64 @@ struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
                ds18 * dhInvFeq[18] + ds19 * dhInvFeq[19] + ds20 * dhInvFeq[20] +
                ds21 * dhInvFeq[21] + ds22 * dhInvFeq[22];
 
-  T entProd2 = dh[0] * dhInvFeq[0] + dh[1] * dhInvFeq[1] + dh[2] * dhInvFeq[2] +
-               dh[3] * dhInvFeq[3] + dh[4] * dhInvFeq[4] + dh[5] * dhInvFeq[5] +
-               dh[6] * dhInvFeq[6] + dh[7] * dhInvFeq[7] + dh[8] * dhInvFeq[8] +
-               dh[9] * dhInvFeq[9] + dh[10] * dhInvFeq[10] + dh[11] * dhInvFeq[11] +
-               dh[12] * dhInvFeq[12] + dh[13] * dhInvFeq[13] + dh[14] * dhInvFeq[14] +
-               dh[15] * dhInvFeq[15] + dh[16] * dhInvFeq[16] + dh[17] * dhInvFeq[17] +
-               dh[18] * dhInvFeq[18] + dh[19] * dhInvFeq[19] + dh[20] * dhInvFeq[20] +
-               dh[21] * dhInvFeq[21] + dh[22] * dhInvFeq[22] + dh[23] * dhInvFeq[23] +
-               dh[24] * dhInvFeq[24] + dh[25] * dhInvFeq[25] + dh[26] * dhInvFeq[26];
-
-  T invBeta = 1. / beta;
+  T entProd2 = df[0] * dhInvFeq[0] + dh1 * dhInvFeq[1] + dh2 * dhInvFeq[2] +
+               dh3 * dhInvFeq[3] + dh4 * dhInvFeq[4] + dh5 * dhInvFeq[5] +
+               dh6 * dhInvFeq[6] + dh7 * dhInvFeq[7] + dh8 * dhInvFeq[8] +
+               dh9 * dhInvFeq[9] + df[10] * dhInvFeq[10] + df[11] * dhInvFeq[11] +
+               df[12] * dhInvFeq[12] + df[13] * dhInvFeq[13] + dh14 * dhInvFeq[14] +
+               dh15 * dhInvFeq[15] + dh16 * dhInvFeq[16] + dh17 * dhInvFeq[17] +
+               dh18 * dhInvFeq[18] + dh19 * dhInvFeq[19] + dh20 * dhInvFeq[20] +
+               dh21 * dhInvFeq[21] + dh22 * dhInvFeq[22] + df[23] * dhInvFeq[23] +
+               df[24] * dhInvFeq[24] + df[25] * dhInvFeq[25] + df[26] * dhInvFeq[26];
   
-  T gamma = invBeta - (2. - invBeta) * (entProd1 / entProd2);
-  //std::cout << "gamma" << gamma << std::endl;
+  if (entProd2 != 0) {
 
-  //Collide
-  cell[0] -= beta * (gamma * dh[0]);
-  cell[1] -= beta * (2. * ds1 + gamma * dh[1]);
-  cell[2] -= beta * (2. * ds2 + gamma * dh[2]);
-  cell[3] -= beta * (2. * ds3 + gamma * dh[3]);
-  cell[4] -= beta * (2. * ds4 + gamma * dh[4]);
-  cell[5] -= beta * (2. * ds5 + gamma * dh[5]);
-  cell[6] -= beta * (2. * ds6 + gamma * dh[6]);
-  cell[7] -= beta * (2. * ds7 + gamma * dh[7]);
-  cell[8] -= beta * (2. * ds8 + gamma * dh[8]);
-  cell[9] -= beta * (2. * ds9 + gamma * dh[9]);
-  cell[10] -= beta * (gamma * dh[10]);
-  cell[11] -= beta * (gamma * dh[11]);
-  cell[12] -= beta * (gamma * dh[12]);
-  cell[13] -= beta * (gamma * dh[13]);
-  cell[14] -= beta * (2. * ds14 + gamma * dh[14]);
-  cell[15] -= beta * (2. * ds15 + gamma * dh[15]);
-  cell[16] -= beta * (2. * ds16 + gamma * dh[16]);
-  cell[17] -= beta * (2. * ds17 + gamma * dh[17]);
-  cell[18] -= beta * (2. * ds18 + gamma * dh[18]);
-  cell[19] -= beta * (2. * ds19 + gamma * dh[19]);
-  cell[20] -= beta * (2. * ds20 + gamma * dh[20]);
-  cell[21] -= beta * (2. * ds21 + gamma * dh[21]);
-  cell[22] -= beta * (2. * ds22 + gamma * dh[22]);
-  cell[23] -= beta * (gamma * dh[23]);
-  cell[24] -= beta * (gamma * dh[24]);
-  cell[25] -= beta * (gamma * dh[25]);
-  cell[26] -= beta * (gamma * dh[26]);
+    T invBeta = 1. / beta;
+  
+    T gamma = invBeta - (2. - invBeta) * (entProd1 / entProd2);
+
+//    std::cout << "beta" << beta << std::endl;
+//    std::cout << "gamma" << gamma << std::endl;
+
+    //Collide
+    cell[0] -= beta * (gamma * df[0]);
+    cell[1] -= beta * (2. * ds1 + gamma * dh1);
+    cell[2] -= beta * (2. * ds2 + gamma * dh2);
+    cell[3] -= beta * (2. * ds3 + gamma * dh3);
+    cell[4] -= beta * (2. * ds4 + gamma * dh4);
+    cell[5] -= beta * (2. * ds5 + gamma * dh5);
+    cell[6] -= beta * (2. * ds6 + gamma * dh6);
+    cell[7] -= beta * (2. * ds7 + gamma * dh7);
+    cell[8] -= beta * (2. * ds8 + gamma * dh8);
+    cell[9] -= beta * (2. * ds9 + gamma * dh9);
+    cell[10] -= beta * (gamma * df[10]);
+    cell[11] -= beta * (gamma * df[11]);
+    cell[12] -= beta * (gamma * df[12]);
+    cell[13] -= beta * (gamma * df[13]);
+    cell[14] -= beta * (2. * ds14 + gamma * dh14);
+    cell[15] -= beta * (2. * ds15 + gamma * dh15);
+    cell[16] -= beta * (2. * ds16 + gamma * dh16);
+    cell[17] -= beta * (2. * ds17 + gamma * dh17);
+    cell[18] -= beta * (2. * ds18 + gamma * dh18);
+    cell[19] -= beta * (2. * ds19 + gamma * dh19);
+    cell[20] -= beta * (2. * ds20 + gamma * dh20);
+    cell[21] -= beta * (2. * ds21 + gamma * dh21);
+    cell[22] -= beta * (2. * ds22 + gamma * dh22);
+    cell[23] -= beta * (gamma * df[23]);
+    cell[24] -= beta * (gamma * df[24]);
+    cell[25] -= beta * (gamma * df[25]);
+    cell[26] -= beta * (gamma * df[26]);
+
+//    std::cout << "SPECIALIZED COLLISION END" << std::endl;
+  }
 
   T uSqr = util::normSqr<T,3>(u);
   return uSqr;
   }
 
-}; //struct
 
+
+}; //struct
 
 } //namespace olb
 

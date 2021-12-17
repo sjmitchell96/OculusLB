@@ -85,11 +85,11 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineRho(Cell<T,DESCRIPTOR>& cell, T rho)
   T oldRho, u[DESCRIPTOR::d];
   computeRhoU(cell, oldRho, u);
   T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
-  T fNeq[DESCRIPTOR::q], fEq[DESCRIPTOR::q];
+  T fNeq[DESCRIPTOR::q];
   kbcLbHelpers<T,DESCRIPTOR>::computeFneq(cell, fNeq, oldRho, u);
-  kbcLbHelpers<T,DESCRIPTOR>::computeFeq(fEq, rho, u);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = fEq[iPop] + fNeq[iPop];
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
+                 fNeq[iPop];
   }
 }
 
@@ -101,11 +101,11 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineU (
   T rho, oldU[DESCRIPTOR::d];
   computeRhoU(cell, rho, oldU);
   T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
-  T fNeq[DESCRIPTOR::q], fEq[DESCRIPTOR::q];
+  T fNeq[DESCRIPTOR::q];
   kbcLbHelpers<T,DESCRIPTOR>::computeFneq(cell, fNeq, rho, oldU);
-  kbcLbHelpers<T,DESCRIPTOR>::computeFeq(fEq, rho, u);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = fEq[iPop] + fNeq[iPop];
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
+                 fNeq[iPop];
   }
 
 }
@@ -118,15 +118,15 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineRhoU (
   T oldRho, oldU[DESCRIPTOR::d];
   computeRhoU(cell, oldRho, oldU);
   T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
-  T fNeq[DESCRIPTOR::q], fEq[DESCRIPTOR::q];
+  T fNeq[DESCRIPTOR::q];
   kbcLbHelpers<T,DESCRIPTOR>::computeFneq(cell, fNeq, oldRho, oldU);
-  kbcLbHelpers<T,DESCRIPTOR>::computeFeq(fEq, rho, u);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = fEq[iPop] + fNeq[iPop];
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
+                 fNeq[iPop];
   }
 }
 
-//Not updated for KBC yet
+//Not modified for KBC yet
 template<typename T, typename DESCRIPTOR>
 void KBCBulkMomenta<T,DESCRIPTOR>::defineAllMomenta (
   Cell<T,DESCRIPTOR>& cell,
@@ -139,6 +139,19 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineAllMomenta (
                  firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
   }
 }
+
+/////////////// Singletons //////////////////////////////////
+
+namespace instances {
+
+template<typename T, typename DESCRIPTOR>
+KBCBulkMomenta<T,DESCRIPTOR>& getKBCBulkMomenta()
+{
+  static KBCBulkMomenta<T,DESCRIPTOR> bulkMomentaSingleton;
+  return bulkMomentaSingleton;
+}
+}
+
 
 }
 

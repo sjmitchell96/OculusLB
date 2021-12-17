@@ -40,6 +40,7 @@
 #include "interactionPotential.h"
 #include "kbcDynamics.h"
 #include "kbcLatticeDescriptors.h"
+#include "kbcMomenta.h"
 #include "latticeDescriptors.h"
 #include "mrtDynamics.h"
 #include "mrtLatticeDescriptors.h"

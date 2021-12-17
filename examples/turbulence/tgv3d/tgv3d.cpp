@@ -58,11 +58,11 @@ typedef double T;
 // Choose your turbulent model of choice
 //#define RLB
 //#define Smagorinsky
-//#define WALE
+#define WALE
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
-#define DNS
+//#define DNS
 
 #define finiteDiff //for N<256
 
@@ -72,7 +72,8 @@ typedef double T;
 #define DESCRIPTOR WALED3Q19Descriptor
 #else
 //#define DESCRIPTOR D3Q19<>
-#define DESCRIPTOR D3Q27descriptorKBC
+#define DESCRIPTOR D3Q27<>
+//#define DESCRIPTOR D3Q27descriptorKBC
 #endif
 
 // Global constants
@@ -257,7 +258,7 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
       getDNSValues();
     }
   }
-  if (iT%1/*converter.getLatticeTime(vtkSave)*/ == 0) {
+  if (iT%converter.getLatticeTime(vtkSave) == 0) {
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
     SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
     vtmWriter.addFunctor( velocity );
@@ -370,8 +371,8 @@ int main(int argc, char* argv[])
 #if defined(RLB)
   bulkDynamics.reset(new RLBdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(DNS)
-  //bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
-  bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
+  bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
+  //bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getKBCBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(WALE)
   bulkDynamics.reset(new WALEBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst));

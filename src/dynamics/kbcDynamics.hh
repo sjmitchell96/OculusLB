@@ -68,24 +68,24 @@ void KBCdynamics<T, DESCRIPTOR>::collide(
   //Compute rho, u
   T rho, u[DESCRIPTOR::d];
   this -> _momenta.computeRhoU(cell, rho, u);
-
- //std::cout << "--------------------" << std::endl;
-  //std::cout << "RHO BEFORE KBC COLLIDE " << rho << std::endl;
-  //std::cout << "UX BEFORE KBC COLLIDE " << u[0] << std::endl;
-  //std::cout << "UY BEFORE KBC COLLIDE " << u[1] << std::endl;
-  //std::cout << "UZ BEFORE KBC COLLIDE " << u[2] << std::endl;
-
+/*
+  std::cout << "--------------------" << std::endl;
+  std::cout << "RHO BEFORE KBC COLLIDE " << rho << std::endl;
+  std::cout << "UX BEFORE KBC COLLIDE " << u[0] << std::endl;
+  std::cout << "UY BEFORE KBC COLLIDE " << u[1] << std::endl;
+  std::cout << "UZ BEFORE KBC COLLIDE " << u[2] << std::endl;
+*/
   T uSqr = kbcLbH::kbcCollision(cell, rho, u, _beta);
 
-  //T rhoDummy, uDummy[DESCRIPTOR::d];
-  //this -> _momenta.computeRhoU(cell, rhoDummy, uDummy);
+//  T rhoDummy, uDummy[DESCRIPTOR::d];
+//  this -> _momenta.computeRhoU(cell, rhoDummy, uDummy);
 
-  //std::cout << "RHO AFTER KBC COLLIDE " << rhoDummy << std::endl;
-  //std::cout << "UX AFTER KBC COLLIDE " << uDummy[0] << std::endl;
-  //std::cout << "UY AFTER KBC COLLIDE " << uDummy[1] << std::endl;
-  //std::cout << "UZ AFTER KBC COLLIDE " << uDummy[2] << std::endl;
+//  std::cout << "RHO AFTER KBC COLLIDE " << rhoDummy << std::endl;
+//  std::cout << "UX AFTER KBC COLLIDE " << uDummy[0] << std::endl;
+//  std::cout << "UY AFTER KBC COLLIDE " << uDummy[1] << std::endl;
+//  std::cout << "UZ AFTER KBC COLLIDE " << uDummy[2] << std::endl;
 
-  //std::cout << "--------------------" << std::endl;
+//  std::cout << "--------------------" << std::endl;
 
   //In helper instead ...
   //T uSqr = util::normSqr<T,L::d>(u);
