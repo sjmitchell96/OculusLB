@@ -58,7 +58,7 @@ typedef double T;
 // Choose your turbulent model of choice
 //#define RLB
 //#define Smagorinsky
-#define WALE
+//#define WALE
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause

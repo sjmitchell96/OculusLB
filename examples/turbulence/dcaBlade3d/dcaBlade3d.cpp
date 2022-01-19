@@ -104,7 +104,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
-  sGeometry.rename(5, 6, pressureSection1);
+  //sGeometry.rename(5, 6, pressureSection1);
 
   //Set material number for inflow
   {
@@ -613,8 +613,8 @@ int main( int argc, char* argv[] ) {
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
-  const int N = 20;        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 2;	//Number of refinement levels (current max = 4)
+  const int N = 14;        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
@@ -622,7 +622,7 @@ int main( int argc, char* argv[] ) {
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100.;       // Reynolds number
+  const T Re = 100000.;       // Reynolds number
   const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physNu = 1.468*std::pow(10,-5); //Kinematic viscosity
@@ -632,10 +632,10 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 20; //Every 10% of max physical time
+  const int vtkIter   	   = 10; //Every 10% of max physical time
   //const int vtk2DIter      = 20;
   const int statIter  	   = 10;
-  const int checkIter 	   = 20;
+  const int checkIter 	   = 1000;
   const int bladeForceIter = 1;
   const int timeAvgIter    = 1;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
@@ -849,11 +849,3 @@ int main( int argc, char* argv[] ) {
 	timer.stop();
 	timer.printSummary();
 }
-
-
-
-
-
-
-
-
