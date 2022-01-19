@@ -47,9 +47,11 @@ public:
   /// Compute equilibrium distribution 
   T computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const override;
   /// Collision
-  void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics);
+  void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
   /// Get local relaxation parameter 
   T getOmega() const override;
+  /// Get local relaxation parameter
+  T getBeta() const;
   /// Set local relaxation parameter
   void setOmega(T omega) override;
 private:
@@ -57,6 +59,16 @@ private:
 
   T _omega; ///Relaxation parameter
   T _beta; //Relaxation parameter in EMRT form
+};
+
+//Implementation of KBC dynamics with compatibility for Grad's boundary
+template <typename T, typename DESCRIPTOR> 
+class KBCGradDynamics : public KBCdynamics<T, DESCRIPTOR> {
+public:
+  /// Constructor
+  KBCdynamics(T omega, Momenta<T, DESCRIPTOR>& momenta);
+  /// Collision
+  void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
 };
 
 }

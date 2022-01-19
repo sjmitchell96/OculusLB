@@ -46,13 +46,6 @@ KBCdynamics<T, DESCRIPTOR>::KBCdynamics(
     _omega(omega), _beta(0.5 * omega)
 { }
 
-//template<typename T, typename DESCRIPTOR>
-//T KBCdynamics<T, DESCRIPTOR>::computeEquilibrium(
-//  int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
-//{
-//  return kbcLbHelpers<T, DESCRIPTOR>::equilibrium(iPop, rho, u);
-//}
-
 template<typename T, typename DESCRIPTOR>
 T KBCdynamics<T,DESCRIPTOR>::computeEquilibrium(int iPop, T rho, const T u[DESCRIPTOR::d], T uSqr) const
 {
@@ -68,37 +61,8 @@ void KBCdynamics<T, DESCRIPTOR>::collide(
   //Compute rho, u
   T rho, u[DESCRIPTOR::d];
   this -> _momenta.computeRhoU(cell, rho, u);
-/*
-  std::cout << "--------------------" << std::endl;
-  std::cout << "RHO BEFORE KBC COLLIDE " << rho << std::endl;
-  std::cout << "UX BEFORE KBC COLLIDE " << u[0] << std::endl;
-  std::cout << "UY BEFORE KBC COLLIDE " << u[1] << std::endl;
-  std::cout << "UZ BEFORE KBC COLLIDE " << u[2] << std::endl;
-*/
   T uSqr = kbcLbH::kbcCollision(cell, rho, u, _beta);
 
-//  T rhoDummy, uDummy[DESCRIPTOR::d];
-//  this -> _momenta.computeRhoU(cell, rhoDummy, uDummy);
-
-//  std::cout << "RHO AFTER KBC COLLIDE " << rhoDummy << std::endl;
-//  std::cout << "UX AFTER KBC COLLIDE " << uDummy[0] << std::endl;
-//  std::cout << "UY AFTER KBC COLLIDE " << uDummy[1] << std::endl;
-//  std::cout << "UZ AFTER KBC COLLIDE " << uDummy[2] << std::endl;
-
-//  std::cout << "--------------------" << std::endl;
-
-  //In helper instead ...
-  //T uSqr = util::normSqr<T,L::d>(u);
-  //Compute feq
-  //T f[L::q], feq[L::q], fNeq[L::q];
-  //for(int iPop = 0; iPop < L::q; ++iPop) {
-  //    fEq[iPop] = kbcLbH::equilibrium(iPop, rho, u);
-  //    fNeq[iPop] = cell[iPop] - fEq[iPop];
-  //}
-  //Compute delta si
-  //Compute delta hi
-  //Compute stabiliser gamma
-  //Relax
   statistics.incrementStats(rho, uSqr);
 }
 
@@ -109,9 +73,44 @@ T KBCdynamics<T, DESCRIPTOR>::getOmega() const
 }
 
 template<typename T, typename DESCRIPTOR>
+T KBCdynamics<T, DESCRIPTOR>::getBeta() const
+{
+  return _beta;
+}
+
+template<typename T, typename DESCRIPTOR>
 void KBCdynamics<T, DESCRIPTOR>::setOmega(T omega) 
 {
   _omega = omega;
+}
+
+//==============================================================================//
+/////////////////////////// Class KBCGradDynamics ///////////////////////////////
+//==============================================================================//
+
+template<typename T, typename DESCRIPTOR>
+KBCGradDynamics<T, DESCRIPTOR>::KBCGradDynamics(
+  T omega, Momenta<T, DESCRIPTOR>& momenta)
+  : KBCdynamics<T, DESCRIPTOR>(omega, momenta)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+void KBCGradDynamics<T, DESCRIPTOR>::collide(
+  Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics)
+{
+  typedef kbcLbHelpers<T, DESCRIPTOR> kbcLbH;
+
+  //Compute rho, u
+  T rho, u[DESCRIPTOR::d];
+  this -> _momenta.computeRhoU(cell, rho, u);
+
+  //Store pre-collision velocities within velocity field
+  cell.template defineField<descriptors::VELOCITY>(u);
+   
+
+  T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics::getBeta());
+
+  statistics.incrementStats(rho, uSqr);
 }
 
 } //namespace
