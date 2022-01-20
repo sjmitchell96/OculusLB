@@ -65,12 +65,14 @@ typedef double T;
 
 //Turbulence model choice
 //#define WALE
-#define Smagorinsky
+//#define Smagorinsky
 
 #ifdef WALE
 #define DESCRIPTOR WALED3Q19Descriptor
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
+#else
+#define DESCRIPTOR D3Q27descriptorKBCGrad
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -415,6 +417,11 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
         new SmagorinskyBGKdynamics<T,DESCRIPTOR>(
           omega, instances::getBulkMomenta<T,DESCRIPTOR>(), 0.1)));
+  #else 
+    Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+      grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+        new KBCGradDynamics<T,DESCRIPTOR>(
+          omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
   #endif
 
   // Initialize boundary condition types

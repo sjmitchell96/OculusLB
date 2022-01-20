@@ -108,7 +108,7 @@ void KBCGradDynamics<T, DESCRIPTOR>::collide(
   cell.template defineField<descriptors::VELOCITY>(u);
    
 
-  T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics::getBeta());
+  T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics<T,DESCRIPTOR>::getBeta());
 
   statistics.incrementStats(rho, uSqr);
 }

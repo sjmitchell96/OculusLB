@@ -34,12 +34,12 @@
 namespace olb {
 
 // Efficient specialisation for D3Q27 lattice
-template<typename T>
-struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
+template<typename T, typename ...FIELDS>
+struct kbcLbHelpers<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>> {
 
   static T equilibrium(int iPop, T rho, const T u[3], const T uSqr)
   {
-    typedef descriptors::D3Q27descriptorKBC L;
+    typedef descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>  L;
 
     return rho * descriptors::t<T,L>(iPop) * (2. - sqrt(1. + 3. * u[0] * u[0])) *
            (2. - sqrt(1. + 3. * u[1] * u[1])) * (2. - sqrt(1. + 3. * u[2] * u[2])) *
@@ -50,7 +50,7 @@ struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
   }
 
   static void computeFneq (
-    Cell<T, descriptors::D3Q27descriptorKBC>& cell, T fNeq[27], T rho, const T u[3] )
+    Cell<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>>& cell, T fNeq[27], T rho, const T u[3] )
   {
     const T uSqr = u[0]*u[0] + u[1]*u[1] + u[2]*u[2];
     for (int iPop=0; iPop < 27; ++iPop) {
@@ -58,9 +58,9 @@ struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBC> {
     }
   }
 
-  static T kbcCollision(Cell<T, descriptors::D3Q27descriptorKBC>& cell, T rho, T u[3], const T& beta) {
+  static T kbcCollision(Cell<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>>& cell, T rho, T u[3], const T& beta) {
 
-  typedef descriptors::D3Q27descriptorKBC L;
+  typedef descriptors::D3Q27<descriptors::tag::KBC, FIELDS...> L;
    
 //  std::cout << "SPECIALIZED KBC COLLIDE" << std::endl;
 
@@ -329,10 +329,33 @@ T dh22 = df[22] - ds22;
   T uSqr = util::normSqr<T,3>(u);
   return uSqr;
   }
+}; //struct
 
+/*
+// Efficient specialisation for D3Q27 lattice, with KBC-GRAD descriptor
+template<typename T>
+struct kbcLbHelpers<T, descriptors::D3Q27descriptorKBCGrad> {
 
+  static T equilibrium(int iPop, T rho, const T u[3], const T uSqr)
+  {
+    return kbcLbHelpers<T, descriptors::D3Q27descriptorKBC>::equilibrium(iPop, rho, u, uSqr);
+  }
+
+  static void computeFneq (
+    Cell<T, descriptors::D3Q27descriptorKBCGrad>& cell, T fNeq[27], T rho, const T u[3] )
+  {
+    kbcLbHelpers<T, descriptors::D3Q27descriptorKBC>::computeFneq(cell, fNeq, rho, u);
+  }
+
+  static T kbcCollision(Cell<T, descriptors::D3Q27descriptorKBCGrad>& cell, T rho, T u[3], const T& beta) {
+    return kbcLbHelpers<T, descriptors::D3Q27descriptorKBC>::kbcCollision(cell, rho, u, beta);
+    //Doest work because can't convert cell types KBCGrad -> KBC
+    //Just copy-paste entire collision instead??
+    //May as well just add velocity save here, rather than use whole new dynamics class
+  }
 
 }; //struct
+*/
 
 } //namespace olb
 

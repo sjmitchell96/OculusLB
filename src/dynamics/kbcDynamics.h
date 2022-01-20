@@ -66,7 +66,7 @@ template <typename T, typename DESCRIPTOR>
 class KBCGradDynamics : public KBCdynamics<T, DESCRIPTOR> {
 public:
   /// Constructor
-  KBCdynamics(T omega, Momenta<T, DESCRIPTOR>& momenta);
+  KBCGradDynamics(T omega, Momenta<T, DESCRIPTOR>& momenta);
   /// Collision
   void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
 };
