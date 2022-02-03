@@ -105,7 +105,9 @@ void KBCGradDynamics<T, DESCRIPTOR>::collide(
   this -> _momenta.computeRhoU(cell, rho, u);
 
   //Store pre-collision velocities within velocity field
+  //std::cout << "KBC collide " << u[0] << " " << u[1] << " " << u[2] << std::endl; 
   cell.template defineField<descriptors::VELOCITY>(u);
+  //std::cout << "KBC collide " << u[0] << " " << u[1] << " " << u[2] << " " << cell.template getField<descriptors::VELOCITY>()[0] << " " << cell.template getField<descriptors::VELOCITY>()[1] << " " << cell.template getField<descriptors::VELOCITY>()[2] << std::endl; 
    
 
   T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics<T,DESCRIPTOR>::getBeta());

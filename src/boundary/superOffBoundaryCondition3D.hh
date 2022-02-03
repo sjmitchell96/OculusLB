@@ -172,6 +172,58 @@ void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityBoundary(
 }
 
 template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityGradBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+  IndicatorF3D<T>&                   geometryIndicator)
+{
+  if (_output) {
+    clout << "epsFraction=" << _epsFraction << std::endl;
+    clout.setMultiOutput(true);
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+    }
+    _blockBCs[iCloc]->addZeroVelocityGradBoundary(
+      boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+      bulkIndicator->getExtendedBlockIndicatorF(iCloc),
+      geometryIndicator);
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+    }
+  }
+  if (_output) {
+    clout.setMultiOutput(false);
+  }
+  addPoints2CommBC(std::forward<decltype(boundaryIndicator)>(boundaryIndicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityGradBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  SuperGeometry3D<T>& superGeometry = boundaryIndicator->getSuperGeometry();
+  addZeroVelocityGradBoundary(
+    std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+    superGeometry.getMaterialIndicator(std::move(bulkMaterials)),
+    geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityGradBoundary(
+  SuperGeometry3D<T>& superGeometry, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  addZeroVelocityGradBoundary(superGeometry.getMaterialIndicator(material),
+                          geometryIndicator,
+                          bulkMaterials);
+}
+
+template<typename T, typename DESCRIPTOR>
 void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::defineU(
   FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
   FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
@@ -307,6 +359,19 @@ void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTO
   for (int iC=0; iC<nC; iC++) {
     OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* blockBC
       = createBouzidiBoundaryCondition3D<T,DESCRIPTOR,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
+    sBC.getBlockBCs().push_back(blockBC);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+void createGradBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC)
+{
+
+  int nC = sBC.getSuperLattice().getLoadBalancer().size();
+  sBC.setOverlap(1);
+  for (int iC=0; iC<nC; iC++) {
+    OffLatticeBoundaryCondition3D<T,DESCRIPTOR>* blockBC
+      = createGradBoundaryCondition3D<T,DESCRIPTOR,MixinDynamics>(sBC.getSuperLattice().getExtendedBlockLattice(iC));
     sBC.getBlockBCs().push_back(blockBC);
   }
 }

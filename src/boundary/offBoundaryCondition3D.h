@@ -53,6 +53,7 @@ public:
   /// Using Bouzidi BC OnePoint corresponds to Bounce Back and TwoPoint to linear interpolation
   virtual void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
+  virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) =0;
   virtual void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
 
@@ -61,10 +62,16 @@ public:
 
   virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
                                        int x, int y, int z, int iPop, T dist) =0;
+  virtual void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
+                                       int x, int y, int z, int iPop, T dist, std::vector<T> distances,
+                                       int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) =0;
   virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d]) =0;
 
   virtual void addOffDynamics(BlockIndicatorF3D<T>& indicator) =0;
   virtual void addZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
+                                       BlockIndicatorF3D<T>& bulkIndicator,
+                                       IndicatorF3D<T>&      geometryIndicator) =0;
+  virtual void addZeroVelocityGradBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
                                        BlockIndicatorF3D<T>& bulkIndicator,
                                        IndicatorF3D<T>&      geometryIndicator) =0;
   virtual void addVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
@@ -81,6 +88,9 @@ public:
 
   void addOffDynamics(BlockGeometryStructure3D<T>& blockGeometryStructure, int material);
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+                               IndicatorF3D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
                                IndicatorF3D<T>& geometryIndicator,
                                std::vector<int> bulkMaterials = std::vector<int>(1,1));
   void addVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
@@ -109,6 +119,9 @@ template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,D
 OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
 createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block);
 
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
+createGradBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block);
 }
 
 #endif

@@ -122,6 +122,41 @@ private:
   T dist;
 };
 
+//Grad BC post processor - TODO
+template<typename T, typename DESCRIPTOR>
+class ZeroVelocityGradPostProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
+public:
+  ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_,
+    std::vector<T> distances_, std::vector<int> xF_, std::vector<int> yF_,
+    std::vector<int> zF_, std::vector<int> pStencilX_, std::vector<int> pStencilY_,
+    std::vector<int> pStencilZ_, int nLinks_, std::vector<int> iLinks_, std::vector<int> iBulk_);
+  int extent() const override
+  {
+    return 1;
+  }
+  int extent(int whichDirection) const override
+  {
+    return 1;
+  }
+  void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+private:
+  int x, y, z;
+  int iPop, opp;
+  T dist;
+  std::vector<T> distances;
+  std::vector<int> xF;
+  std::vector<int> yF;
+  std::vector<int> zF;
+  std::vector<int> pStencilX;
+  std::vector<int> pStencilY;
+  std::vector<int> pStencilZ;
+  int nLinks;
+  std::vector<int> iMissing, iNotMissing; 
+};
+
+
 /**
 * Linear Bouzidi BC Generator
 */
@@ -172,6 +207,31 @@ private:
   int x, y, z;
   int iPop;
   T dist;
+};
+
+/**
+* Grad BC Generator - TODO
+*/
+
+template<typename T, typename DESCRIPTOR>
+class ZeroVelocityGradPostProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
+public:
+  ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_, std::vector<T> distances_, std::vector<int> xF_, std::vector<int> yF_, std::vector<int> zF_, std::vector<int> pStencilX_, std::vector<int> pStencilY_, std::vector<int> pStencilZ_, int nLinks_, std::vector<int> iLinks_, std::vector<int> iBulk_);
+  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
+  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
+private:
+  int x, y, z;
+  int iPop;
+  T dist;
+  std::vector<T> distances;
+  std::vector<int> xF;
+  std::vector<int> yF;
+  std::vector<int> zF;
+  std::vector<int> pStencilX;
+  std::vector<int> pStencilY;
+  std::vector<int> pStencilZ;
+  int nLinks;
+  std::vector<int> iLinks, iBulk; 
 };
 
 }

@@ -110,6 +110,89 @@ getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
   return new OffDynamics<T, DESCRIPTOR>(location, distances);
 }
 
+/////////// GradBoundaryManager3D /////////////////////////////////////////////
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+class GradBoundaryManager3D {
+public:
+
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d]);
+  static Dynamics<T,DESCRIPTOR>*
+  getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q]);
+};
+
+////////// GradBoundaryManager3D /////////////////////////////////////////
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new ZeroVelocityBounceBackPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new ZeroVelocityBouzidiLinearPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk)
+{
+  return new ZeroVelocityGradPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist, distances, xF, yF, zF, pStencilX, pStencilY, pStencilZ, nLinks, iLinks, iBulk);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new VelocityBounceBackPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new VelocityBouzidiLinearPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d])
+{
+  return new OffDynamics<T, DESCRIPTOR>(location);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+Dynamics<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
+{
+  return new OffDynamics<T, DESCRIPTOR>(location, distances);
+}
+
 ////////// Convenience wrappers for boundary functions ////////////////////////
 
 template<typename T, typename DESCRIPTOR>
@@ -129,6 +212,18 @@ void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroVelocityBoundary(
   BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
   addZeroVelocityBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
 }
+
+template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroVelocityGradBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
+  addZeroVelocityGradBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+//TMRW - ADDZEROVELOCITYGRADBOUNDARY!!, THEN CUSTOMISE THIS AND GRAD POST PROCESSORS, TO APPLY GRAD BC INSTEAD
 
 template<typename T, typename DESCRIPTOR>
 void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addVelocityBoundary(
@@ -159,6 +254,15 @@ createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
   return new OffBoundaryConditionInstantiator3D <
          T, DESCRIPTOR,
          BouzidiBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
+}
+
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
+createGradBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
+{
+  return new OffBoundaryConditionInstantiator3D <
+         T, DESCRIPTOR,
+         GradBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
 }  // namespace olb

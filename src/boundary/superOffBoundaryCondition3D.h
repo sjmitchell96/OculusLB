@@ -56,7 +56,7 @@ template<typename T, typename DESCRIPTOR>
 class sOffLatticeBoundaryCondition3D {
 public:
   /// Constructor
-  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001); //SM - original eps value = 0.0001
+  sOffLatticeBoundaryCondition3D(SuperLattice3D<T,DESCRIPTOR>& sLattice, T epsFraction_ = 0.0001); 
   /// Copy construction
   sOffLatticeBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR> const& rhs);
   /// Copy assignment
@@ -89,6 +89,16 @@ public:
                                IndicatorF3D<T>&                   geometryIndicator,
                                std::vector<int> bulkMaterials = std::vector<int>(1,1));
   void addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
+                               IndicatorF3D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+
+  void addZeroVelocityGradBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator);
+  void addZeroVelocityGradBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addZeroVelocityGradBoundary(SuperGeometry3D<T>& superGeometry, int material,
                                IndicatorF3D<T>& geometryIndicator,
                                std::vector<int> bulkMaterials = std::vector<int>(1,1));
 
@@ -127,6 +137,9 @@ private:
 template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
 void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 
+//factory function for Grad condition 
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+void createGradBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 
 }  // namespace olb
 

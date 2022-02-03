@@ -40,7 +40,6 @@ struct kbcLbHelpers<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>> {
   static T equilibrium(int iPop, T rho, const T u[3], const T uSqr)
   {
     typedef descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>  L;
-
     return rho * descriptors::t<T,L>(iPop) * (2. - sqrt(1. + 3. * u[0] * u[0])) *
            (2. - sqrt(1. + 3. * u[1] * u[1])) * (2. - sqrt(1. + 3. * u[2] * u[2])) *
            pow((2. * u[0] + sqrt(1. + 3. * u[0] * u[0])) / (1. - u[0]), descriptors::c<L>(iPop,0)) *

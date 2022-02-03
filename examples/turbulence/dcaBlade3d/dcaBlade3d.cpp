@@ -436,9 +436,15 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   createLocalBoundaryCondition3D<T,DESCRIPTOR>(onbc);
 
   //Bouzidi
+  //sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
+  //  grid.getOffLatticeBoundaryCondition();
+  //createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+
+  //Grad
   sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
     grid.getOffLatticeBoundaryCondition();
-  createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+  createGradBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+
 
   // Define dynamics
   sLattice.defineDynamics(sGeometry, 0,
@@ -455,9 +461,9 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   if ( bouzidiOn ) {
     // material=5,6 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade );
     sLattice.defineDynamics( sGeometry,6,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityBoundary( sGeometry,6,indicatorBlade );
+    offBc.addZeroVelocityGradBoundary( sGeometry,6,indicatorBlade );
   }
   else {
   // material=5 --> fullway bounceBack dynamics

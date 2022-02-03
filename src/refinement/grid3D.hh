@@ -186,7 +186,7 @@ Grid3D<T,DESCRIPTOR>::Grid3D(FunctorPtr<IndicatorF3D<T>>&& domainF,
 	_geometry(new SuperGeometry3D<T>(
 				*_cuboids,
 				*_balancer,
-				2)),
+				2)), //sm - originally 2
 	_lattice(new SuperLattice3D<T,DESCRIPTOR>(
 				*_geometry))
 {

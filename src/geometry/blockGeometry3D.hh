@@ -136,6 +136,7 @@ int const& BlockGeometry3D<T>::get(int iX, int iY, int iZ) const
   return BlockData3D<T,int>::get(iX,iY,iZ,0);
 }
 
+//sm - modified
 template<typename T>
 int BlockGeometry3D<T>::getMaterial(int iX, int iY, int iZ) const
 {
