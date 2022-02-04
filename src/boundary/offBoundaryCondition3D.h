@@ -53,7 +53,7 @@ public:
   /// Using Bouzidi BC OnePoint corresponds to Bounce Back and TwoPoint to linear interpolation
   virtual void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
-  virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) =0;
+  virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances, std::vector<T> iMissing) =0;
   virtual void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
 
@@ -63,8 +63,7 @@ public:
   virtual void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
                                        int x, int y, int z, int iPop, T dist) =0;
   virtual void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                       int x, int y, int z, int iPop, T dist, std::vector<T> distances,
-                                       int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) =0;
+                                       int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing) =0;
   virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d]) =0;
 
   virtual void addOffDynamics(BlockIndicatorF3D<T>& indicator) =0;

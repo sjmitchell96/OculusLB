@@ -120,7 +120,7 @@ public:
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
-  getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk);
+  getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
@@ -153,10 +153,10 @@ getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 template<typename T, typename DESCRIPTOR, class MixinDynamics>
 PostProcessorGenerator3D<T,DESCRIPTOR>*
 GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
-getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> xF, std::vector<int> yF, std::vector<int> zF, std::vector<int> pStencilX, std::vector<int> pStencilY, std::vector<int> pStencilZ, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk)
+getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances, iMissing)
 {
   return new ZeroVelocityGradPostProcessorGenerator3D
-         <T, DESCRIPTOR>(x, y, z, iPop, dist, distances, xF, yF, zF, pStencilX, pStencilY, pStencilZ, nLinks, iLinks, iBulk);
+         <T, DESCRIPTOR>(x, y, z, distances, iMissing);
 }
 
 template<typename T, typename DESCRIPTOR, class MixinDynamics>

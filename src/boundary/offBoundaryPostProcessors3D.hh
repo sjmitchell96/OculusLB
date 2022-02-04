@@ -249,21 +249,36 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 //Zero velocity Grad post processor
 template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessor3D<T,DESCRIPTOR>::
-ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_,
-                                std::vector<T> distances_, std::vector<int> xF_,
-                                std::vector<int> yF_, std::vector<int> zF_, std::vector<int> pStencilX_,
-                                std::vector<int> pStencilY_, std::vector<int> pStencilZ_, int nLinks_,
-                                std::vector<int> iLinks_,
-                                std::vector<int> iBulk_)
-  : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_), distances(distances_),
-    xF(xF_), yF(yF_), zF(zF_), pStencilX(pStencilX_), pStencilY(pStencilY_),
-    pStencilZ(pStencilZ_), nLinks(nLinks_)
+ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
+                                std::vector<T> distances_,
+                                std::vector<int> iMissing_)
+  : x(x_), y(y_), z(z_), distances(distances_), iMissing(iMissing_)
 {
+
+  /*
 #ifndef QUIET
   if (dist < 0 || dist > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
               << dist << std::endl;
 #endif
+
+  //Take only distances as input
+
+  //Generate iMissing and iNotMissing
+  
+
+
+  //Cycle through distances and get next fluid nodes (remember periodic) - seperate method
+
+  //Check if nodes are clean or dirty - seperate method
+
+  //If clean, add to clean vector
+
+  //If dirty, snf if option2, add to dirty vector
+  //If option 1, just ignore cell (don't add to uF vector)
+
+  //
+
 
 
   //Convert link/bulk arrays to missing/notMissing
@@ -272,6 +287,8 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_,
   for (unsigned i = 0; i < iBulk_.size(); ++i)
     iNotMissing.push_back(util::opposite<DESCRIPTOR>(iBulk_[i])); 
   opp = util::opposite<DESCRIPTOR>(iPop);
+
+  */
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -289,6 +306,11 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
 using namespace olb::util::tensorIndices3D;
 
+//Process dirty nodes vector - seperate object - update f_missing for these ones so that uF can be calculated here
+
+//
+
+/*
 //Compute target density and velocity
 T rhoTarget = 0.;
 T uTarget[3] = {0.,0.,0.};
@@ -364,7 +386,7 @@ blockLattice.get(x, y, z)[opp] = descriptors::t<T,DESCRIPTOR>(opp) * rhoTarget *
    pi[xy] * cOpp[0] * cOpp[1] +
    pi[xz] * cOpp[0] * cOpp[2] + 
    pi[yz] * cOpp[1] * cOpp[2])));
-
+*/
 }
 
 
@@ -467,9 +489,9 @@ VelocityBounceBackPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 //Grad post processor generator - TODO
 template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>::
-ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_, std::vector<T> distances_, std::vector<int> xF_, std::vector<int> yF_, std::vector<int> zF_, std::vector<int> pStencilX_, std::vector<int> pStencilY_, std::vector<int> pStencilZ_, int nLinks_, std::vector<int> iLinks_, std::vector<int> iBulk_)
+ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, std::vector<T> distances_, std::vector<int> iMissing_)
   : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
-    x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_), distances(distances_), xF(xF_), yF(yF_), zF(zF_), pStencilX(pStencilX_), pStencilY(pStencilY_), pStencilZ(pStencilZ_), nLinks(nLinks_), iLinks(iLinks_), iBulk(iBulk_)
+    x(x_), y(y_), z(z_), distances(distances_), iMissing(iMissing_)
 { }
 
 template<typename T, typename DESCRIPTOR>
@@ -477,7 +499,7 @@ PostProcessor3D<T,DESCRIPTOR>*
 ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>::generate() const
 {
   return new ZeroVelocityGradPostProcessor3D<T,DESCRIPTOR>
-         ( this->x, this->y, this->z, this->iPop, this->dist, this->distances, this-> xF, this-> yF, this-> zF, this-> pStencilX, this-> pStencilY, this-> pStencilZ, this-> nLinks, this-> iLinks, this->iBulk);
+         ( this->x, this->y, this->z, this->distances, this->iMissing);
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -485,7 +507,7 @@ PostProcessorGenerator3D<T,DESCRIPTOR>*
 ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 {
   return new ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>
-         (this->x, this->y, this->z, this->iPop, this->dist, this-> distances, this-> xF, this-> yF, this-> zF, this-> pStencilX, this-> pStencilY, this-> pStencilZ, this-> nLinks, this-> iLinks, this->iBulk);
+         (this->x, this->y, this-> z, this-> distances, this-> iMissing);
 }
 
 }  // namespace olb
