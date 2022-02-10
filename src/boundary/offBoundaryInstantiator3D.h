@@ -54,7 +54,7 @@ public:
   void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances,
-                                         std::vector<int> iMissing) override;
+                                         std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
   void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
@@ -161,11 +161,11 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addTwoP
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addMultiPointZeroVelocityBoundary(
-  int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing)
+  int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
 {
   PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getMultiPointZeroVelocityBoundaryProcessor
-    (x, y, z, distances, iLinks);
+    (x, y, z, distances, iMissing, blockGeometryStructure);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
   }
@@ -552,14 +552,13 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
  Vector<int, 3> cf;
 
   //Determine whether all xF nodes are fluid
-  for (int i=0; i<iMissing.size(); ++i) {
+  for (unsigned i=0; i<iMissing.size(); ++i) {
     cf = descriptors::c<DESCRIPTOR>(iMissing[i]);
-    if (blockGeometryStructure.get(xB + cf[0], yB + cf[1], zB + cf[2]) != 1)
+    if (blockGeometryStructure.getMaterial(xB + cf[0], yB + cf[1], zB + cf[2]) != 1)
       isFluid = false;
-      break;
   }
 
-  for (int i=0; i<iMissing.size(); ++i) {
+  for (unsigned i=0; i<iMissing.size(); ++i) {
     iPop = iMissing[i];
     Vector<int,3> cs = descriptors::c<DESCRIPTOR>(util::opposite<DESCRIPTOR>(iPop));
     xs[0] = xB + cs[0];
@@ -572,12 +571,16 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
       xs[1] <= 0 || xs[1] >= blockGeometryStructure.getNy() - 1 ||
       xs[2] <= 0 || xs[2] >= blockGeometryStructure.getNz() - 1 )) 
         addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
-    else if (!isFluid){ 
-        addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
-    }
+    //else if (!isFluid){
+    //  std::cout << "NOT FLUID " << zB << std::endl; 
+    //    addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
+    //}
     else {
-       addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing);     
+       //std::cout << xB << " " << yB << " " << zB << std::endl;
+       //std::cout << xs[0] << " " << xs[1] << " " << xs[2] << std::endl;
+       addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);     
     }
+  }
 } 
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
@@ -599,7 +602,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
       T voxelSize=blockGeometryStructure.getDeltaR();
       Vector<T,3> physC(physR);
       std::vector<T> distances;
-      std::vector<T> iMissing;
+      std::vector<int> iMissing;
 
       for (int jPop = 1; jPop < DESCRIPTOR::q; ++jPop) {
         const Vector<int,3> cs = descriptors::c<DESCRIPTOR>(jPop);
@@ -614,6 +617,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
           T cPhysNorm = voxelSize*sqrt(cs[0]*cs[0]+cs[1]*cs[1]+cs[2]*cs[2]);
 
           if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob())) {
+            clout << "Distance not found initially" << std::endl;
             T epsX = voxelSize*cs[0]*this->_epsFraction;
             T epsY = voxelSize*cs[1]*this->_epsFraction;
             T epsZ = voxelSize*cs[2]*this->_epsFraction;
@@ -636,6 +640,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
             T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
             if (distNew < 0.5) {
               dist = 0;
+              clout << "DISTANCE WARNING" << std::endl;
             }
             else {
               dist = 0.5 * cPhysNorm;

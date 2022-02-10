@@ -70,6 +70,7 @@ public:
   void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
   void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+
 private:
   int x, y, z;
   int xN, yN, zN;
@@ -127,7 +128,7 @@ template<typename T, typename DESCRIPTOR>
 class ZeroVelocityGradPostProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
 public:
   ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
-    std::vector<T> distances_, std::vector<int> iMissing_);
+    std::vector<T> distances_, std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_);
   int extent() const override
   {
     return 1;
@@ -142,9 +143,25 @@ public:
 private:
   int x, y, z;
   std::vector<T> distances;
-  std::vector<int> iMissing; 
+  std::vector<int> iMissing, iNotMissing; 
+  std::vector<int> iClean, iDirty;
+  std::vector<int> xFclean, yFclean, zFclean;
+  std::vector<int> xFdirty, yFdirty, zFdirty;
+  std::vector<T> distancesClean, distancesDirty;
+  std::vector<int> pStencilX = std::vector<int>(2);
+  std::vector<int> pStencilY = std::vector<int>(2);
+  std::vector<int> pStencilZ = std::vector<int>(2);
+  BlockGeometryStructure3D<T>& blockGeometryStructure;
+  int nMissing;
+  
+  std::vector<int> getNext(int x, int y, int z);
+  // computePi
+  // updateMissing
+  // computeUf
+  //
 };
 
+//New class - dirtyNodePostProcessor, cleanNodePostProcessor
 
 /**
 * Linear Bouzidi BC Generator
@@ -205,13 +222,15 @@ private:
 template<typename T, typename DESCRIPTOR>
 class ZeroVelocityGradPostProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
 public:
-  ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, std::vector<T> distances_, std::vector<int> iMissing_);
+  ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, std::vector<T> distances_,
+  std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_);
   PostProcessor3D<T,DESCRIPTOR>* generate() const override;
   PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
 private:
   int x, y, z;
   std::vector<T> distances;
-  std::vector<int> iMissing; 
+  std::vector<int> iMissing;
+  BlockGeometryStructure3D<T>& blockGeometryStructure; 
 };
 
 }

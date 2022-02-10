@@ -53,7 +53,9 @@ public:
   /// Using Bouzidi BC OnePoint corresponds to Bounce Back and TwoPoint to linear interpolation
   virtual void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
-  virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances, std::vector<T> iMissing) =0;
+  virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances,
+                                                 std::vector<int> iMissing,
+                                                 BlockGeometryStructure3D<T>& blockGeometryStructure) =0;
   virtual void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
 

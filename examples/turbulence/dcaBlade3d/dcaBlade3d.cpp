@@ -73,6 +73,7 @@ typedef double T;
 #define DESCRIPTOR D3Q19<>
 #else
 #define DESCRIPTOR D3Q27descriptorKBCGrad
+//#define DESCRIPTOR D3Q27descriptorKBC
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -422,6 +423,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
         new KBCGradDynamics<T,DESCRIPTOR>(
           omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+    //Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+    //  grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+    //    new KBCdynamics<T,DESCRIPTOR>(
+     //     omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
   #endif
 
   // Initialize boundary condition types
@@ -444,6 +449,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
     grid.getOffLatticeBoundaryCondition();
   createGradBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+  //createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
 
 
   // Define dynamics
@@ -462,8 +468,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     // material=5,6 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade );
+    //offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
     sLattice.defineDynamics( sGeometry,6,&instances::getNoDynamics<T,DESCRIPTOR>() );
     offBc.addZeroVelocityGradBoundary( sGeometry,6,indicatorBlade );
+    //offBc.addZeroVelocityBoundary( sGeometry,6,indicatorBlade );
   }
   else {
   // material=5 --> fullway bounceBack dynamics
