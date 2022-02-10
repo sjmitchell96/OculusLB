@@ -251,8 +251,8 @@ template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessor3D<T,DESCRIPTOR>::
 ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
                                 std::vector<T> distances_,
-                                std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
-  : x(x_), y(y_), z(z_), distances(distances_), iMissing(iMissing_), blockGeometryStructure(blockGeometryStructure_)
+                                std::vector<unsigned> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
+  : x(x_), y(y_), z(z_), blockGeometryStructure(blockGeometryStructure_)
 {
 
   //Option 
@@ -260,18 +260,18 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
 
   //Check bogus distances  
   #ifndef QUIET
-  for (unsigned i = 0; i < iMissing.size(); i++ ) {
-    if (distances[i] < 0 || distances[i] > 1)
+  for (unsigned i = 0; i < iMissing_.size(); i++ ) {
+    if (distances_[i] < 0 || distances_[i] > 1)
       std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
-                << distances[i] << std::endl;
+                << distances_[i] << std::endl;
   }
   #endif
  
   //Generate iNotMissing  
-  for (int i = 0; i < DESCRIPTOR::q; i++) {
+  for (unsigned i = 0; i < DESCRIPTOR::q; i++) {
     bool missing = false;
-    for (unsigned j = 0; j < iMissing.size(); ++j) {
-      if (i == iMissing[j]) {
+    for (unsigned j = 0; j < iMissing_.size(); ++j) {
+      if (i == iMissing_[j]) {
         missing = true;
         break;
       }
@@ -281,8 +281,8 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
   }
 
   //Sort boundary nodes based on adjacent fluid node properties
-  for (unsigned i = 0; i < iMissing.size(); ++i){
-    Vector<int, 3> cf = descriptors::c<DESCRIPTOR>(iMissing[i]);
+  for (unsigned i = 0; i < iMissing_.size(); ++i){
+    Vector<int, 3> cf = descriptors::c<DESCRIPTOR>(iMissing_[i]);
     std::vector<int> xFtemp = getNext(x + cf[0], y + cf[1], z + cf[2]);
 
     bool isClean = true;
@@ -295,18 +295,18 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
       }
     }
     if (isClean) {
-      iClean.push_back(iMissing[i]);
+      iClean.push_back(iMissing_[i]);
       xFclean.push_back(xFtemp[0]);
       yFclean.push_back(xFtemp[1]);
       zFclean.push_back(xFtemp[2]);
-      distancesClean.push_back(distances[i]);
+      distancesClean.push_back(distances_[i]);
     }
     else if (mode == 1) { //Include dirty nodes into bc
-      iDirty.push_back(iMissing[i]);
+      iDirty.push_back(iMissing_[i]);
       xFdirty.push_back(xFtemp[0]);
       yFdirty.push_back(xFtemp[1]);
       zFdirty.push_back(xFtemp[2]);
-      distancesDirty.push_back(distances[i]);
+      distancesDirty.push_back(distances_[i]);
     }
   }
 
@@ -394,12 +394,20 @@ T cs2 = 1. / invCs2;
 //std::cout << cs2 << std::endl;
 
 //Target density
-for (unsigned i = 0; i < iMissing.size(); ++i) {
-  rhoTarget += blockLattice.get(x - descriptors::c<DESCRIPTOR>(iMissing[i],0),
-    y - descriptors::c<DESCRIPTOR>(iMissing[i],1), 
-    z - descriptors::c<DESCRIPTOR>(iMissing[i],2))
-    [util::opposite<DESCRIPTOR>(iMissing[i])];
-    //std::cout << "MISSING " << iMissing[i] << std::endl;
+for (unsigned i = 0; i < iClean.size(); ++i) {
+  rhoTarget += blockLattice.get(x - descriptors::c<DESCRIPTOR>(iClean[i],0),
+    y - descriptors::c<DESCRIPTOR>(iClean[i],1), 
+    z - descriptors::c<DESCRIPTOR>(iClean[i],2))
+    [util::opposite<DESCRIPTOR>(iClean[i])];
+    //std::cout << "CLEAN " << iClean[i] << std::endl;
+}
+
+for (unsigned i = 0; i < iDirty.size(); ++i) {
+  rhoTarget += blockLattice.get(x - descriptors::c<DESCRIPTOR>(iDirty[i],0),
+    y - descriptors::c<DESCRIPTOR>(iDirty[i],1), 
+    z - descriptors::c<DESCRIPTOR>(iDirty[i],2))
+    [util::opposite<DESCRIPTOR>(iDirty[i])];
+    //std::cout << "DIRTY " << iDirty[i] << std::endl;
 }
 
 //std::cout << "PROCESS2" << std::endl;
@@ -469,15 +477,14 @@ pi[yz] = uTarget[1] * uTarget[2] - cs2Beta * (dy_uz + dz_uy);
 
 
 //Replace all missing
-  for (unsigned i = 0; i < iMissing.size(); ++i) {
-    Vector<int, 3> ci = descriptors::c<DESCRIPTOR>(iMissing[i]);
+  for (unsigned i = 0; i < iClean.size(); ++i) {
+    Vector<int, 3> ci = descriptors::c<DESCRIPTOR>(iClean[i]);
 
   //  std::cout << "grad " << pi[xx] << " " << pi[yy] << " " << pi[zz] << " " << pi[xy] << " " << pi[xz] << " " << pi[yz] << " "
   //<< uTarget[0] << " " << uTarget[1] << " " << uTarget[2] << " " << ci[0] << " " << ci[1] << " " << ci[2] << " " <<
   //rhoTarget << " " << cs2 << " " << invCs2 <<  " " << descriptors::t<T,DESCRIPTOR>(iMissing[i]) << std::endl;
 
-
-    blockLattice.get(x, y, z)[iMissing[i]] = descriptors::t<T,DESCRIPTOR>(iMissing[i]) * ( rhoTarget * 
+    blockLattice.get(x, y, z)[iClean[i]] = descriptors::t<T,DESCRIPTOR>(iClean[i]) * ( rhoTarget * 
       (1. + invCs2 * (uTarget[0] * ci[0] + uTarget[1] * ci[1] + uTarget[2] * ci[2]) +
       0.5 * invCs2 * invCs2 * 
       (pi[xx] * (ci[0] * ci[0] - cs2) +
@@ -487,6 +494,25 @@ pi[yz] = uTarget[1] * uTarget[2] - cs2Beta * (dy_uz + dz_uy);
        pi[xz] * ci[0] * ci[2] + 
        pi[yz] * ci[1] * ci[2]))) - 1.); //(fi - ti) needs to be stored
   }
+
+for (unsigned i = 0; i < iDirty.size(); ++i) {
+    Vector<int, 3> ci = descriptors::c<DESCRIPTOR>(iDirty[i]);
+
+  //  std::cout << "grad " << pi[xx] << " " << pi[yy] << " " << pi[zz] << " " << pi[xy] << " " << pi[xz] << " " << pi[yz] << " "
+  //<< uTarget[0] << " " << uTarget[1] << " " << uTarget[2] << " " << ci[0] << " " << ci[1] << " " << ci[2] << " " <<
+  //rhoTarget << " " << cs2 << " " << invCs2 <<  " " << descriptors::t<T,DESCRIPTOR>(iMissing[i]) << std::endl;
+
+    blockLattice.get(x, y, z)[iDirty[i]] = descriptors::t<T,DESCRIPTOR>(iDirty[i]) * ( rhoTarget * 
+      (1. + invCs2 * (uTarget[0] * ci[0] + uTarget[1] * ci[1] + uTarget[2] * ci[2]) +
+      0.5 * invCs2 * invCs2 * 
+      (pi[xx] * (ci[0] * ci[0] - cs2) +
+       pi[yy] * (ci[1] * ci[1] - cs2) +
+       pi[zz] * (ci[2] * ci[2] - cs2) + 2. * (
+       pi[xy] * ci[0] * ci[1] +
+       pi[xz] * ci[0] * ci[2] + 
+       pi[yz] * ci[1] * ci[2]))) - 1.); //(fi - ti) needs to be stored
+  }
+
 }
 
 ////////  LinearBouzidiBoundaryPostProcessorGenerator ////////////////////////////////
@@ -589,7 +615,7 @@ VelocityBounceBackPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>::
 ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, std::vector<T> distances_,
-  std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
+  std::vector<unsigned> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
   : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
     x(x_), y(y_), z(z_), distances(distances_), iMissing(iMissing_), blockGeometryStructure(blockGeometryStructure_) 
 { }

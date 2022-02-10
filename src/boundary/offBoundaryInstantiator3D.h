@@ -54,7 +54,7 @@ public:
   void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances,
-                                         std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
+                                         std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
   void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
@@ -69,7 +69,7 @@ public:
   void addZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
   //void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist, std::vector<T> distances, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) override;
-  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<int> iMissing);
+  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing);
   void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
   void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
   void addZeroVelocityGradBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
@@ -161,7 +161,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addTwoP
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addMultiPointZeroVelocityBoundary(
-  int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
+  int x, int y, int z, std::vector<T> distances, std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
 {
   PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getMultiPointZeroVelocityBoundaryProcessor
@@ -543,20 +543,20 @@ addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<int> iMissing)
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing)
 {
  int xs[3];
  int iPop;
  bool isPeriodic = true;
- bool isFluid = true;
+ //bool isFluid;
  Vector<int, 3> cf;
 
   //Determine whether all xF nodes are fluid
-  for (unsigned i=0; i<iMissing.size(); ++i) {
-    cf = descriptors::c<DESCRIPTOR>(iMissing[i]);
-    if (blockGeometryStructure.getMaterial(xB + cf[0], yB + cf[1], zB + cf[2]) != 1)
-      isFluid = false;
-  }
+  //for (unsigned i=0; i<iMissing.size(); ++i) {
+  //  cf = descriptors::c<DESCRIPTOR>(iMissing[i]);
+  //  if (blockGeometryStructure.getMaterial(xB + cf[0], yB + cf[1], zB + cf[2]) != 1)
+  //    isFluid = false;
+  //}
 
   for (unsigned i=0; i<iMissing.size(); ++i) {
     iPop = iMissing[i];
@@ -602,7 +602,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
       T voxelSize=blockGeometryStructure.getDeltaR();
       Vector<T,3> physC(physR);
       std::vector<T> distances;
-      std::vector<int> iMissing;
+      std::vector<unsigned> iMissing;
 
       for (int jPop = 1; jPop < DESCRIPTOR::q; ++jPop) {
         const Vector<int,3> cs = descriptors::c<DESCRIPTOR>(jPop);
