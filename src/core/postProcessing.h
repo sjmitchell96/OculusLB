@@ -132,6 +132,11 @@ struct PostProcessor3D {
   virtual int extent() const =0;
   /// Extent of application area along a direction (0 or 1)
   virtual int extent(int direction) const =0;
+  /// Return associated lattice position
+  virtual std::vector<int> getPosition() 
+  {
+    return std::vector<int> {0,0,0};
+  }
 };
 
 template<typename T, typename DESCRIPTOR>

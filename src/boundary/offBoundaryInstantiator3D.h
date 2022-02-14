@@ -91,6 +91,10 @@ public:
 
   BlockLatticeStructure3D<T, DESCRIPTOR>& getBlock() override;
   BlockLatticeStructure3D<T, DESCRIPTOR> const& getBlock() const override;
+
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() override; 
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& getPostProcessors() const override; 
+
 private:
   BlockLatticeStructure3D<T, DESCRIPTOR>& block;
   //std::vector<Momenta<T, DESCRIPTOR>*> momentaVector;
@@ -114,6 +118,21 @@ BlockLatticeStructure3D<T, DESCRIPTOR> const& OffBoundaryConditionInstantiator3D
 {
   return block;
 }
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager> 
+std::vector<PostProcessor3D<T, DESCRIPTOR>*>& OffBoundaryConditionInstantiator3D<T, DESCRIPTOR,
+                        BoundaryManager>::getPostProcessors()
+{
+  return block.getPostProcessors();
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager> 
+std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& OffBoundaryConditionInstantiator3D<T, DESCRIPTOR,
+                        BoundaryManager>::getPostProcessors() const
+{
+  return block.getPostProcessors();
+}
+
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::OffBoundaryConditionInstantiator3D(
@@ -375,212 +394,48 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
   }
 }
 
-/* OLD -------------------------------------------
-
-//Zero velocity Grad boundary
-template<typename T, typename DESCRIPTOR, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist, std::vector<T> distances, std::vector<int> iLinks) //CHANGE TO ACCEPT ENTIRE DISTANCES VECTOR AS WELL AS SINGLE LINK DISTANCE
-{
-  //const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
-  //T pos[3];
-  //blockGeometryStructure.getPhysR(pos,x - c[0],y - c[1],z - c[2]);
-  //blockGeometryStructure.getPhysR(pos,x,y,z);
-  //int material = blockGeometryStructure.getMaterial(x - c[0],y - c[1],z - c[2]);
-  //if (blockGeometryStructure.getMaterial(x-c[0], y-c[1], z-c[2]) != 1) { 
-  //  std::cout << "ADD BOUNCEBACK" << " " << x+c[0] << " " << y+c[1] << " " << z+c[2] << " " << iPop << " " << dist << " " << blockGeometryStructure.getMaterial(x-c[0], y-c[1], z-c[2]) << " " << pos[2] << " " << material << std::endl;
-  //  addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
-  //}
-  //else {
-    //std::cout << "ADD MULTI" << " " << x+c[0] << " " << y+c[1] << " " << z+c[2] << " " << iPop << " " << dist << " " << blockGeometryStructure.getMaterial(x-c[0], y-c[1], z-c[2]) << " " << pos[2] << " " << material << std::endl;
-    //std::cout << "ADD MULTI" << std::endl;
-    //addMultiPointZeroVelocityBoundary(x, y, z, iPop, dist, distances);
-  //}
-
-  //std::cout << "AddZVGB " << x << " " << y << " " << z << endl;
-
-  bool isPeriodic = true;
-  //std::vector<int> xF(nLinks);
-  //std::vector<int> yF(nLinks);
-  //std::vector<int> zF(nLinks);
-
-  //std::vector<int> pStencilX(2);
-  //std::vector<int> pStencilY(2);
-  //std::vector<int> pStencilZ(2);
-  
-  int xs[3];
-  int jPop;
-
-  for (int i=0; i<iLinks.size(); ++i) {
-    jPop = iLinks[i];
-    Vector<int,3> c = descriptors::c<DESCRIPTOR>(jPop);
-    xs[0] = x + c[0];
-    xs[1] = y + c[1];
-    xs[2] = z + c[2];
-
-    //xs is ghost node
-    if (isPeriodic && (
-        xs[0] <= 0 || xs[0] >= blockGeometryStructure.getNx() - 1 ||
-        xs[1] <= 0 || xs[1] >= blockGeometryStructure.getNy() - 1 ||
-        xs[2] <= 0 || xs[2] >= blockGeometryStructure.getNz() - 1 )) 
-      addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
-    else {
-      int nextX = x - descriptors::c<DESCRIPTOR>(jPop,0);
-      int nextY = y - descriptors::c<DESCRIPTOR>(jPop,1);
-      int nextZ = z - descriptors::c<DESCRIPTOR>(jPop,2);
-
-      //std::cout << jPop << std::endl;
-      //std::cout << blockGeometryStructure.getNx() - 1 << " " << blockGeometryStructure.getNy() - 1 << " " << blockGeometryStructure.getNz() - 1 << std::endl;
-      //std::cout << descriptors::c<DESCRIPTOR>(jPop,0) << " " << descriptors::c<DESCRIPTOR>(jPop,1) << " " << descriptors::c<DESCRIPTOR>(jPop,2) << std::endl;
-      //std::cout << xs[0] << " " << xs[1] << " " << xs[2] << std::endl;
-      //std::cout << x << " " << y << " " << z << std::endl;
-
-      //xf out of lattice domain
-      if (isPeriodic && (nextX < 0 || nextX >= blockGeometryStructure.getNx() ||
-          nextY < 0 || nextY >= blockGeometryStructure.getNy() ||
-          nextZ < 0 || nextZ >= blockGeometryStructure.getNz())) {
-        nextX = (nextX + blockGeometryStructure.getNx()) % blockGeometryStructure.getNx(); 
-        nextY = (nextY + blockGeometryStructure.getNy()) % blockGeometryStructure.getNy(); 
-        nextZ = (nextZ + blockGeometryStructure.getNz()) % blockGeometryStructure.getNz(); 
-      }
-
-      xF[i] = nextX;
-      yF[i] = nextY;
-      zF[i] = nextZ;
-    
-      //Determine stencil points for pressure tensor gradients
-      if (blockGeometryStructure.getMaterial(x + 1, y, z) == 1) {
-        pStencilX[0] = x + 1;
-        pStencilX[1] = x;
-      }
-      else if (blockGeometryStructure.getMaterial(x - 1, y, z) == 1) {
-        pStencilX[0] = x;
-        pStencilX[1] = x - 1;
-      }
-      else 
-        std::cout << "GradBC Warning: No suitable stencil point in x" << std::endl;
-
-      if (blockGeometryStructure.getMaterial(x, y + 1, z) == 1) {
-        pStencilY[0] = y + 1;
-        pStencilY[1] = y;
-      }
-      else if (blockGeometryStructure.getMaterial(x, y - 1, z) == 1) {
-        pStencilY[0] = y;
-        pStencilY[1] = y - 1;
-      }
-      else 
-        std::cout << "GradBC Warning: No suitable stencil point in y" << std::endl;
-
-      if (blockGeometryStructure.getMaterial(x, y, z + 1) == 1) {
-        pStencilZ[0] = z + 1;
-        pStencilZ[1] = z;
-      }
-      else if (blockGeometryStructure.getMaterial(x, y, z - 1) == 1) {
-        pStencilZ[0] = z;
-        pStencilZ[1] = z - 1;
-      }
-      else 
-        std::cout << "GradBC Warning: No suitable stencil point in z" << std::endl;
-
-      
-      //std::cout << "STENCIL" << pStencilX[0] << " "  << pStencilX[1] << " "  << pStencilY[0] << " "  << pStencilY[1] << " "  << pStencilZ[0] << " "  << pStencilZ[1] << std::endl; 
-      addMultiPointZeroVelocityBoundary(x, y, z, jPop, dist, distances,
-                                        xF, yF, zF,
-                                        pStencilX, pStencilY, pStencilZ,
-                                        nLinks, iLinks, iBulk);
-    }
-  }                                  
-}
-
-template<typename T, typename DESCRIPTOR, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
-addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, std::vector<T> distances)
-{
-  typedef DESCRIPTOR L;
-  //T location[DESCRIPTOR::d];
-  //location[0] = blockGeometryStructure.physCoordX(x);
-  //location[1] = blockGeometryStructure.physCoordY(y);
-  //location[2] = blockGeometryStructure.physCoordZ(z);
-  //T distancesCopy[L::q];
-  //T spacing = blockGeometryStructure.getDeltaR();
-  //for (int iPop = 1; iPop < L::q ; ++iPop) {
-  //  distancesCopy[iPop] = spacing*(1.-distances[iPop]);
-  //  if (distances[iPop] == -1)
-  //    distancesCopy[iPop] = -1;
-  //}
-  //addOffDynamics(x, y, z, location, distancesCopy);
-
-  //Dummy run to record number of link velocities
-  //int nLinks = 0;
-  std::vector<int> iLinks;
-  //std::vector<int> iBulk = {0};
-
-  //construct std::vector of distances for safe passing by value
-  std::vector<T> distancesVector;
-
-  for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if ( !util::nearZero(distances[iPop]+1) ) {
-      nLinks++;
-      iLinks.push_back(iPop);
-      distancesVector.push_back(distances[iPop]);
-    }
-  //  else 
-  //  iBulk.push_back(iPop);
-  //}
-  for (int iPop = 1; iPop < L::q ; ++iPop) {
-    if ( !util::nearZero(distances[iPop]+1) ) {
-      const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
-      addZeroVelocityGradBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop], distancesVector, iLinks); 
-    }
-  }
-}
-
-*/
-
-
-//CURRENTLY HERE - JUST FINISHED ADDZVGB FUNCTIONS, 
-//NEXT - MAKE SURE COMPILES  UP TO THIS POINT??, CHECK NEXT FUNCTIONS (ADD MULTI POINT), UPDATE POST PROCESSOR, GET IT WORKING??
-
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing)
 {
- int xs[3];
+ //int xs[3];
  int iPop;
  bool isPeriodic = true;
  //bool isFluid;
  Vector<int, 3> cf;
-
-  //Determine whether all xF nodes are fluid
-  //for (unsigned i=0; i<iMissing.size(); ++i) {
-  //  cf = descriptors::c<DESCRIPTOR>(iMissing[i]);
-  //  if (blockGeometryStructure.getMaterial(xB + cf[0], yB + cf[1], zB + cf[2]) != 1)
-  //    isFluid = false;
-  //}
-
-  for (unsigned i=0; i<iMissing.size(); ++i) {
-    iPop = iMissing[i];
-    Vector<int,3> cs = descriptors::c<DESCRIPTOR>(util::opposite<DESCRIPTOR>(iPop));
-    xs[0] = xB + cs[0];
-    xs[1] = yB + cs[1];
-    xs[2] = zB + cs[2];
-
-    //xs is ghost node
+   
+    //if xb is ghost
     if (isPeriodic && (
-      xs[0] <= 0 || xs[0] >= blockGeometryStructure.getNx() - 1 ||
-      xs[1] <= 0 || xs[1] >= blockGeometryStructure.getNy() - 1 ||
-      xs[2] <= 0 || xs[2] >= blockGeometryStructure.getNz() - 1 )) 
-        addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
-    //else if (!isFluid){
-    //  std::cout << "NOT FLUID " << zB << std::endl; 
-    //    addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
-    //}
+      xB == 0 || xB == blockGeometryStructure.getNx() - 1 ||
+      yB == 0 || yB == blockGeometryStructure.getNy() - 1 ||
+      zB == 0 || zB == blockGeometryStructure.getNz() - 1 )) {
+
+        for (unsigned i = 0; i < iMissing.size(); ++i) {
+          iPop = iMissing[i];
+          addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
+        } 
+      }
     else {
-       //std::cout << xB << " " << yB << " " << zB << std::endl;
-       //std::cout << xs[0] << " " << xs[1] << " " << xs[2] << std::endl;
-       addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);     
+      //Check if grad post processor already exists for this boundary node
+      std::vector<PostProcessor3D<T, DESCRIPTOR>*>& postProcessors = this->getPostProcessors();
+      bool counted = false;
+      for(unsigned i = 0; i < postProcessors.size(); ++i) {
+        //LOOP IN REVERSE ORDER - WILL BE MORE EFFICIENT!? i.e. size() - 1 to zero
+        if (postProcessors[i]->getPosition()[0] == xB &&
+          postProcessors[i]->getPosition()[1] == yB &&
+          postProcessors[i]->getPosition()[2] == zB) {
+            counted = true;
+            break;
+        }
+      }
+      if (!counted) {
+        addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);
+        //std::cout << "ADDED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
+      }
+      else {
+        //std::cout << "IGNORED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
+      }
     }
-  }
 } 
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
@@ -657,7 +512,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
           iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
         } // bulkMaterials if j
       } //jPop loop
-      addZeroVelocityGradBoundary(blockGeometryStructure, iXb, iYb, iZb, distances, iMissing);
+       addZeroVelocityGradBoundary(blockGeometryStructure, iXb, iYb, iZb, distances, iMissing);
     }   // bulkMaterials if i
   } // iPop loop
 }

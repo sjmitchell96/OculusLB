@@ -478,6 +478,19 @@ BlockLattice3D<T,DESCRIPTOR>::getStatistics() const
 }
 
 template<typename T, typename DESCRIPTOR>
+std::vector<PostProcessor3D<T, DESCRIPTOR>*>& BlockLattice3D<T,DESCRIPTOR>::getPostProcessors()
+{
+  return postProcessors;
+}
+
+template<typename T, typename DESCRIPTOR>
+std::vector<PostProcessor3D<T, DESCRIPTOR>*> const&
+BlockLattice3D<T,DESCRIPTOR>::getPostProcessors() const
+{
+  return postProcessors;
+}
+
+template<typename T, typename DESCRIPTOR>
 void BlockLattice3D<T,DESCRIPTOR>::allocateMemory()
 {
   // The conversions to size_t ensure 64-bit compatibility. Note that

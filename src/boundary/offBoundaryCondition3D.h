@@ -106,6 +106,10 @@ public:
   virtual BlockLatticeStructure3D<T,DESCRIPTOR>& getBlock() =0;
   virtual BlockLatticeStructure3D<T,DESCRIPTOR> const& getBlock() const =0;
 
+  //Access to post processors vector of associated blockLattice
+  virtual std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() =0; 
+  virtual std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& getPostProcessors() const =0; 
+
   virtual void outputOn() =0;
   virtual void outputOff() =0;
 };

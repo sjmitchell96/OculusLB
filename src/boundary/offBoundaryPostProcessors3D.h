@@ -154,6 +154,7 @@ private:
   int nMissing;
   
   std::vector<int> getNext(int x, int y, int z);
+  std::vector<int> getPosition();
   // computePi
   // updateMissing
   // computeUf

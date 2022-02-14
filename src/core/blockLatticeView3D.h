@@ -87,6 +87,8 @@ public:
   void executeCoupling() override;
   LatticeStatistics<T>& getStatistics() override;
   LatticeStatistics<T> const& getStatistics() const override;
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() override;
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& getPostProcessors() const override;
 private:
   BlockLatticeStructure3D<T,DESCRIPTOR>  *originalLattice;
   int                          x0, y0, z0;

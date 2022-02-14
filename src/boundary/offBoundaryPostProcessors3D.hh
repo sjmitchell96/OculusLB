@@ -365,6 +365,12 @@ getNext(int x, int y, int z)
       return std::vector<int> {x, y, z};
 }
 
+template<typename T, typename DESCRIPTOR>
+std::vector<int> ZeroVelocityGradPostProcessor3D<T, DESCRIPTOR>::
+getPosition()
+{
+      return std::vector<int> {x, y, z};
+}
 
 template<typename T, typename DESCRIPTOR>
 void ZeroVelocityGradPostProcessor3D<T,DESCRIPTOR>::

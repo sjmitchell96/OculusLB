@@ -341,6 +341,20 @@ LatticeStatistics<T> const& BlockLatticeView3D<T,DESCRIPTOR>::getStatistics() co
   return originalLattice->getStatistics();
 }
 
+template<typename T, typename DESCRIPTOR>
+std::vector<PostProcessor3D<T, DESCRIPTOR>*>& 
+BlockLatticeView3D<T,DESCRIPTOR>::getPostProcessors()
+{
+  return originalLattice->getPostProcessors();
+}
+
+template<typename T, typename DESCRIPTOR>
+std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& 
+BlockLatticeView3D<T,DESCRIPTOR>::getPostProcessors() const
+{
+  return originalLattice->getPostProcessors();
+}
+
 }  // namespace olb
 
 #endif

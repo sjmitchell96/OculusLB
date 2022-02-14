@@ -201,6 +201,10 @@ public:
 
   virtual LatticeStatistics<T>& getStatistics() =0;
   virtual LatticeStatistics<T> const& getStatistics() const =0;
+
+  //Access to postProcessor vector
+  virtual std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() =0;
+  virtual std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& getPostProcessors() const =0;
 };
 
 

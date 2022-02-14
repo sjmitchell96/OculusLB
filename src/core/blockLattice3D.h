@@ -172,6 +172,11 @@ public:
   LatticeStatistics<T>& getStatistics() override;
   /// Return a constant handle to the LatticeStatistics object
   LatticeStatistics<T> const& getStatistics() const override;
+  
+  /// Return a handle to the postProcessors object
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() override;
+  /// Return a constant handle to the postProcessors object
+  std::vector<PostProcessor3D<T, DESCRIPTOR>*> const& getPostProcessors() const override;
 
   /// Apply streaming step to bulk (non-boundary) cells
   void bulkStream(int x0, int x1, int y0, int y1, int z0, int z1);
