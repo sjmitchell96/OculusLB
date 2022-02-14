@@ -419,16 +419,19 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
       //Check if grad post processor already exists for this boundary node
       std::vector<PostProcessor3D<T, DESCRIPTOR>*>& postProcessors = this->getPostProcessors();
       bool counted = false;
-      for(unsigned i = 0; i < postProcessors.size(); ++i) {
-        //LOOP IN REVERSE ORDER - WILL BE MORE EFFICIENT!? i.e. size() - 1 to zero
-        if (postProcessors[i]->getPosition()[0] == xB &&
-          postProcessors[i]->getPosition()[1] == yB &&
-          postProcessors[i]->getPosition()[2] == zB) {
+      unsigned pSize = postProcessors.size();
+      std::vector<int> pos = {0,0,0}; 
+      for(unsigned i = 0; i < pSize; ++i) {
+        pos = postProcessors[pSize -1 -i]->getPosition();
+        if (pos[0] == xB && pos[1] == yB && pos[2] == zB) {
             counted = true;
             break;
         }
       }
       if (!counted) {
+
+        //clean / dirty sort here!
+
         addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);
         //std::cout << "ADDED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
       }
@@ -447,7 +450,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
   for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
     const Vector<int,3> cb = descriptors::c<DESCRIPTOR>(iPop);
     const int iXb = iX + cb[0]; //Boundary node
-    const int iYb = iY + cb[1];
+    const int iYb = iY + cb[1]; 
     const int iZb = iZ + cb[2];
 
     if (blockGeometryStructure.isInside(iXb,iYb,iZb) && bulkIndicator(iXb, iYb, iZb)) {
