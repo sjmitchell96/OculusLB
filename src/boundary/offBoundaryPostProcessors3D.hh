@@ -310,32 +310,41 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
     }
   }
 
+  //Xb material
+  int xBmat = 6;
+
   //Determine stencil points for pressure tensor gradients
-  if (blockGeometryStructure.getMaterial(x + 1, y, z) == 1) {
+  if ((blockGeometryStructure.getMaterial(x + 1, y, z) == 1) ||
+       (blockGeometryStructure.getMaterial(x + 1, y, z) == xBmat)) {
     pStencilX[0] = x + 1;
     pStencilX[1] = x;
   }
-  else if (blockGeometryStructure.getMaterial(x - 1, y, z) == 1) {
+  else if ((blockGeometryStructure.getMaterial(x - 1, y, z) == 1) ||
+  (blockGeometryStructure.getMaterial(x - 1, y, z) == xBmat)) {
     pStencilX[0] = x;
     pStencilX[1] = x - 1;
   }
   else 
     std::cout << "GradBC Warning: No suitable stencil point in x" << std::endl;
-  if (blockGeometryStructure.getMaterial(x, y + 1, z) == 1) {
+  if ((blockGeometryStructure.getMaterial(x, y + 1, z) == 1) ||
+     (blockGeometryStructure.getMaterial(x, y + 1, z) == xBmat)) {
     pStencilY[0] = y + 1;
     pStencilY[1] = y;
   }
-  else if (blockGeometryStructure.getMaterial(x, y - 1, z) == 1) {
+  else if ((blockGeometryStructure.getMaterial(x, y - 1, z) == 1) ||
+           (blockGeometryStructure.getMaterial(x, y - 1, z) == xBmat)) {
     pStencilY[0] = y;
     pStencilY[1] = y - 1;
   }
   else 
     std::cout << "GradBC Warning: No suitable stencil point in y" << std::endl;
-  if (blockGeometryStructure.getMaterial(x, y, z + 1) == 1) {
+  if ((blockGeometryStructure.getMaterial(x, y, z + 1) == 1) ||
+      (blockGeometryStructure.getMaterial(x, y, z + 1) == xBmat)) {
     pStencilZ[0] = z + 1;
     pStencilZ[1] = z;
   }
-  else if (blockGeometryStructure.getMaterial(x, y, z - 1) == 1) {
+  else if ((blockGeometryStructure.getMaterial(x, y, z - 1) == 1) ||
+           (blockGeometryStructure.getMaterial(x, y, z - 1) == xBmat)) {
     pStencilZ[0] = z;
     pStencilZ[1] = z - 1;
   }

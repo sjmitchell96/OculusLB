@@ -398,6 +398,20 @@ template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing)
 {
+
+//RESTRUCTURE NEXT
+//CHECK ALL ADJACENT MISSING NODES, TO FIND IF CLEAN OR DIRTY
+//IF CLEAN, ADD TO ICLEAN ETC. AS USUAL
+//IF DIRTY, ADD TO IDIRTY ETC. AS USUAL
+
+//WILL NEED SECOND LOOP OVER ALL XB (HIGHER FUNCTION), TO ADD CONNECTIVITY
+//SINCE CAN'T BE GUARANTEED THAT ADJACENT PP EXISTS YET!
+//SO WRITE FUNCTION TO FILL PP CONNECTIVITY VECTORS (WITH CONDITIONAL STATEMENT, SO ONLY IF OPT2 CHOSEN)
+
+//ALSO DON'T FORGET TO IMPROVE PI STENCIL! (GRAD PAPER 2)
+
+ //OLD
+
  //int xs[3];
  int iPop;
  bool isPeriodic = true;
@@ -417,28 +431,28 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
       }
     else {
       //Check if grad post processor already exists for this boundary node
-      std::vector<PostProcessor3D<T, DESCRIPTOR>*>& postProcessors = this->getPostProcessors();
-      bool counted = false;
-      unsigned pSize = postProcessors.size();
-      std::vector<int> pos = {0,0,0}; 
-      for(unsigned i = 0; i < pSize; ++i) {
-        pos = postProcessors[pSize -1 -i]->getPosition();
-        if (pos[0] == xB && pos[1] == yB && pos[2] == zB) {
-            counted = true;
-            break;
-        }
-      }
-      if (!counted) {
+      //std::vector<PostProcessor3D<T, DESCRIPTOR>*>& postProcessors = this->getPostProcessors();
+      //bool counted = false;
+      //unsigned pSize = postProcessors.size();
+      //std::vector<int> pos = {0,0,0}; 
+      //for(unsigned i = 0; i < pSize; ++i) {
+      //  pos = postProcessors[pSize -1 -i]->getPosition();
+      //  if (pos[0] == xB && pos[1] == yB && pos[2] == zB) {
+      //      counted = true;
+      //      break;
+      //  }
+      //}
+      //if (!counted) {
 
         //clean / dirty sort here!
 
         addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);
         //std::cout << "ADDED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
       }
-      else {
+      //else {
         //std::cout << "IGNORED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
-      }
-    }
+      //}
+    //}
 } 
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
@@ -446,78 +460,78 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
   BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
   IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
 {  
-  
-  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
-    const Vector<int,3> cb = descriptors::c<DESCRIPTOR>(iPop);
-    const int iXb = iX + cb[0]; //Boundary node
-    const int iYb = iY + cb[1]; 
-    const int iZb = iZ + cb[2];
 
-    if (blockGeometryStructure.isInside(iXb,iYb,iZb) && bulkIndicator(iXb, iYb, iZb)) {
 
-      T physR[3];
-      blockGeometryStructure.getPhysR(physR,iXb,iYb,iZb);
-      T voxelSize=blockGeometryStructure.getDeltaR();
-      Vector<T,3> physC(physR);
-      std::vector<T> distances;
-      std::vector<unsigned> iMissing;
+  //std::cout << blockGeometryStructure.getMaterial(iX, iY, iZ) << std::endl;
+  //std::cout << bulkIndicator(iX, iY, iZ) << std::endl;
 
-      for (int jPop = 1; jPop < DESCRIPTOR::q; ++jPop) {
-        const Vector<int,3> cs = descriptors::c<DESCRIPTOR>(jPop);
-        const int iXs = iXb + cs[0]; //Solid node
-        const int iYs = iYb + cs[1];
-        const int iZs = iZb + cs[2]; 
-        T dist = -1;
+  //Update: Input is now Xb cells!
+  if (blockGeometryStructure.isInside(iX,iY,iZ) && bulkIndicator(iX, iY, iZ)) {
 
-        if (blockGeometryStructure.isInside(iXs,iYs,iZs) && !bulkIndicator(iXs, iYs, iZs)) {
-         
-          Vector<T,3> direction(voxelSize*cs[0],voxelSize*cs[1],voxelSize*cs[2]);
-          T cPhysNorm = voxelSize*sqrt(cs[0]*cs[0]+cs[1]*cs[1]+cs[2]*cs[2]);
+    T physR[3];
+    blockGeometryStructure.getPhysR(physR,iX,iY,iZ);
+    T voxelSize=blockGeometryStructure.getDeltaR();
+    Vector<T,3> physC(physR);
+    std::vector<T> distances;
+    std::vector<unsigned> iMissing;
 
-          if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob())) {
-            clout << "Distance not found initially" << std::endl;
-            T epsX = voxelSize*cs[0]*this->_epsFraction;
-            T epsY = voxelSize*cs[1]*this->_epsFraction;
-            T epsZ = voxelSize*cs[2]*this->_epsFraction;
+    for (int jPop = 1; jPop < DESCRIPTOR::q; ++jPop) {
+      const Vector<int,3> cs = descriptors::c<DESCRIPTOR>(jPop);
+      const int iXs = iX + cs[0]; //Solid node
+      const int iYs = iY + cs[1];
+      const int iZs = iZ + cs[2]; 
+      T dist = -1;
 
-            Vector<T,3> physC2(physC);
-            physC2[0] -= epsX;
-            physC2[1] -= epsY;
-            physC2[2] -= epsZ;
-            Vector<T,3> direction2(direction);
-            direction2[0] += 2.*epsX;
-            direction2[1] += 2.*epsY;
-            direction2[2] += 2.*epsZ;
-                      
-            if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
-              clout << "ERROR: no boundary found at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
-                    << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                    << "in direction " << jPop
-                    << std::endl;
-            }
-            T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
-            if (distNew < 0.5) {
-              dist = 0;
-              clout << "DISTANCE WARNING" << std::endl;
-            }
-            else {
-              dist = 0.5 * cPhysNorm;
-              clout << "WARNING: distance at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
-                    << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                    << "in direction " << jPop << ": "
-                    << distNew
-                    << " rounded to "
-                    << dist/cPhysNorm
-                    << std::endl;
-            }
+      if (blockGeometryStructure.isInside(iXs,iYs,iZs) && !bulkIndicator(iXs, iYs, iZs)) {
+        
+        Vector<T,3> direction(voxelSize*cs[0],voxelSize*cs[1],voxelSize*cs[2]);
+        T cPhysNorm = voxelSize*sqrt(cs[0]*cs[0]+cs[1]*cs[1]+cs[2]*cs[2]);
+
+        if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob())) {
+          clout << "Distance not found initially" << std::endl;
+          T epsX = voxelSize*cs[0]*this->_epsFraction;
+          T epsY = voxelSize*cs[1]*this->_epsFraction;
+          T epsZ = voxelSize*cs[2]*this->_epsFraction;
+
+          Vector<T,3> physC2(physC);
+          physC2[0] -= epsX;
+          physC2[1] -= epsY;
+          physC2[2] -= epsZ;
+          Vector<T,3> direction2(direction);
+          direction2[0] += 2.*epsX;
+          direction2[1] += 2.*epsY;
+          direction2[2] += 2.*epsZ;
+                    
+          if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+            clout << "ERROR: no boundary found at (" << iX << "," << iY << "," << iZ <<") ~ ("
+                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                  << "in direction " << jPop
+                  << std::endl;
           }
-          distances.push_back(dist/cPhysNorm);
-          iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
-        } // bulkMaterials if j
-      } //jPop loop
-       addZeroVelocityGradBoundary(blockGeometryStructure, iXb, iYb, iZb, distances, iMissing);
-    }   // bulkMaterials if i
-  } // iPop loop
+          T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+          if (distNew < 0.5) {
+            dist = 0;
+            clout << "DISTANCE WARNING" << std::endl;
+          }
+          else {
+            dist = 0.5 * cPhysNorm;
+            clout << "WARNING: distance at (" << iX << "," << iY << "," << iZ <<") ~ ("
+                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                  << "in direction " << jPop << ": "
+                  << distNew
+                  << " rounded to "
+                  << dist/cPhysNorm
+                  << std::endl;
+          }
+        }
+        distances.push_back(dist/cPhysNorm);
+        iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
+      } // bulkMaterials if j
+    } //jPop loop
+      addZeroVelocityGradBoundary(blockGeometryStructure, iX, iY, iZ, distances, iMissing);
+  }   // bulkMaterials if i
+  else
+    std::cout << "WARNING - cell is not bulk " << iX << " " << iY << " " << iZ << std::endl;
 }
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>

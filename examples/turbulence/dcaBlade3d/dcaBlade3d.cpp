@@ -63,17 +63,25 @@ using namespace std;
 
 typedef double T;
 
-//Turbulence model choice
+//Collision choice
 //#define WALE
 //#define Smagorinsky
+#define KBC
+
+//Boundary condition choice
+#define Bouzidi 
+//#define Grad
 
 #ifdef WALE
 #define DESCRIPTOR WALED3Q19Descriptor
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
-#else
+#elif defined (KBC)
+#define DESCRIPTOR D3Q27descriptorKBC
+#endif
+
+#ifdef Grad
 #define DESCRIPTOR D3Q27descriptorKBCGrad
-//#define DESCRIPTOR D3Q27descriptorKBC
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -107,7 +115,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
-  //sGeometry.rename(5, 6, pressureSection1);
+  //sGeometry.rename(5, 7, pressureSection1);
 
   //Set material number for inflow
   {
@@ -155,6 +163,12 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   }
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
+
+  #ifdef Grad
+  IndicatorLayer3D<T> bladeLayer(indicatorBlade, deltaX);
+  sGeometry.rename(1,6,bladeLayer);
+  #endif
+
   sGeometry.checkForErrors();
   sGeometry.print();
   clout << "Prepare Geometry ... OK" << std::endl;
@@ -418,15 +432,18 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
         new SmagorinskyBGKdynamics<T,DESCRIPTOR>(
           omega, instances::getBulkMomenta<T,DESCRIPTOR>(), 0.1)));
-  #else 
-    Dynamics<T,DESCRIPTOR>& bulkDynamics = 
-      grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
-        new KBCGradDynamics<T,DESCRIPTOR>(
-          omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
-    //Dynamics<T,DESCRIPTOR>& bulkDynamics = 
-    //  grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
-    //    new KBCdynamics<T,DESCRIPTOR>(
-     //     omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+  #elif defined(KBC)
+    #if defined(Grad)
+      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+        grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+          new KBCGradDynamics<T,DESCRIPTOR>(
+            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+    #else
+      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+        grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+          new KBCdynamics<T,DESCRIPTOR>(
+            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+    #endif
   #endif
 
   // Initialize boundary condition types
@@ -440,22 +457,19 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     grid.getOnLatticeBoundaryCondition();
   createLocalBoundaryCondition3D<T,DESCRIPTOR>(onbc);
 
-  //Bouzidi
-  //sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
-  //  grid.getOffLatticeBoundaryCondition();
-  //createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
-
-  //Grad
   sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& offBc =
-    grid.getOffLatticeBoundaryCondition();
-  createGradBoundaryCondition3D<T,DESCRIPTOR>(offBc);
-  //createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+      grid.getOffLatticeBoundaryCondition();
 
+  #if defined(Bouzidi)
+    createBouzidiBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+  #elif defined(Grad)
+    createGradBoundaryCondition3D<T,DESCRIPTOR>(offBc);
+  #endif
 
   // Define dynamics
   sLattice.defineDynamics(sGeometry, 0,
 		       	  &instances::getNoDynamics<T,DESCRIPTOR>());
-  auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4});
+  auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4, 6});
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
@@ -463,21 +477,23 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   onbc.addVelocityBoundary(sGeometry, 3, omega);
   bc.addPressureBoundary(sGeometry, 4, omega);
 
-  //Options for blade surface boundary
-  if ( bouzidiOn ) {
-    // material=5,6 --> no dynamics + bouzidi zero velocity
+  #if defined(Bouzidi)
+    // material=5, 7 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade );
-    //offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
-    sLattice.defineDynamics( sGeometry,6,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,6,indicatorBlade );
-    //offBc.addZeroVelocityBoundary( sGeometry,6,indicatorBlade );
-  }
-  else {
-  // material=5 --> fullway bounceBack dynamics
-  sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
-  sLattice.defineDynamics( sGeometry, 6, &instances::getBounceBack<T, DESCRIPTOR>() );
-  }
+    sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
+    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
+    offBc.addZeroVelocityBoundary( sGeometry,7,indicatorBlade );
+  #elif defined(Grad)
+    sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
+    sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorBlade,std::vector<int>{1,6} );
+  #else
+    //material=5,7 --> fullway bounceBack dynamics
+    sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
+    sLattice.defineDynamics( sGeometry, 7, &instances::getBounceBack<T, DESCRIPTOR>() );
+  #endif
+
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
   Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0., 0.};
@@ -636,7 +652,7 @@ int main( int argc, char* argv[] ) {
   //Domain and simulation parameters
   const int N = 14;        // resolution of the model (coarse cells per chord)
   const int nRefinement = 4;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
+  const T lDomainPhysx = 18.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
@@ -753,9 +769,9 @@ int main( int argc, char* argv[] ) {
 			sAveragedP.push_back(taType(new typename taType::element_type(
         *sP.back())));
 			wssp.push_back(wsspType(new typename wsspType::element_type(
-        sLattice,converter, sGeometry,6,indicatorBlade)));
+        sLattice,converter, sGeometry,7,indicatorBlade)));
 			yPlus.push_back(yPlusType(new typename yPlusType::element_type(
-        sLattice,converter,sGeometry,indicatorBlade,6)));
+        sLattice,converter,sGeometry,indicatorBlade,7)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
         *wssp.back())));
 	};
