@@ -627,8 +627,8 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
   T bladeForce[3];
   int input1[0];
   drag(bladeForce,input1);
-  std::cout << "Lift = " << bladeForce[1] << endl;
-  std::cout << "Drag = " << bladeForce[0] << endl;
+  //std::cout << "Lift = " << bladeForce[1] << endl;
+  //std::cout << "Drag = " << bladeForce[0] << endl;
 
   ofstream myfile;
   std::string filename {filePath+".csv"};
