@@ -622,7 +622,7 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
   T chord = blade.getChord();
 
   SuperLatticePhysDragBlade3D<T,DESCRIPTOR> drag(sLattice, superGeometry,
-		                                 std::vector<int>{5,6},
+		                                 std::vector<int>{5,7},
 						 converter,span*chord);
   T bladeForce[3];
   int input1[0];
