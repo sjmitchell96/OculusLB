@@ -193,17 +193,17 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {0.25 * chord, 0.3 * chord}; 
-  const Vector<T,2> hp4 = {0.25 * chord, 0.3 * chord}; // '' positive
+  const Vector<T,2> hn4 = {0.1 * chord, 0.15 * chord}; 
+  const Vector<T,2> hp4 = {0.1 * chord, 0.15 * chord}; // '' positive
 
-  const Vector<T,2> hn3 = {1.1 * chord, 0.5 * chord};
-  const Vector<T,2> hp3 = {1.1 * chord, 0.5 * chord};
+  const Vector<T,2> hn3 = {0.2 * chord, 0.25 * chord};
+  const Vector<T,2> hp3 = {0.6 * chord, 0.25 * chord};
 
-  const Vector<T,2> hn2 = {2.1 * chord, 0.9 * chord};
-  const Vector<T,2> hp2 = {2.1 * chord, 0.9 * chord};
+  const Vector<T,2> hn2 = {0.4 * chord, 0.45 * chord};
+  const Vector<T,2> hp2 = {1.2 * chord, 0.45 * chord};
 
-  const Vector<T,2> hn1 = {3.1 * chord, 1.3 * chord}; //Outermost
-  const Vector<T,2> hp1 = {3.1 * chord, 1.3 * chord};
+  const Vector<T,2> hn1 = {0.8 * chord, 0.85 * chord}; //Outermost
+  const Vector<T,2> hp1 = {2.4 * chord, 0.85 * chord};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -647,10 +647,10 @@ int main( int argc, char* argv[] ) {
   const T r1 = 0.1836;
   const T r2 = 0.00015;
   const T xp = 0.02538;
-  const T theta = 0.00; //Pitch (+ve = anticlockwise)
+  const T theta = -8.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
-  const int N = 14;        // resolution of the model (coarse cells per chord)
+  const int N = 25; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 4;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 18.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
