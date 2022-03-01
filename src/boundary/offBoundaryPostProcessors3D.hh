@@ -97,6 +97,7 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
   blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
                                    (1-q)*blockLattice.get(xB, yB, zB)[iPop2];
+  //BOUNCEBACK blockLattice.get(x, y, z)[opp] = blockLattice.get(xN, yN, zN)[iPop];
 }
 
 template<typename T, typename DESCRIPTOR>

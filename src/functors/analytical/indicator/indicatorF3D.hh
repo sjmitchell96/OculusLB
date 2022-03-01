@@ -561,9 +561,9 @@ template<typename S>
 bool IndicatorBladeDca3D<S>::operator()(bool output[], const S input[]) 
 {
   //Transform input position to blade-local coordinates
-  S inputLocalX = (input[0]-_origin[0])*cos(_theta*M_PI/180) + (input[1]-_origin[1])*sin(_theta*M_PI/180);
-  S inputLocalY = -(input[0]-_origin[0])*sin(_theta*M_PI/180)  + (input[1]-_origin[1])*cos(_theta*M_PI/180);
-  S inputLocalZ = input[2] - _origin[2];
+  S inputLocalX = _I[0]*(input[0]-_origin[0]) + _I[1]*(input[1]-_origin[1]) + _I[2]*(input[2]-_origin[2]);
+  S inputLocalY = _J[0]*(input[0]-_origin[0]) + _J[1]*(input[1]-_origin[1]) + _J[2]*(input[2]-_origin[2]);
+  S inputLocalZ = _K[0]*(input[0]-_origin[0]) + _K[1]*(input[1]-_origin[1]) + _K[2]*(input[2]-_origin[2]);
 
   output[0] = false;
   
@@ -815,13 +815,13 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
                                      const Vector<S,3>& direction, int iC)
 {
   //Convert input origin and direction to blade-local coordinates
-  const Vector<S,3> originLocal((origin[0]-_origin[0])*cos(_theta*M_PI/180) + (origin[1]-_origin[1])*sin(_theta*M_PI/180),
-                                  -(origin[0]-_origin[0])*sin(_theta*M_PI/180)  + (origin[1]-_origin[1])*cos(_theta*M_PI/180),
-                                  origin[2] - _origin[2]);
+  const Vector<S,3> originLocal(_I[0]*(origin[0]-_origin[0]) + _I[1]*(origin[1]-_origin[1]) + _I[2]*(origin[2]-_origin[2]),
+                                  _J[0]*(origin[0]-_origin[0]) + _J[1]*(origin[1]-_origin[1]) + _J[2]*(origin[2]-_origin[2]),
+                                  _K[0]*(origin[0]-_origin[0]) + _K[1]*(origin[1]-_origin[1]) + _K[2]*(origin[2]-_origin[2]));
 
-  Vector<S,3> directionLocal(direction[0]*cos(_theta*M_PI/180) + direction[1]*sin(_theta*M_PI/180),
-  			       -direction[0]*sin(_theta*M_PI/180)  + direction[1]*cos(_theta*M_PI/180),
-                               direction[2]);
+  Vector<S,3> directionLocal(_I[0]*direction[0] + _I[1]*direction[1] + _I[2]*direction[2],
+                             _J[0]*direction[0] + _J[1]*direction[1] + _J[2]*direction[2],
+                             _K[0]*direction[0] + _K[1]*direction[1] + _K[2]*direction[2]);
 
   //Normalise local direction vector
   S dirMag = directionLocal[0]*directionLocal[0] + directionLocal[1]*directionLocal[1] + directionLocal[2]*directionLocal[2];
@@ -865,14 +865,14 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
       distance[1] = sol2;
       return true;
     }
-    else if (discriminant > -pow(10,-15) && a > 0.) {
-      discriminant = 0.;
+    //else if (discriminant > -pow(10,-15) && a > 0.) {
+    //  discriminant = 0.;
       //std::cout << "Set discriminant to zero!" << endl;
-      sol1 = (-b-pow(discriminant,0.5))/(2.*a);
-      sol2 = (-b+pow(discriminant,0.5))/(2.*a);
-      distance[0] = sol1;
-      distance[1] = sol2;
-    }
+    //  sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+    //  sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+    //  distance[0] = sol1;
+    //  distance[1] = sol2;
+    //}
     else {
       //std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
       distance[0] = -pow(10,6);
@@ -968,7 +968,7 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
   Vector<S,2> intersectCyl4x;
   for (int i=0;i<2;++i){
     intersectCyl4x[i] = originLocal[0] + d4[i] * directionLocal[0];
-    if (intersectCyl4x[i] <= -_xp || intersectCyl4x[i] >= _xp) {
+    if (intersectCyl4x[i] < -_xp || intersectCyl4x[i] > _xp) {
       d4[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
     }
   }
@@ -976,7 +976,7 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
   Vector<S,2> intersectCyl5x;
   for (int i=0;i<2;++i){
     intersectCyl5x[i] = originLocal[0] + d5[i] * directionLocal[0];
-    if (intersectCyl5x[i] <= -_xp || intersectCyl5x[i] >= _xp) {
+    if (intersectCyl5x[i] < -_xp || intersectCyl5x[i] > _xp) {
       d5[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
     }
   }
@@ -991,6 +991,7 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
   std::vector<S> absDistances;
   absDistances.assign({abs(d1),abs(d2),abs(d3[0]),abs(d3[1]),abs(d4[0]),abs(d4[1]),abs(d5[0]),abs(d5[1]),abs(d6[0]),abs(d6[1])});
   distance = *std::min_element(std::begin(absDistances),std::end(absDistances));
+  //std::cout << "---" << std::endl;  
   //std::cout << "ORIGIN LOCAL" << originLocal[0] << " " << originLocal[1] << " " << originLocal[2] << endl;;
   //std::cout << "DIRECTION LOCAL" << directionLocal[0] << " " << directionLocal[1] << " " << directionLocal[2] << endl;
   //std::cout << "DISTANCE" << distance << endl;

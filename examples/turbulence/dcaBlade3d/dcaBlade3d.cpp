@@ -647,10 +647,10 @@ int main( int argc, char* argv[] ) {
   const T r1 = 0.1836;
   const T r2 = 0.00015;
   const T xp = 0.02538;
-  const T theta = -8.00; //Pitch (+ve = anticlockwise)
+  const T theta = 0.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
-  const int N = 25; //14        // resolution of the model (coarse cells per chord)
+  const int N = 14; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 4;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 18.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
