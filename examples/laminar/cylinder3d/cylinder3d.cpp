@@ -43,6 +43,11 @@
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
 #include "olb3D.hh"   // include full template code
 #endif
+#include "olb2D.h"
+#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
+#include "olb2D.hh"   // include full template code
+#endif
+
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -206,6 +211,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
   SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
   SuperLatticeYplus3D<T, DESCRIPTOR> yPlus( sLattice, converter, superGeometry, stlReader, 5 );
+  
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
   vtmWriter.addFunctor( yPlus );
@@ -218,6 +224,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
+
     vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
@@ -229,11 +236,42 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   if ( iT%1/*vtkIter*/ == 0 ) {
     vtmWriter.write( iT );
 
-  //  SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-  //  BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    //SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    //BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
     // write output as JPEG
   //  heatmap::write(planeReduction, iT);
   }
+
+
+  //2D BLOCK VTK
+  BlockVTKwriter2D<T> vtkWriter( "cylinder2d" );
+  
+  std::cout << "TEST" << std::endl;
+  BlockReduction3D2D<T> planeReductionVel( velocity, {0, 0, 1} );
+  BlockReduction3D2D<T> planeReductionP( pressure, {0, 0, 1} );
+
+  vtkWriter.addFunctor( planeReductionVel );
+  vtkWriter.addFunctor( planeReductionP );
+  std::cout << "TEST" << std::endl;
+  if ( iT==0 ) {
+    // Writes the geometry, cuboid no. and rank no. as vti file for visualization
+    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
+
+    BlockReduction3D2D<T> planeReductionGeometry( geometry, {0, 0, 1} );
+    vtkWriter.write( planeReductionGeometry );
+  }
+
+  // Writes the vtk files
+  if ( iT%1/*vtkIter*/ == 0 ) {
+    vtkWriter.write( iT );
+    
+
+    //SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    //BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    // write output as JPEG
+  //  heatmap::write(planeReduction, iT);
+  }
+
 
   // Writes output on the console
   if ( iT%statIter == 0 ) {

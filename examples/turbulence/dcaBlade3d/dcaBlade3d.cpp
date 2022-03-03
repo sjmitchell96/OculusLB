@@ -598,6 +598,22 @@ void getVTK2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtkWriter.write(iT);
 }
 
+void getVTKcP(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
+	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
+	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP)
+  {
+
+  OstreamManager clout( std::cout,"getVTKcP" );
+  SuperVTMwriter3D<T> vtmWriter(prefix);
+  vtmWriter.addFunctor(wssp);
+  vtmWriter.addFunctor(sAveragedWSSP);
+
+  if (iT==0) {
+     vtmWriter.createMasterFile();
+  }
+  vtmWriter.write(iT);
+}
+
 
 void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
                Timer<T> timer) {
@@ -671,6 +687,7 @@ int main( int argc, char* argv[] ) {
   //Time-loop options
   const int vtkIter   	   = 10; //Every 10% of max physical time
   //const int vtk2DIter      = 20;
+  const int vtkCpIter      = 1;
   const int statIter  	   = 10;
   const int checkIter 	   = 1000;
   const int bladeForceIter = 1;
@@ -809,6 +826,17 @@ int main( int argc, char* argv[] ) {
       std::cout << "Get results vtk" << endl;
 	};
 
+  auto writeCpVTK = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
+	  auto& wsspVector, auto& sAveragedWSSPVector, int& i_grid){
+			auto& wssp= *wsspVector[i_grid];
+			auto& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
+			getVTKcP(grid, id, iT, wssp,
+        sAveragedWSSP);
+			i_grid++;
+      id = "cP_"+std::to_string(i_grid);
+      //std::cout << "Get results cp" << endl;
+	};
+
   auto saveCheckpoint = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id,
     const std::string& checkpoint, int& i_grid) {
       grid.getSuperLattice().save(id+".checkpoint");
@@ -857,6 +885,13 @@ int main( int argc, char* argv[] ) {
 			i_grid = 0;	
       coarseGrid.forEachGrid(writeTaVTK,"dcaBlade3d_"+std::to_string(i_grid),
         iT, sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus, i_grid);
+		}
+
+    //Add time-averaged functor vector into getVTK functions
+    if ( iT % vtkCpIter == 0 ) {
+			i_grid = 0;	
+      coarseGrid.forEachGrid(writeCpVTK,"cP_"+std::to_string(i_grid),
+        iT, wssp, sAveragedWSSP, i_grid);
 		}
 
 		// Save checkpoint
