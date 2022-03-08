@@ -116,51 +116,298 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
   //sGeometry.rename(5, 7, pressureSection1);
-
-  //Set material number for inflow
+  
+  //Front face
   {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX / 2.,
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
                                   origin[1] + deltaX / 2.,
-                                  origin[2] - deltaX / 2.};
-    const Vector<T,3> wallExtend {deltaX,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
                                   extend[1] - deltaX,
-                                  extend[2] + deltaX};
-    IndicatorCuboid3D<T> inflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 3, inflow);
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> ff(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, ff);
   }
-  //Outflow
+  //Front upper right corner
   {
-    const Vector<T,3> wallOrigin {origin[0] + extend[0] - deltaX / 2.,
-                                  origin[1] + deltaX / 2.,
-                                  origin[2] - deltaX / 2.};
-    const Vector<T,3> wallExtend {deltaX,
-                                  extend[1] - deltaX,
-                                  extend[2] + deltaX};
-    IndicatorCuboid3D<T> outflow(wallExtend, wallOrigin);
-    sGeometry.rename(1, 4, outflow);
-  }
-  //Top wall
-  {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX / 2.,
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
                                   origin[1] + extend[1] - deltaX / 2.,
                                   origin[2] - deltaX / 2.};
-    const Vector<T,3> wallExtend {origin[0] + extend[0] + deltaX,
-                                  origin[1] + deltaX,
-                                  origin[2] + extend[2] + deltaX};
-    IndicatorCuboid3D<T> topWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, topWall);
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> furc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, furc);
   }
-  //Bottom wall
+  //Front upper edge
   {
-    const Vector<T,3> wallOrigin {origin[0] - deltaX / 2.,
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> fue(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, fue);
+  }
+  //Front upper left corner
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> fulc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, fulc);
+  }
+  //Front left edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] +  deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> fle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, fle);
+  }
+  //Front lower left corner
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> flle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, flle);
+  }
+  //Front lower edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> fle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, fle);
+  }
+  //Front lower right corner
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
                                   origin[1] - deltaX / 2.,
                                   origin[2] - deltaX / 2.};
-    const Vector<T,3> wallExtend {extend[0] + deltaX,
+    const Vector<T,3> indiExtend {deltaX,
                                   deltaX,
-                                  extend[2] + deltaX};
-    IndicatorCuboid3D<T> bottomWall(wallExtend, wallOrigin);
-    sGeometry.rename(1, 2, bottomWall);
+                                  deltaX};
+    IndicatorCuboid3D<T> flrc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, flrc);
   }
+  ////////////////////
+  //Front right edge  
+  {
+    const Vector<T,3> indiOrigin {origin[0] - deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> fre(indiExtend, indiOrigin);
+    sGeometry.rename(1, 3, fre);
+  }
+  ///////////
+  //Upper right edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> ure(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, ure);
+  }
+  //Upper face  
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> uf(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, uf);
+  }
+  //Upper left edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> ule(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, ule);
+  }
+  //Left face
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> lf(indiExtend, indiOrigin);
+    sGeometry.rename(1, 1, lf);
+  }
+  //Lower left edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> lle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, lle);
+  }
+  //Lower face
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> lf(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, lf);
+  }
+  //Lower right edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> lre(indiExtend, indiOrigin);
+    sGeometry.rename(1, 2, lre);
+  }
+  //Right face
+  {
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {extend[0] + deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rf(indiExtend, indiOrigin);
+    sGeometry.rename(1, 1, rf);
+  }
+  /////////////////
+  //Rear face
+  {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  extend[1] - deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> rf(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rf);
+  }
+  //////////////////
+  //Rear upper right corner
+  {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rurc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rurc);
+  }
+  //Rear upper edge
+  {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> rue(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rue);
+  }
+  //Rear upper left corner
+ {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] + extend[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rulc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rulc);
+  }
+  //Rear left edge
+ {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] +  deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rle);
+  }
+  //Rear lower left corner
+ {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + extend[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rllc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rllc);
+  }
+  //Rear lower edge
+ {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] + deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  extend[2] - deltaX};
+    IndicatorCuboid3D<T> rle(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rle);
+  }
+  //Rear lower right corner
+  {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rlrc(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rlrc);
+  }
+  //Rear right edge  
+  {
+    const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
+                                  origin[2] - deltaX / 2.};
+    const Vector<T,3> indiExtend {deltaX,
+                                  extend[1] - deltaX,
+                                  deltaX};
+    IndicatorCuboid3D<T> rre(indiExtend, indiOrigin);
+    sGeometry.rename(1, 4, rre);
+  }
+
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
 
@@ -469,13 +716,21 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   // Define dynamics
   sLattice.defineDynamics(sGeometry, 0,
 		       	  &instances::getNoDynamics<T,DESCRIPTOR>());
+//  sLattice.defineDynamics(sGeometry, 2,
+//		       	  &instances::getNoDynamics<T,DESCRIPTOR>());
+
   auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4, 6});
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  onbc.addVelocityBoundary(sGeometry, 2, omega);
+  //onbc.addVelocityBoundary(sGeometry, 2, omega);
+  onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
   onbc.addVelocityBoundary(sGeometry, 3, omega);
-  bc.addPressureBoundary(sGeometry, 4, omega);
+  //onbc.addVelocityBoundary(sGeometry, 2, omega);
+  bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
+  //bc.addConvectionBoundary(sGeometry, 4);
+  //onbc.addPressureBoundary(sGeometry, 4, omega); 
+
 
   #if defined(Bouzidi)
     // material=5, 7 --> no dynamics + bouzidi zero velocity
@@ -675,7 +930,7 @@ int main( int argc, char* argv[] ) {
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100000.;       // Reynolds number
+  const T Re = 100.;       // Reynolds number
   const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physNu = 1.468*std::pow(10,-5); //Kinematic viscosity

@@ -242,7 +242,7 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   //  heatmap::write(planeReduction, iT);
   }
 
-
+/*
   //2D BLOCK VTK
   BlockVTKwriter2D<T> vtkWriter( "cylinder2d" );
   
@@ -262,15 +262,16 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   }
 
   // Writes the vtk files
-  if ( iT%1/*vtkIter*/ == 0 ) {
-    vtkWriter.write( iT );
+  //if ( iT%1vtkIter == 0 ) {
+  //  vtkWriter.write( iT );
     
 
     //SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
     //BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
     // write output as JPEG
   //  heatmap::write(planeReduction, iT);
-  }
+  */
+  //}
 
 
   // Writes output on the console

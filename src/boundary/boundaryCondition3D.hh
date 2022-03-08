@@ -760,6 +760,17 @@ void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
   addFreeEnergyOutletBoundary(indicator, omega, type, latticeNumber, includeOuterCells);
 }
 
+//SM - Outlet boundary
+template<typename T, typename DESCRIPTOR>
+void OnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addOutletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
+  addOutletBoundary(boundaryIndicator, bulkIndicator);
+}
+
 ////////// Factory functions //////////////////////////////////////////////////
 
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>

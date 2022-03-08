@@ -989,6 +989,132 @@ FreeEnergyConvectiveProcessorGenerator3D<T,DESCRIPTOR>::clone() const
           discreteNormalX, discreteNormalY, discreteNormalZ);
 }
 
+
+//////// SM - OutletPostProcessor3D ///////////////////
+
+template<typename T, typename DESCRIPTOR>
+OutletPostProcessor3D<T,DESCRIPTOR>::
+OutletPostProcessor3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_)
+  : x(x_), y(y_), z(z_), nextX(nextX_), nextY(nextY_), nextZ(nextZ_), iPop(iPop_)
+{
+  /*
+    std::cout << "Corner (" << x << "," << y << "," << z <<
+        "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," << zN <<
+        "), dist: " << dist << std::endl;
+  */
+}
+
+template<typename T, typename DESCRIPTOR>
+void OutletPostProcessor3D<T,DESCRIPTOR>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
+    process(blockLattice);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void OutletPostProcessor3D<T,DESCRIPTOR>::
+process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
+{
+  blockLattice.get(x, y, z)[iPop] = blockLattice.get(nextX, nextY, nextZ)[iPop];
+}
+
+/////////// SM - OutletPostProcessorGenerator /////////////////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+OutletPostProcessorGenerator3D<T,DESCRIPTOR>::
+OutletPostProcessorGenerator3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_)
+  : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
+    x(x_), y(y_), z(z_), nextX(nextX_), nextY(nextY_), nextZ(nextZ_), iPop(iPop_)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+PostProcessor3D<T,DESCRIPTOR>*
+OutletPostProcessorGenerator3D<T,DESCRIPTOR>::generate() const
+{
+  return new OutletPostProcessor3D<T,DESCRIPTOR>
+         ( this->x, this->y, this->z, this->nextX, this->nextY, this->nextZ, this->iPop);
+}
+
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+OutletPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
+{
+  return new OutletPostProcessorGenerator3D<T,DESCRIPTOR>
+         (this->x, this->y, this->z, this->nextX, this->nextY, this->nextZ, this->iPop);
+}
+
+//////// SM - OutletCornerPostProcessor3D ///////////////////
+
+//Specular reflection in x-z plane to obey no-sip condition at top and bottom of outlet
+template<typename T, typename DESCRIPTOR>
+OutletCornerPostProcessor3D<T,DESCRIPTOR>::
+OutletCornerPostProcessor3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_)
+  : x(x_), y(y_), z(z_), nextX(nextX_), nextY(nextY_), nextZ(nextZ_), iPop(iPop_)
+{
+  //Find iOpp
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+  iOpp = 0;
+
+  for (int i = 1; i < DESCRIPTOR::q ; ++i) {
+    Vector<int,3> cOpp = descriptors::c<DESCRIPTOR>(i);
+    if ((cOpp[0] == c[0]) && (cOpp[1] == -c[1]) && (cOpp[2] == c[2]))
+      iOpp = i;
+  }
+
+  if (iOpp ==0)
+    std::cout << "OUTLET BC WARNING: NO SPECULAR REFLECTION FOUND" << std::endl;
+
+  /*
+    std::cout << "Corner (" << x << "," << y << "," << z <<
+        "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," << zN <<
+        "), dist: " << dist << std::endl;
+  */
+}
+
+template<typename T, typename DESCRIPTOR>
+void OutletCornerPostProcessor3D<T,DESCRIPTOR>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
+    process(blockLattice);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void OutletCornerPostProcessor3D<T,DESCRIPTOR>::
+process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
+{
+  blockLattice.get(x, y, z)[iPop] = blockLattice.get(nextX, nextY, nextZ)[iOpp];
+  //std::cout << blockLattice.get(nextX, nextY, nextZ)[iOpp] << std::endl;
+}
+
+/////////// SM - OutletPostProcessorGenerator /////////////////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+OutletCornerPostProcessorGenerator3D<T,DESCRIPTOR>::
+OutletCornerPostProcessorGenerator3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_)
+  : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
+    x(x_), y(y_), z(z_), nextX(nextX_), nextY(nextY_), nextZ(nextZ_), iPop(iPop_)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+PostProcessor3D<T,DESCRIPTOR>*
+OutletCornerPostProcessorGenerator3D<T,DESCRIPTOR>::generate() const
+{
+  return new OutletCornerPostProcessor3D<T,DESCRIPTOR>
+         ( this->x, this->y, this->z, this->nextX, this->nextY, this->nextZ, this->iPop);
+}
+
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+OutletCornerPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
+{
+  return new OutletCornerPostProcessorGenerator3D<T,DESCRIPTOR>
+         (this->x, this->y, this->z, this->nextX, this->nextY, this->nextZ, this->iPop);
+}
+
 }  // namespace olb
 
 #endif

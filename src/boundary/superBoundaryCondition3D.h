@@ -94,6 +94,14 @@ public:
   void addZeroDistributionBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& indicator);
   void addZeroDistributionBoundary(SuperGeometry3D<T>& superGeometry, int material);
 
+  //SM - Outlet 'No' boundary - Dorschner 2017
+  void addOutletBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator);
+  void addOutletBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addOutletBoundary(SuperGeometry3D<T>& superGeometry, int material,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+
   /// Implementation of a wetting boundary condition for the binary free energy model, consisting of a BounceBack
   /// dynamics and an FreeEnergyWall PostProcessor.
   /// \param[in] alpha_ - Parameter related to the interface width. [lattice units]

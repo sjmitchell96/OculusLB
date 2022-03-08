@@ -167,6 +167,10 @@ public:
                                          int x0, int x1, int y0, int y1, int z0, int z1,
                                          T omega, std::string type, int latticeNumber) =0;
 
+  //SM - Outlet boundary
+  virtual void addOutletBoundary(int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ ,int iPop) =0;
+  virtual void addOutletBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
+                                       BlockIndicatorF3D<T>& bulkIndicator) =0;                                     
   ///\}
 
   /**
@@ -266,6 +270,9 @@ public:
   void addFreeEnergyOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
                                    T omega, std::string type, int latticeNumber, bool includeOuterCells=false);
 
+  //SM - Outlet boundary
+  void addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
   ///\}
 
   virtual void outputOn() =0;

@@ -324,6 +324,7 @@ void sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroDistributionBoundary(
   addZeroDistributionBoundary(superGeometry.getMaterialIndicator(material));
 }
 
+
 template<typename T, typename DESCRIPTOR>
 void sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyWallBoundary(
   FunctorPtr<SuperIndicatorF3D<T>>&& indicator, T alpha, T kappa1, T kappa2, T h1, T h2, int latticeNumber)
@@ -434,6 +435,54 @@ void sOnLatticeBoundaryCondition3D<T, DESCRIPTOR>::addFreeEnergyOutletBoundary(
   SuperGeometry3D<T>& superGeometry, int material, T omega, std::string type, int latticeNumber)
 {
   addFreeEnergyOutletBoundary(superGeometry.getMaterialIndicator(material), omega, type, latticeNumber);
+}
+
+//SM - Outlet boundary
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>::addOutletBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator)
+{
+  if (_output) {
+    clout.setMultiOutput(true);
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+    }
+    _blockBCs[iCloc]->addOutletBoundary(
+      boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+      bulkIndicator->getExtendedBlockIndicatorF(iCloc));
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+    }
+  }
+  if (_output) {
+    clout.setMultiOutput(false);
+  }
+  addPoints2CommBC(std::forward<decltype(boundaryIndicator)>(boundaryIndicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>::addOutletBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  std::vector<int> bulkMaterials)
+{
+  SuperGeometry3D<T>& superGeometry = boundaryIndicator->getSuperGeometry();
+  addOutletBoundary(
+    std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+    superGeometry.getMaterialIndicator(std::move(bulkMaterials)));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>::addOutletBoundary(
+  SuperGeometry3D<T>& superGeometry, int material,
+  std::vector<int> bulkMaterials)
+{
+  addOutletBoundary(superGeometry.getMaterialIndicator(material),
+                          bulkMaterials);
 }
 
 

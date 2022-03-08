@@ -244,7 +244,7 @@ void SuperLattice3D<T, DESCRIPTOR>::initialize()
   for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
     //AENDERN VON INI in BLOCKLATTICEVIEW!!!!
     //_blockLattices[iC].initialize();
-    _blockLattices[iC].postProcess();
+    //_blockLattices[iC].postProcess(); - SM - ON BEFORE
   }
 
   this->_communicationNeeded = true;

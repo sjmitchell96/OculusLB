@@ -146,6 +146,12 @@ public:
                                  int x0, int x1, int y0, int y1, int z0, int z1,
                                  T omega, std::string type, int latticeNumber) override;
 
+  //SM - Outlet boundary
+  void addOutletBoundary(int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ, int iPop) override;
+  void addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, BlockIndicatorF3D<T>& bulkIndicator);
+  void addOutletBoundary(  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, std::vector<int> bulkMaterials);
+  void addOutletBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator) override;
+
   void outputOn() override;
   void outputOff() override;
 
@@ -883,6 +889,7 @@ void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addWallFun
   }
 }
 
+
 // Free Energy BC
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
@@ -1099,6 +1106,101 @@ void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addFreeEne
 
 }
 
+//SM - Outlet boundary
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOutletBoundary(
+  int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ, int iPop)
+{
+  //Sort for special treatment of corner nodes - specular reflection (slip bc) at y-z planes
+  bool reflectInY = true;
+  
+  //Specular reflection for any pops with y-component and not upstream in x
+  if (reflectInY) {
+    const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop); 
+    if((c[0] >= 0) && (c[1] != 0)){
+      PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor = new OutletCornerPostProcessorGenerator3D<T, DESCRIPTOR>(x, y, z, nextOppX, nextOppY, nextOppZ, iPop);
+      if (postProcessor) {
+        _block.addPostProcessor(*postProcessor);
+      }
+    }
+    else {
+      PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor = new OutletPostProcessorGenerator3D<T, DESCRIPTOR>(x, y, z, nextX, nextY, nextZ, iPop);
+      if (postProcessor) {
+        _block.addPostProcessor(*postProcessor);
+      }
+    }
+  }
+  else {
+    PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor = new OutletPostProcessorGenerator3D<T, DESCRIPTOR>(x, y, z, nextX, nextY, nextZ, iPop);
+    if (postProcessor) {
+      _block.addPostProcessor(*postProcessor);
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, BlockIndicatorF3D<T>& bulkIndicator)
+{
+  bool isPeriodic = true;
+
+  typedef DESCRIPTOR L;
+  for (int iPop = 1; iPop < L::q ; ++iPop) {
+    
+    //iPop is pointing from solid to fluid
+    const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+    if(!bulkIndicator(x - c[0], y - c[1], z - c[2])) { 
+      int nextX = x + c[0];
+      int nextY = y + c[1];
+      int nextZ = z + c[2];
+      
+      //Specular oposite in x-z for slip links
+      int nextOppX = x + c[0];
+      int nextOppY = y - c[1];
+      int nextOppZ = z + c[2];
+
+      if (isPeriodic && (nextZ < 0 || nextZ >= blockGeometryStructure.getNz())) {
+        nextZ = (nextZ + blockGeometryStructure.getNz()) % blockGeometryStructure.getNz();
+      }
+      
+      if (isPeriodic && (nextOppZ < 0 || nextOppZ >= blockGeometryStructure.getNz())) {
+        nextOppZ = (nextOppZ + blockGeometryStructure.getNz()) % blockGeometryStructure.getNz(); 
+      }
+    addOutletBoundary(x, y, z, nextX, nextY, nextZ, nextOppX, nextOppY, nextOppZ, iPop);
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOutletBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addOutletBoundary(blockGeometryStructure, iX, iY, iZ,
+                          bulkIndicator);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOutletBoundary(
+  BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
+{
+  if ( !boundaryIndicator.isEmpty() ) {
+    const Vector<int,3> min = boundaryIndicator.getMin();
+    const Vector<int,3> max = boundaryIndicator.getMax();
+
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (boundaryIndicator(iX,iY,iZ)) {
+            addOutletBoundary(boundaryIndicator.getBlockGeometryStructure(), iX, iY, iZ,
+                                    bulkIndicator);
+          }
+        }
+      }
+    }
+  }
+}
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void BoundaryConditionInstantiator3D<T,DESCRIPTOR,BoundaryManager>::

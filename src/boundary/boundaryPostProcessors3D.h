@@ -387,6 +387,76 @@ private:
   int discreteNormalZ;
 };
 
+//SM - Outlet (No) boundary condition
+template<typename T, typename DESCRIPTOR>
+class OutletPostProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
+public:
+  OutletPostProcessor3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_);
+  int extent() const override
+  {
+    return 1;
+  }
+  int extent(int whichDirection) const override
+  {
+    return 1;
+  }
+  void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+
+private:
+  int x, y, z;
+  int nextX, nextY, nextZ;
+  int iPop;
+};
+
+template<typename T, typename DESCRIPTOR>
+class OutletPostProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
+public:
+  OutletPostProcessorGenerator3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_);
+  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
+  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
+private:
+  int x, y, z;
+  int nextX, nextY, nextZ;
+  int iPop;
+};
+
+//SM - Outlet (No) boundary condition
+template<typename T, typename DESCRIPTOR>
+class OutletCornerPostProcessor3D : public LocalPostProcessor3D<T,DESCRIPTOR> {
+public:
+  OutletCornerPostProcessor3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_);
+  int extent() const override
+  {
+    return 1;
+  }
+  int extent(int whichDirection) const override
+  {
+    return 1;
+  }
+  void process(BlockLattice3D<T,DESCRIPTOR>& blockLattice) override;
+  void processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice,
+                                int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
+
+private:
+  int x, y, z;
+  int nextX, nextY, nextZ;
+  int iPop;
+  int iOpp;
+};
+
+template<typename T, typename DESCRIPTOR>
+class OutletCornerPostProcessorGenerator3D : public PostProcessorGenerator3D<T,DESCRIPTOR> {
+public:
+  OutletCornerPostProcessorGenerator3D(int x_, int y_, int z_, int nextX_, int nextY_, int nextZ_, int iPop_);
+  PostProcessor3D<T,DESCRIPTOR>* generate() const override;
+  PostProcessorGenerator3D<T,DESCRIPTOR>*  clone() const override;
+private:
+  int x, y, z;
+  int nextX, nextY, nextZ;
+  int iPop;
+};
 }
 
 #endif
