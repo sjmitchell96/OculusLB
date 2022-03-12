@@ -708,7 +708,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   
   if (nRefOut >= 1) {
     //Outlet refinement
-    const Vector<T,3> outRefineExtend {2. * chord,
+    const Vector<T,3> outRefineExtend {chord,
                                                               domainExtend[1],
                                                               domainExtend[2]};
     const Vector<T,3> outRefineOrigin {domainExtend[0] - outRefineExtend[0],
@@ -720,59 +720,59 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
     prepareGeometry(outRefineGrid, domainOrigin, domainExtend, indicatorBlade);
     // add couplers manually
     {
-      const T coarseDeltaX = coarseGrid.getConverter().getPhysDeltaX();
-      const Vector<T,3> origin        = outRefineGrid.getOrigin()
-                      + Vector<T,3> {0., 0., 0.5*coarseDeltaX};
-      const Vector<T,3> extend        = outRefineGrid.getExtend()
-                      - Vector<T,3> {0., 0., 0.5*coarseDeltaX};
-      const Vector<T,3> extendYZ      = {0, extend[1], extend[2]};
-      coarseGrid.addFineCoupling(outRefineGrid, origin, extendYZ);
+      const T coarseDeltaXout = coarseGrid.getConverter().getPhysDeltaX();
+      const Vector<T,3> originOut        = outRefineGrid.getOrigin()
+                      + Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
+      const Vector<T,3> extendOut        = outRefineGrid.getExtend()
+                      - Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
+      const Vector<T,3> extendYZout      = {0, extendOut[1], extendOut[2]};
+      coarseGrid.addFineCoupling(outRefineGrid, originOut, extendYZout);
 
-      const Vector<T,3> innerOrigin = origin
-                                              + Vector<T,3> {coarseDeltaX, 0, 0};
-      coarseGrid.addCoarseCoupling(outRefineGrid, innerOrigin, extendYZ);
+      const Vector<T,3> innerOriginOut = originOut
+                                              + Vector<T,3> {coarseDeltaXout, 0, 0};
+      coarseGrid.addCoarseCoupling(outRefineGrid, innerOriginOut, extendYZout);
 
-      const Vector<T,3> refinedOrigin = origin
-                      + Vector<T,3> {2*coarseDeltaX, 0, -2*coarseDeltaX};
-      const Vector<T,3> refinedExtend = extend
-                      - Vector<T,3> {2*coarseDeltaX, 0, -4*coarseDeltaX};
-      IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
-      coarseGrid.getSuperGeometry().reset(refined);
+      const Vector<T,3> refinedOriginOut = originOut
+                      + Vector<T,3> {2*coarseDeltaXout, 0, -2*coarseDeltaXout};
+      const Vector<T,3> refinedExtendOut = extendOut
+                      - Vector<T,3> {2*coarseDeltaXout, 0, -4*coarseDeltaXout};
+      IndicatorCuboid3D<T> refinedOut(refinedExtendOut, refinedOriginOut);
+      coarseGrid.getSuperGeometry().reset(refinedOut);
     }
 
     if (nRefOut >= 2) {
       // Refinement at the outlet half
-      const T deltaX0 = outRefineGrid.getConverter().getPhysDeltaX();
-      const Vector<T,3> outRefineExtend2 {chord,
+      const T deltaX0Out = outRefineGrid.getConverter().getPhysDeltaX();
+      const Vector<T,3> outRefineExtend2 {0.5 * chord,
                                                                 domainExtend[1],
-                                                                domainExtend[2] + deltaX0};
+                                                                domainExtend[2] + deltaX0Out};
       const Vector<T,3> outRefineOrigin2 {domainExtend[0] - outRefineExtend2[0],
                                                                 domainOrigin[1],
-                                                                domainOrigin[2] - deltaX0};
+                                                                domainOrigin[2] - deltaX0Out};
       // add periodicity as well
       auto& outRefineGrid2 = outRefineGrid.refine(outRefineOrigin2, outRefineExtend2,
-                      false, false, false, false);
+                      false, false, true, false);
       prepareGeometry(outRefineGrid2, domainOrigin, domainExtend, indicatorBlade);
       // add couplers manually
       {
-              const T coarseDeltaX = outRefineGrid.getConverter().getPhysDeltaX();
-              const Vector<T,3> origin        = outRefineGrid2.getOrigin()
-                              + Vector<T,3> {0., 0., 0.5*coarseDeltaX};
-              const Vector<T,3> extend        = outRefineGrid2.getExtend()
-                              - Vector<T,3> {0., 0., 0.5*coarseDeltaX};
-              const Vector<T,3> extendYZ      = {0, extend[1], extend[2]};
-              outRefineGrid.addFineCoupling(outRefineGrid2, origin, extendYZ);
+              const T coarseDeltaXout = outRefineGrid.getConverter().getPhysDeltaX();
+              const Vector<T,3> originOut        = outRefineGrid2.getOrigin()
+                              + Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
+              const Vector<T,3> extendOut        = outRefineGrid2.getExtend()
+                              - Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
+              const Vector<T,3> extendYZout      = {0, extendOut[1], extendOut[2]};
+              outRefineGrid.addFineCoupling(outRefineGrid2, originOut, extendYZout);
 
-              const Vector<T,3> innerOrigin = origin
-                                                      + Vector<T,3> {coarseDeltaX, 0, 0};
-              outRefineGrid.addCoarseCoupling(outRefineGrid2, innerOrigin, extendYZ);
+              const Vector<T,3> innerOriginOut = originOut
+                                                      + Vector<T,3> {coarseDeltaXout, 0, 0};
+              outRefineGrid.addCoarseCoupling(outRefineGrid2, innerOriginOut, extendYZout);
 
-              const Vector<T,3> refinedOrigin = origin
-                              + Vector<T,3> {2*coarseDeltaX, 0, -2*coarseDeltaX};
-              const Vector<T,3> refinedExtend = extend
-                              - Vector<T,3> {2*coarseDeltaX, 0, -4*coarseDeltaX};
-              IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
-              outRefineGrid.getSuperGeometry().reset(refined);
+              const Vector<T,3> refinedOriginOut = originOut
+                              + Vector<T,3> {2*coarseDeltaXout, 0, -2*coarseDeltaXout};
+              const Vector<T,3> refinedExtendOut = extendOut
+                              - Vector<T,3> {2*coarseDeltaXout, 0, -4*coarseDeltaXout};
+              IndicatorCuboid3D<T> refinedOut(refinedExtendOut, refinedOriginOut);
+              outRefineGrid.getSuperGeometry().reset(refinedOut);
       }
     }
   }
@@ -1048,9 +1048,9 @@ int main( int argc, char* argv[] ) {
 
   //Domain and simulation parameters
   const int N = 25; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 3;	//Number of refinement levels (current max = 4)
-  const int nRefinementOutlet = 1;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 18.*chord; //Length of domain in physical units (m)
+  const int nRefinement = 2;	//Number of refinement levels (current max = 4)
+  const int nRefinementOutlet = 2;	//Number of refinement levels (current max = 4)
+  const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
