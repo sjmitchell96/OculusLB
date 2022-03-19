@@ -23,10 +23,10 @@
 ###########################################################################
 ###########################################################################
 
-CXX             := g++
+#CXX             := g++
 #CXX             := icpc -D__aligned__=ignored
 #CXX             := mpiCC
-#CXX             := mpic++
+CXX             := mpic++
 #CXX 			:= mpiicpc
 
 CC              := gcc                                          # necessary for zlib, for Intel use icc
@@ -54,8 +54,8 @@ LDFLAGS         :=
 
 #PARALLEL_MODE   := OFF
 #PARALLEL_MODE   := MPI
-PARALLEL_MODE   := OMP
-#PARALLEL_MODE   := HYBRID
+#PARALLEL_MODE   := OMP
+PARALLEL_MODE   := HYBRID
 
 MPIFLAGS        :=
 OMPFLAGS        := -fopenmp

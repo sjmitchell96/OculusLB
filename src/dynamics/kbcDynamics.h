@@ -71,5 +71,16 @@ public:
   void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
 };
 
+//Implementation of KBC dynamics with sponge layer at outlet
+template <typename T, typename DESCRIPTOR> 
+class KBCGradDynamics : public KBCdynamics<T, DESCRIPTOR> {
+public:
+  /// Constructor
+  KBCGradDynamics(T omega, Momenta<T, DESCRIPTOR>& momenta);
+  /// Collision
+  void collide(Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics) override;
+};
+
+
 }
 #endif

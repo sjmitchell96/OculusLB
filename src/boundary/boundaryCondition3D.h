@@ -168,7 +168,7 @@ public:
                                          T omega, std::string type, int latticeNumber) =0;
 
   //SM - Outlet boundary
-  virtual void addOutletBoundary(int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ ,int iPop) =0;
+  virtual void addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ , int nextRevX, int nextRevY, int nextRevZ, int iPop) =0;
   virtual void addOutletBoundary(BlockIndicatorF3D<T>& boundaryIndicator,
                                        BlockIndicatorF3D<T>& bulkIndicator) =0;                                     
   ///\}

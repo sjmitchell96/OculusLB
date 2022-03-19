@@ -427,10 +427,10 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
 
   //Upper face
   {
-    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] + extend[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
-    const Vector<T,3> indiExtend {extend[0] - deltaX,
+    const Vector<T,3> indiExtend {extend[0] - deltaX ,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> uf(indiExtend, indiOrigin);
@@ -439,7 +439,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
 
   //Lower face
   {
-    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2.,
+    const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
     const Vector<T,3> indiExtend {extend[0] - deltaX,
@@ -849,12 +849,12 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   // Define boundary conditions
   //onbc.addVelocityBoundary(sGeometry, 2, omega);
-  //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
-  onbc.addVelocityBoundary(sGeometry, 3, omega);
-  onbc.addVelocityBoundary(sGeometry, 2, omega);
+  onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
+  bc.addVelocityBoundary(sGeometry, 3, omega);
+  //bc.addVelocityBoundary(sGeometry, 2, omega);
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
   //bc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
-  //bc.addConvectionBoundary(sGeometry, 4);
+ // bc.addConvectionBoundary(sGeometry, 4);
   //onbc.addPressureBoundary(sGeometry, 4, omega); 
 
 
@@ -888,6 +888,45 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.initialize();
 
   clout << "Prepare Lattice ... OK" << std::endl;
+}
+
+// Set boundary values for start-scale inlet velocity
+void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
+
+	OstreamManager clout(std::cout, "setBoundaryValues");
+
+	auto& converter	= grid.getConverter();
+	auto& sGeometry	= grid.getSuperGeometry();
+	auto& sLattice	= grid.getSuperLattice();
+
+	// No of time steps for smooth start-up
+//	int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
+	int iTmaxStart = 1000;
+	int iTupdate = 10;
+
+	if (iT%iTupdate == 0 && iT <= iTmaxStart) {
+		// Smooth start curve, sinus
+//		SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
+
+		// Smooth start curve, polynomial
+		PolynomialStartScale<T,int> StartScale(iTmaxStart, T( 1 ));
+
+		// Creates and sets the Poiseuille inflow profile using functors
+		int iTvec[1] = {iT};
+		T frac[1] = {};
+		StartScale( frac,iTvec );
+		std::vector<T> maxVelocity(3, 0);
+		maxVelocity[0] = 1.5*frac[0]*converter.getCharLatticeVelocity();
+
+		T distance2Wall = converter.getConversionFactorLength()/2.;
+//		RectanglePoiseuille3D<T> poiseuilleU(sGeometry, 3, maxVelocity,
+//				distance2Wall, distance2Wall, distance2Wall);
+		Rectangle1DPoiseuille3D<T> poiseuilleU( sGeometry, 3, maxVelocity,
+				distance2Wall, 0 );
+		sLattice.defineU(sGeometry, 3, poiseuilleU);
+
+		clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
+	}
 }
 
 // Output results to vtk files
@@ -1044,12 +1083,12 @@ int main( int argc, char* argv[] ) {
   const T r1 = 0.1836;
   const T r2 = 0.00015;
   const T xp = 0.02538;
-  const T theta = -8.00; //Pitch (+ve = anticlockwise)
+  const T theta = 8.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
   const int N = 25; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 2;	//Number of refinement levels (current max = 4)
-  const int nRefinementOutlet = 2;	//Number of refinement levels (current max = 4)
+  const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
@@ -1057,7 +1096,7 @@ int main( int argc, char* argv[] ) {
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100000.;       // Reynolds number
+  const T Re = 100.;       // Reynolds number
   const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physNu = 1.468*std::pow(10,-5); //Kinematic viscosity
@@ -1115,6 +1154,9 @@ int main( int argc, char* argv[] ) {
     	  coarseGrid.getSuperGeometry().getStatistics().getMinPhysR(0);
   const Vector<T,3> domainExtend =
     	  coarseGrid.getSuperGeometry().getStatistics().getPhysExtend(0);
+
+  //std::cout << "DOMAIN ORIGIN" << domainOrigin[0] << " " << domainOrigin[1] << " " << domainOrigin[2] << std::endl;
+  //std::cout << "DOMAIN EXTEND" << domainExtend[0] << " " << domainExtend[1] << " " << domainExtend[2] << std::endl;
 
   // === 2nd Step: Prepare Geometry ===
   prepareGeometry(coarseGrid, domainOrigin, domainExtend, blade);
