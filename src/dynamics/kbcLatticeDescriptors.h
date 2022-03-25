@@ -42,6 +42,7 @@ struct KBC : public CATEGORY, public DESCRIPTOR_TAG { };
 
 using D3Q27descriptorKBC = D3Q27<tag::KBC>;
 using D3Q27descriptorKBCGrad = D3Q27<tag::KBC,VELOCITY>;
+using D3Q27descriptorKBCSponge = D3Q27<tag::KBC,TAU_EFF>;
 
 namespace kbc_data {
 

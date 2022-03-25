@@ -38,6 +38,7 @@
 #include "latticeStatistics.h"
 #include "functors/analytical/analyticalF.h"
 #include "functors/analytical/indicator/indicatorBaseF3D.h"
+#include "boundary/spongeRegions3D.h"
 
 
 namespace olb {
@@ -198,6 +199,10 @@ public:
                                   std::vector<SpatiallyExtendedObject3D*> partners ) =0;
   virtual void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
   virtual void executeCoupling() =0;
+
+  virtual void addSpongeRegion(SpongeRegionGenerator3D<T,DESCRIPTOR> const& srGen) =0;
+  virtual void initialiseSponges(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) =0;
+  virtual void initialiseSponges() =0;
 
   virtual LatticeStatistics<T>& getStatistics() =0;
   virtual LatticeStatistics<T> const& getStatistics() const =0;

@@ -31,6 +31,7 @@
 #include <vector>
 #include "blockLatticeStructure3D.h"
 #include "geometry/blockGeometryStatistics3D.h"
+#include "boundary/spongeRegions3D.h"
 
 namespace olb {
 
@@ -85,6 +86,10 @@ public:
     std::vector<SpatiallyExtendedObject3D*> partners ) override;
   void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
   void executeCoupling() override;
+  void addSpongeRegion (
+    SpongeRegionGenerator3D<T,DESCRIPTOR> const& srGen ) override;
+  void initialiseSponges(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
+  void initialiseSponges() override;
   LatticeStatistics<T>& getStatistics() override;
   LatticeStatistics<T> const& getStatistics() const override;
   std::vector<PostProcessor3D<T, DESCRIPTOR>*>& getPostProcessors() override;

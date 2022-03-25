@@ -1211,9 +1211,9 @@ addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, in
     int nextRevZ = z - c[2];
   
     if (isPeriodic && (nextRevZ < 0 || nextRevZ >= blockGeometryStructure.getNz())) {
-      std::cout << "BEFORE" << nextRevZ << std::endl;
+      //std::cout << "BEFORE" << nextRevZ << std::endl;
       nextRevZ = (nextRevZ + blockGeometryStructure.getNz()) % blockGeometryStructure.getNz();
-      std::cout << "AFTER" << nextRevZ << std::endl;
+      //std::cout << "AFTER" << nextRevZ << std::endl;
     }
 
     //std::cout << "REV MAT" <<  blockGeometryStructure.getMaterial(nextRevX, nextRevY, nextRevZ) << std::endl; 
@@ -1267,7 +1267,7 @@ void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOutletB
   if ( !boundaryIndicator.isEmpty() ) {
     const Vector<int,3> min = boundaryIndicator.getMin();
     const Vector<int,3> max = boundaryIndicator.getMax();
-    std::cout << "MIN/MAX " << min << " " << max << std::endl;
+    //std::cout << "MIN/MAX " << min << " " << max << std::endl;
 
     for (int iX = min[0]; iX <= max[0]; ++iX) {
       for (int iY = min[1]; iY <= max[1]; ++iY) {

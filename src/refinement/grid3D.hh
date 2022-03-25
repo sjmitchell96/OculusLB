@@ -277,6 +277,15 @@ sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::getOffLattic
 	return *_offLatticeBoundaryConditions.back();
 }
 
+//SM - add viscosity sponge
+template <typename T, typename DESCRIPTOR>
+sViscositySponge3D<T,DESCRIPTOR>& Grid3D<T,DESCRIPTOR>::getViscositySponge()
+{
+	_viscositySponges.emplace_back(
+			new sViscositySponge3D<T,DESCRIPTOR>(getSuperLattice()));
+	return *_viscositySponges.back();
+}
+
 template <typename T, typename DESCRIPTOR>
 void Grid3D<T,DESCRIPTOR>::collideAndStream()
 {

@@ -146,7 +146,6 @@ PlaneFdBoundaryProcessorGenerator3D<T,DESCRIPTOR,direction,orientation>::clone()
          (this->x0, this->x1, this->y0, this->y1, this->z0, this->z1);
 }
 
-
 ////////  StraightConvectionBoundaryProcessorGenerator3D ////////////////////////////////
 
 template<typename T, typename DESCRIPTOR, int direction, int orientation>

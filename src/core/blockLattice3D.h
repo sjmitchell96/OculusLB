@@ -35,6 +35,7 @@
 #include "geometry/blockGeometry3D.h"
 #include "latticeStatistics.h"
 #include "serializer.h"
+#include "boundary/spongeRegions3D.h"
 
 
 /// All OpenLB code is contained in this namespace.
@@ -62,6 +63,7 @@ private:
   /// 3D-Array pointing to rawData; grid[iX][iY] points to beginning of z-array in rawData
   Cell<T,DESCRIPTOR>      ***grid;
   PostProcVector       postProcessors, latticeCouplings;
+  std::vector<SpongeRegion3D<T,DESCRIPTOR>*> spongeRegions;
 #ifdef PARALLEL_MODE_OMP
   LatticeStatistics<T> **statistics;
 #else
@@ -168,6 +170,13 @@ public:
   void executeCoupling(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;
   /// Execute couplings steps
   void executeCoupling() override;
+  /// Add a viscosity sponge region
+  void addSpongeRegion (
+    SpongeRegionGenerator3D<T,DESCRIPTOR> const& srGen ) override;
+  /// Initialise sponges on a sub-lattice
+  void initialiseSponges(int x0_, int x1_, int y0_, int y1_, int z0_, int z1_) override;  
+  /// Initialise sponge regions
+  void initialiseSponges() override;
   /// Return a handle to the LatticeStatistics object
   LatticeStatistics<T>& getStatistics() override;
   /// Return a constant handle to the LatticeStatistics object
@@ -207,6 +216,8 @@ private:
   void clearPostProcessors();
   /// Release memory for post processors
   void clearLatticeCouplings();
+  /// Release memory for sponge regions
+  void clearSpongeRegions();
   /// Make the lattice periodic in all directions
   void makePeriodic();
 

@@ -115,6 +115,46 @@ void KBCGradDynamics<T, DESCRIPTOR>::collide(
   statistics.incrementStats(rho, uSqr);
 }
 
+
+//==============================================================================//
+/////////////////////////// Class KBCSpongeDynamics ///////////////////////////////
+//==============================================================================//
+
+template<typename T, typename DESCRIPTOR>
+KBCSpongeDynamics<T, DESCRIPTOR>::KBCSpongeDynamics(
+  T omega, Momenta<T, DESCRIPTOR>& momenta)
+  : KBCdynamics<T, DESCRIPTOR>(omega, momenta)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+void KBCSpongeDynamics<T, DESCRIPTOR>::collide(
+  Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics)
+{
+  typedef kbcLbHelpers<T, DESCRIPTOR> kbcLbH;
+
+  //Compute rho, u
+  T rho, u[DESCRIPTOR::d];
+  this -> _momenta.computeRhoU(cell, rho, u);
+
+  //Store pre-collision velocities within velocity field
+  //std::cout << "KBC collide " << u[0] << " " << u[1] << " " << u[2] << std::endl; 
+  //cell.template defineField<descriptors::TAU_EFF>(u);
+  //std::cout << "KBC collide " << u[0] << " " << u[1] << " " << u[2] << " " << cell.template getField<descriptors::VELOCITY>()[0] << " " << cell.template getField<descriptors::VELOCITY>()[1] << " " << cell.template getField<descriptors::VELOCITY>()[2] << std::endl; 
+
+  //COMPUTE EFFECTIVE RELAXATION (INCL SPONGE) AND PASS TO COLLISION 
+
+  T tauEff = 1. / KBCdynamics<T,DESCRIPTOR>::getOmega() + cell.template getField<descriptors::TAU_EFF>();
+
+  T betaEff = 0.5 * 1. / tauEff;
+
+  //std::cout << "BETAEFF" << betaEff << std::endl;
+
+  T uSqr = kbcLbH::kbcCollision(cell, rho, u, betaEff);
+
+  statistics.incrementStats(rho, uSqr);
+}
+
 } //namespace
+
 
 #endif

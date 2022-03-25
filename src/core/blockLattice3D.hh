@@ -80,6 +80,7 @@ BlockLattice3D<T,DESCRIPTOR>::~BlockLattice3D()
   releaseMemory();
   clearPostProcessors();
   clearLatticeCouplings();
+  clearSpongeRegions();
 #ifdef PARALLEL_MODE_OMP
   #pragma omp parallel
   {
@@ -457,6 +458,40 @@ void BlockLattice3D<T,DESCRIPTOR>::clearLatticeCouplings()
 }
 
 template<typename T, typename DESCRIPTOR>
+void BlockLattice3D<T,DESCRIPTOR>::addSpongeRegion (
+  SpongeRegionGenerator3D<T,DESCRIPTOR> const& srGen )
+{
+  spongeRegions.push_back(srGen.generate());
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLattice3D<T,DESCRIPTOR>::initialiseSponges()
+{
+  for (unsigned iSr=0; iSr<spongeRegions.size(); ++iSr) {
+    spongeRegions[iSr] -> initialise(*this);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLattice3D<T,DESCRIPTOR>::initialiseSponges (
+  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  for (unsigned iSr=0; iSr<spongeRegions.size(); ++iSr) {
+    spongeRegions[iSr] -> initialiseSubDomain(*this, x0_, x1_, y0_, y1_, z0_, z1_);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLattice3D<T,DESCRIPTOR>::clearSpongeRegions()
+{
+  typename std::vector<SpongeRegion3D<T,DESCRIPTOR>*>::iterator srIt = spongeRegions.begin();
+  for (; srIt != spongeRegions.end(); ++srIt) {
+    delete *srIt;
+  }
+  spongeRegions.clear();
+}
+
+template<typename T, typename DESCRIPTOR>
 LatticeStatistics<T>& BlockLattice3D<T,DESCRIPTOR>::getStatistics()
 {
 #ifdef PARALLEL_MODE_OMP
@@ -683,7 +718,6 @@ std::size_t BlockLattice3D<T,DESCRIPTOR>::getSerializableSize() const
 {
   return 3 * sizeof(int) + rawData[0].getSerializableSize() * this->_nx * this->_ny * this->_nz;
 }
-
 
 template<typename T, typename DESCRIPTOR>
 bool* BlockLattice3D<T,DESCRIPTOR>::getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode)

@@ -850,6 +850,14 @@ bool* SuperLattice3D<T,DESCRIPTOR>::getBlock(std::size_t iBlock, std::size_t& si
   return dataPtr;
 }
 
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::initialiseSponges()
+{
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].initialiseSponges();
+  } 
+}
+
 ////////// FREE FUNCTIONS //////////
 
 template<typename T, typename DESCRIPTOR>

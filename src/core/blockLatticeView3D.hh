@@ -329,6 +329,29 @@ void BlockLatticeView3D<T,DESCRIPTOR>::executeCoupling(
 }
 
 template<typename T, typename DESCRIPTOR>
+void BlockLatticeView3D<T,DESCRIPTOR>::addSpongeRegion (
+  SpongeRegionGenerator3D<T,DESCRIPTOR> const& srGen )
+{
+  SpongeRegionGenerator3D<T,DESCRIPTOR>* shiftedGen = srGen.clone();
+  shiftedGen->shift(x0,y0,z0);
+  originalLattice->addSpongeRegion(*shiftedGen);
+  delete shiftedGen;
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeView3D<T,DESCRIPTOR>::initialiseSponges()
+{
+  originalLattice -> initialiseSponges(x0, x0+this->_nx-1, y0, y0+this->_ny-1, z0, z0+this->_nz-1);
+}
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeView3D<T,DESCRIPTOR>::initialiseSponges(
+  int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  originalLattice -> initialiseSponges( x0_+x0, x1_+x0, y0_+y0, y1_+y0, z0_+z0, z1_+z0 );
+}
+
+template<typename T, typename DESCRIPTOR>
 LatticeStatistics<T>& BlockLatticeView3D<T,DESCRIPTOR>::
 getStatistics()
 {

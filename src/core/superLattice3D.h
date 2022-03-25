@@ -344,6 +344,9 @@ public:
   /// Return a pointer to the memory of the current block and its size for the serializable interface
   bool* getBlock(std::size_t iBlock, std::size_t& sizeBlock, bool loadingMode) override;
 
+  /// Initialise sponge regions of contained blockLattices
+  void initialiseSponges();
+
 private:
   /// Resets and reduce the statistics
   void reset_statistics();

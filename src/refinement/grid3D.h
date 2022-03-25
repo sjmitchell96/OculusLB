@@ -102,6 +102,9 @@ protected:
 		_onLatticeBoundaryConditions;
 	std::vector<std::unique_ptr<sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>>>
 		_offLatticeBoundaryConditions;
+	std::vector<std::unique_ptr<sViscositySponge3D<T,DESCRIPTOR>>>
+		_viscositySponges;
+
 
 	// list of derived fine grid and their couplers
 	std::vector<std::unique_ptr<RefiningGrid3D<T,DESCRIPTOR>>>		_fineGrids;
@@ -154,6 +157,7 @@ public:
 	Dynamics<T,DESCRIPTOR>& addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>&& dynamics);
 	sOnLatticeBoundaryCondition3D<T,DESCRIPTOR>& getOnLatticeBoundaryCondition();
 	sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& getOffLatticeBoundaryCondition();
+	sViscositySponge3D<T,DESCRIPTOR>& getViscositySponge();
 
 	// core functions
 	void collideAndStream();
