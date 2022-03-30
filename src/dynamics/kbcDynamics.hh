@@ -112,6 +112,8 @@ void KBCGradDynamics<T, DESCRIPTOR>::collide(
 
   T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics<T,DESCRIPTOR>::getBeta());
 
+  //Possibly recompute velocity here (post-collision) for use in Grad BC
+
   statistics.incrementStats(rho, uSqr);
 }
 
