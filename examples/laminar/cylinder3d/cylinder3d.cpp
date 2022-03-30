@@ -171,31 +171,14 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                         SuperGeometry3D<T>& superGeometry ) {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
+    std::vector<T> inVel( 3,0 );
+    maxVelocity[0] = converter.getCharLatticeVelocity();
+    T inRho = 1.0;
+    
+    AnalyticalConst3D<T> inRhoConst(inRho);
+    AnalyticalConst3D<T> inVelConst(inVel);
 
-  // No of time steps for smooth start-up
-  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
-  int iTupdate = 30;
-
-  if ( iT%iTupdate == 0 && iT <= iTmaxStart ) {
-    // Smooth start curve, sinus
-    // SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
-
-    // Smooth start curve, polynomial
-    PolynomialStartScale<T,int> StartScale( iTmaxStart, T( 1 ) );
-
-    // Creates and sets the Poiseuille inflow profile using functors
-    //Gradual start-up to aid stability
-    int iTvec[1] = {iT};
-    T frac[1] = {};
-    StartScale( frac,iTvec );
-    std::vector<T> maxVelocity( 3,0 );
-    maxVelocity[0] = 2.25*frac[0]*converter.getCharLatticeVelocity();
-
-    T distance2Wall = converter.getConversionFactorLength()/2.;
-    RectanglePoiseuille3D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall, distance2Wall, distance2Wall );
-    sLattice.defineU( superGeometry, 3, poiseuilleU );
-
-    clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
+    sLattice.defineRhoU(superGeometry, 3, inRho, inVel);
   }
 }
 
