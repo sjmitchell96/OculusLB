@@ -120,7 +120,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
-  //sGeometry.rename(5, 7, pressureSection1);
+  sGeometry.rename(5, 7, pressureSection1);
 
   //Front face
   {
@@ -682,7 +682,8 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
 
 }
 
-//2D VTK WRITE
+/*
+//2D VTK WRITE - CHANGE TO HEATMAP
 void getVTK2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
 	      SuperLatticeTimeAveragedF3D<T>& sAveragedVel,
 	      SuperLatticeTimeAveragedF3D<T>& sAveragedP,
@@ -733,6 +734,52 @@ void getVTK2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtkWriter.addFunctor(plane1sAveragedP);
   vtkWriter.write(iT);
 }
+*/
+
+//TMRW - MODIFY TO OUTPUT HEATMAP AS CSV - ALIGN WITH LOCATION OF MAT NUM 7 NODES (BLADE CENTRE)
+void getCSV2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
+  BlockReduction3D2D<T>& geom, BlockReduction3D2D<T>& xVel,
+  BlockReduction3D2D<T>& yVel, BlockReduction3D2D<T>& zVel,
+  BlockReduction3D2D<T>& normVel, BlockReduction3D2D<T>& vorticity,
+  BlockReduction3D2D<T>& pressure, BlockReduction3D2D<T>& wp,
+  BlockReduction3D2D<T>& ws) {
+  OstreamManager clout( std::cout,"getVTK2D" );
+
+  heatmap::plotParam<T> param{};
+  param.writeCSV = true;
+
+  //Update block data
+  geom.update();
+  xVel.update();
+  yVel.update();
+  zVel.update();
+  normVel.update();
+  vorticity.update();
+  pressure.update();
+  wp.update();
+  ws.update();
+
+  param.name = prefix + "_geometry";
+  heatmap::write(geom,iT, param); 
+  param.name = prefix + "_xVel";
+  heatmap::write(xVel,iT, param); 
+  param.name = prefix + "_yVel";
+  heatmap::write(yVel,iT, param); 
+  param.name = prefix + "_zVel";
+  heatmap::write(zVel,iT, param); 
+  param.name = prefix + "_normVel";
+  heatmap::write(normVel,iT, param);
+  param.name = prefix + "_vorticity";
+  heatmap::write(vorticity,iT, param); 
+  param.name = prefix + "_pressure";
+  heatmap::write(pressure,iT, param); 
+  param.name = prefix + "_wp";
+  heatmap::write(wp,iT, param); 
+  param.name = prefix + "_ws";
+  heatmap::write(ws,iT, param); 
+
+}
+
 
 void getVTKcP(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
 	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
@@ -822,13 +869,13 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 10; //Every 10% of max physical time
+  const int vtkIter   	   = 1000; //Every 10% of max physical time
   //const int vtk2DIter      = 20;
-  const int vtkCpIter      = 1;
+  const int csv2dIter      = 100;
   const int statIter  	   = 10;
   const int checkIter 	   = 1000;
   const int bladeForceIter = 1;
-  const int timeAvgIter    = 1;
+  const int timeAvgIter    = 1000;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
 
   //Names of output files
@@ -888,7 +935,7 @@ int main( int argc, char* argv[] ) {
   Grid3D<T,DESCRIPTOR>& wingGrid = coarseGrid.locate(
     Vector<T,3>(bladeOrigin[0],bladeOrigin[1],bladeOrigin[2]+span/2.));
 
-	//Instantiate vector of functors for time-averaged quantities
+	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedVel;
@@ -897,6 +944,26 @@ int main( int argc, char* argv[] ) {
     T,DESCRIPTOR>>> wssp;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
 	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
+
+  //Functor vectors for 2D csv
+  //Basic functors required for durtion of main function
+  std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> velCSV;
+  std::vector<std::unique_ptr<SuperLatticePhysVorticityFD3D<T,DESCRIPTOR>>> vortCSV;
+  std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>>> wsspCSV;
+
+  std::list<int> vortMatNumber;
+  vortMatNumber.push_back(1);
+
+  //Reduced functors
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> xVel;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> yVel;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> zVel;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> normVel;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> vorticity;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> pressure;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> wallPressure;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> wallShearStress;
+	std::vector<std::unique_ptr<BlockReduction3D2D<T>>> geometry;
 
   //Helper lambdas for initialisation and management of data
   auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP,
@@ -931,6 +998,67 @@ int main( int argc, char* argv[] ) {
         sLattice,converter,sGeometry,indicatorBlade,7)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
         *wssp.back())));
+	};
+
+  //Initialise 2D CSV functors
+  auto initialiseCSV = [](Grid3D<T,DESCRIPTOR>& grid,
+      std::list<int>& matNumber, auto& velVec, auto& vortVec, auto& wsspVec,
+      auto& geomVec, auto& xVelVec, auto& yVelVec, auto& zVelVec,
+      auto& normVelVec, auto& normVortVec,
+	    auto& pressureVec, auto& wpVec, auto& wsVec,
+      IndicatorBladeDca3D<T>& indicatorBlade) {
+		auto& sGeometry = grid.getSuperGeometry();
+		auto& sLattice = grid.getSuperLattice();
+		auto& converter = grid.getConverter();
+
+    //Hyperplane
+    auto plane1 = 
+      Hyperplane3D<T>().originAt({0.2295,0.204,0.0051}).normalTo({0,0,1});
+
+    //Add functors to holding vectors
+    velVec.push_back(make_unique<SuperLatticePhysVelocity3D<T, DESCRIPTOR>>(sLattice, converter));
+    vortVec.push_back(make_unique<SuperLatticePhysVorticityFD3D<T, DESCRIPTOR>>(sGeometry, sLattice, matNumber, converter));
+    wsspVec.push_back(make_unique<SuperLatticePhysWallShearStressAndPressure3D<T, DESCRIPTOR>>(sLattice,converter, sGeometry,7,indicatorBlade));
+
+    //Add reduced functors to holding vectors
+    geomVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperLatticeGeometry3D<T, DESCRIPTOR>(sLattice, sGeometry),plane1,
+	    BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    xVelVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperExtractComponentF3D<T, T>(
+        new SuperLatticePhysVelocity3D<T, DESCRIPTOR>(sLattice, converter),0),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    yVelVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperExtractComponentF3D<T, T>(
+        new SuperLatticePhysVelocity3D<T, DESCRIPTOR>(sLattice, converter),1),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    zVelVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperExtractComponentF3D<T, T>(
+        new SuperLatticePhysVelocity3D<T, DESCRIPTOR>(sLattice, converter),2),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    normVelVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperEuklidNorm3D<T, DESCRIPTOR>(*velVec.back()),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    normVortVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperEuklidNorm3D<T, DESCRIPTOR>(*vortVec.back()),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    pressureVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperLatticePhysPressure3D<T, DESCRIPTOR>(sLattice, converter),plane1,
+	    BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    wsVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperExtractComponentF3D<T, T>(*wsspVec.back(),0),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
+
+    wpVec.push_back(make_unique<BlockReduction3D2D<T>>(
+      new SuperExtractComponentF3D<T, T>(*wsspVec.back(),1),
+        plane1,BlockDataSyncMode::ReduceAndBcast, BlockDataReductionMode::Discrete));
 	};
 
   auto loadCheckpoint = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id,
@@ -977,6 +1105,24 @@ int main( int argc, char* argv[] ) {
       //std::cout << "Get results cp" << endl;
 	};
 
+  auto writeCSV2D = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
+    auto& geomVec, auto& xVelVec,
+	  auto& yVelVec, auto& zVelVec, auto& normVelVec, auto& vortVec,
+	  auto& pressureVec, auto& wpVec, auto& wsVec, int& i_grid){
+		auto& geom= *geomVec[i_grid];
+		auto& xVel= *xVelVec[i_grid];
+		auto& yVel= *yVelVec[i_grid];
+		auto& zVel= *zVelVec[i_grid];
+		auto& normVel= *normVelVec[i_grid];
+		auto& pressure= *pressureVec[i_grid];
+		auto& vort= *vortVec[i_grid];
+		auto& wp= *wpVec[i_grid];
+		auto& ws= *wsVec[i_grid];
+		getCSV2D(grid, id, iT, geom, xVel, yVel, zVel, normVel, vort, pressure, wp, ws);
+		i_grid++;
+    id = "csv_"+std::to_string(i_grid);
+	};
+
   auto saveCheckpoint = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id,
     const std::string& checkpoint, int& i_grid) {
       grid.getSuperLattice().save(id+".checkpoint");
@@ -991,6 +1137,9 @@ int main( int argc, char* argv[] ) {
 	//Pass functor vectors and create new averaged functors for each grid 
   coarseGrid.forEachGrid(initialiseVTK, sVel, sP, sAveragedVel, sAveragedP,
     wssp, sAveragedWSSP, yPlus, blade);
+
+  coarseGrid.forEachGrid(initialiseCSV, vortMatNumber, velCSV, vortCSV, wsspCSV, geometry, xVel, yVel, zVel, normVel,
+    vorticity, pressure, wallPressure, wallShearStress, blade);
 
 	// === 4th Step: Main Loop with Timer ===
 	clout << "starting simulation..." << endl;
@@ -1030,10 +1179,11 @@ int main( int argc, char* argv[] ) {
 		}
 
     //Add time-averaged functor vector into getVTK functions
-    if ( iT % vtkCpIter == 0 ) {
+    if ( iT % csv2dIter == 0 ) {
 			i_grid = 0;	
-      coarseGrid.forEachGrid(writeCpVTK,"cP_"+std::to_string(i_grid),
-        iT, wssp, sAveragedWSSP, i_grid);
+      coarseGrid.forEachGrid(writeCSV2D,"csv_"+std::to_string(i_grid), iT,
+        geometry, xVel, yVel, zVel, normVel, vorticity, pressure,
+        wallPressure, wallShearStress, i_grid); 
 		}
 
 		// Save checkpoint
