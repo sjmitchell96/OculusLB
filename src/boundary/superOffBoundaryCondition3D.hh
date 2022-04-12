@@ -171,6 +171,59 @@ void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityBoundary(
                           bulkMaterials);
 }
 
+//SM - Second order Bouzidi
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addSecondOrderZeroVelocityBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+  IndicatorF3D<T>&                   geometryIndicator)
+{
+  if (_output) {
+    clout << "epsFraction=" << _epsFraction << std::endl;
+    clout.setMultiOutput(true);
+  }
+  for (int iCloc = 0; iCloc < _sLattice.getLoadBalancer().size(); ++iCloc) {
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " starts to read distances for ZeroVelocity Boundary..." << std::endl;
+    }
+    _blockBCs[iCloc]->addSecondOrderZeroVelocityBoundary(
+      boundaryIndicator->getExtendedBlockIndicatorF(iCloc),
+      bulkIndicator->getExtendedBlockIndicatorF(iCloc),
+      geometryIndicator);
+    if (_output) {
+      clout << "Cuboid globiC " << _sLattice.getLoadBalancer().glob(iCloc)
+            << " finished reading distances for ZeroVelocity Boundary." << std::endl;
+    }
+  }
+  if (_output) {
+    clout.setMultiOutput(false);
+  }
+  addPoints2CommBC(std::forward<decltype(boundaryIndicator)>(boundaryIndicator));
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addSecondOrderZeroVelocityBoundary(
+  FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  SuperGeometry3D<T>& superGeometry = boundaryIndicator->getSuperGeometry();
+  addSecondOrderZeroVelocityBoundary(
+    std::forward<decltype(boundaryIndicator)>(boundaryIndicator),
+    superGeometry.getMaterialIndicator(std::move(bulkMaterials)),
+    geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
+void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addSecondOrderZeroVelocityBoundary(
+  SuperGeometry3D<T>& superGeometry, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  addSecondOrderZeroVelocityBoundary(superGeometry.getMaterialIndicator(material),
+                          geometryIndicator,
+                          bulkMaterials);
+}
+
 template<typename T, typename DESCRIPTOR>
 void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityGradBoundary(
   FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,

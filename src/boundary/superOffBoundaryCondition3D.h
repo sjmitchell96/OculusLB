@@ -91,7 +91,17 @@ public:
   void addZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
                                IndicatorF3D<T>& geometryIndicator,
                                std::vector<int> bulkMaterials = std::vector<int>(1,1));
-
+  //SM - Second order Bouzidi
+  void addSecondOrderZeroVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator);
+  void addSecondOrderZeroVelocityBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
+                               IndicatorF3D<T>&                   geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addSecondOrderZeroVelocityBoundary(SuperGeometry3D<T>& superGeometry, int material,
+                               IndicatorF3D<T>& geometryIndicator,
+                               std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  //SM - Grad
   void addZeroVelocityGradBoundary(FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,
                                FunctorPtr<SuperIndicatorF3D<T>>&& bulkIndicator,
                                IndicatorF3D<T>&                   geometryIndicator);
@@ -136,6 +146,10 @@ private:
 
 template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
 void createBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
+
+//SM - second order Bouzidi
+template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
+void createSecondOrderBouzidiBoundaryCondition3D(sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>& sBC);
 
 //factory function for Grad condition 
 template<typename T, typename DESCRIPTOR, typename MixinDynamics=BGKdynamics<T,DESCRIPTOR> >
