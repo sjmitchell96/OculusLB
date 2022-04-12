@@ -875,7 +875,7 @@ int main( int argc, char* argv[] ) {
   const int statIter  	   = 10;
   const int checkIter 	   = 1000;
   const int bladeForceIter = 1;
-  const int timeAvgIter    = 1000;
+  const int timeAvgIter    = 1;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
 
   //Names of output files

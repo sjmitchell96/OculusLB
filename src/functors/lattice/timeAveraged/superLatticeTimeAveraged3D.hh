@@ -62,7 +62,9 @@ int SuperLatticeTimeAveragedF3D<T>::getEnsembles()
   return _ensembles;
 };
 
-template <typename T>
+//SM - OLD - SERIAL
+/*
+template <typename T> 
 void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
 {
   int i[4];
@@ -72,6 +74,44 @@ void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
     for (iX=0; iX < _sData.get(iCloc).getNx(); iX++) {
       for (iY=0; iY < _sData.get(iCloc).getNy(); iY++) {
         for (iZ=0; iZ < _sData.get(iCloc).getNz(); iZ++) {
+          i[1] = iX - _sData.getOverlap();
+          i[2] = iY - _sData.getOverlap();
+          i[3] = iZ - _sData.getOverlap();
+          BaseType tmp[_sFunctor.getTargetDim()];
+          _sFunctor(tmp, i);
+          for (int iDim=0; iDim<_sFunctor.getTargetDim(); iDim++) {
+            _sData.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmp[iDim]) ;
+            _sDataP2.get(iCloc).get(iX, iY, iZ, iDim) += (BaseType)(tmp[iDim]) *(BaseType)(tmp[iDim]) ;
+          }
+        }
+      }
+    }
+  }
+  _ensembles++;
+};
+*/
+
+//SM - NEW - OMP PARALLEL
+template <typename T> 
+void SuperLatticeTimeAveragedF3D<T>::addEnsemble()
+{
+  //ifdef omp
+
+  //int i[4];
+  //int iX,iY,iZ;
+  int iX;
+  for (int iCloc=0; iCloc < _sData.getLoadBalancer().size(); ++iCloc) {
+    //i[0] = _sData.getLoadBalancer().glob(iCloc);
+    int i0 = _sData.getLoadBalancer().glob(iCloc);
+    
+    #ifdef PARALLEL_MODE_OMP
+      #pragma omp parallel for 
+    #endif
+    for (iX=0; iX < _sData.get(iCloc).getNx(); iX++) {
+      for (int iY=0; iY < _sData.get(iCloc).getNy(); iY++) {
+        for (int iZ=0; iZ < _sData.get(iCloc).getNz(); iZ++) {
+          int i[4];
+          i[0] = i0;
           i[1] = iX - _sData.getOverlap();
           i[2] = iY - _sData.getOverlap();
           i[3] = iZ - _sData.getOverlap();
