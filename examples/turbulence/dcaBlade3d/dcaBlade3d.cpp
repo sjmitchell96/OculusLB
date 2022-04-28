@@ -70,7 +70,7 @@ typedef double T;
 #define sponge 
 
 //Boundary condition choice
-#define Bouzidi 
+//#define Bouzidi 
 //#define Grad
 
 #ifdef WALE
@@ -846,7 +846,7 @@ int main( int argc, char* argv[] ) {
   const T r1 = 0.1836;
   const T r2 = 0.00015;
   const T xp = 0.02538;
-  const T theta = -16.00; //Pitch (+ve = anticlockwise)
+  const T theta = -0.00; //Pitch (+ve = anticlockwise)
 
   //Domain and simulation parameters
   const int N = 25; //14        // resolution of the model (coarse cells per chord)
@@ -859,21 +859,22 @@ int main( int argc, char* argv[] ) {
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 33333.;       // Reynolds number
-  const T Mach = 0.1;
+  const T Re = 1000.;       // Reynolds number
+  const T Mach = 0.012;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physNu = 1.468*std::pow(10,-5); //Kinematic viscosity
+  const T physuC = 4.116; //Physical characteristic velocity
   const T rho = 1.2;	//Density
+  const T physNu = physuC * physL / Re;//m2/s
 
   //Options for blade surface boundary condition
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 1000; //Every 10% of max physical time
+  const int vtkIter   	   = 100; //Every 10% of max physical time
   //const int vtk2DIter      = 20;
-  const int csv2dIter      = 100;
+  const int csv2dIter      = 10000;
   const int statIter  	   = 10;
-  const int checkIter 	   = 1000;
+  const int checkIter 	   = 100;
   const int bladeForceIter = 1;
   const int timeAvgIter    = 1;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
