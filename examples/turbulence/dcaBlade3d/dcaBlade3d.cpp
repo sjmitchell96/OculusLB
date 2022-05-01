@@ -864,8 +864,8 @@ int main( int argc, char* argv[] ) {
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 1000.;       // Reynolds number
-  const T Mach = 0.012;
+  const T Re = 100000.;       // Reynolds number
+  const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physuC = 4.116; //Physical characteristic velocity
   const T rho = 1.2;	//Density

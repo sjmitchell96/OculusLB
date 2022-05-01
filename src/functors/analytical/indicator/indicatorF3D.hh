@@ -907,50 +907,69 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
     return true;
   }
   //Lambdas to compute distance from cylinder and plane
-  auto cylDistance = [](Vector<S,2>& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
+  auto cylDistance = [](S& distance, const Vector<S,3>& origin, const Vector<S,3>& direction,
   		       const Vector<S,3>& x1, const Vector<S,3>& x2, const S& r)
   {
-    //std::cout << "ORIGIN CYL LAMBDA" << origin[0] << " " << origin[1] << " " << origin[2] << endl;
-    //Analytical solution via 3D point-line distance formula
-    S s1 = -x1[2]*direction[0]-direction[2]*x2[0]+x1[0]*direction[2]+direction[0]*x2[2];
-    S s2 = -x1[1]*direction[2]-direction[1]*x2[2]+x1[2]*direction[1]+direction[2]*x2[1];
-    S s3 = -x1[0]*direction[1]-direction[0]*x2[1]+x1[1]*direction[0]+direction[1]*x2[0];
-			            
-    S s4 = -origin[1]*x2[2]-x1[1]*origin[2]+x1[1]*x2[2]+origin[2]*x2[1]+x1[2]*origin[1]-x1[2]*x2[1];
-    S s5 = -origin[2]*x2[0]-x1[2]*origin[0]+x1[2]*x2[0]+origin[0]*x2[2]+x1[0]*origin[2]-x1[0]*x2[2];
-    S s6 = -origin[0]*x2[1]-x1[0]*origin[1]+x1[0]*x2[1]+origin[1]*x2[0]+x1[1]*origin[0]-x1[1]*x2[0];
-    S s7 = r*r*((x2[0]-x1[0])*(x2[0]-x1[0])+(x2[1]-x1[1])*(x2[1]-x1[1])+(x2[2]-x1[2])*(x2[2]-x1[2]));
-								            
-    S a = s1*s1 + s2*s2 + s3*s3;
-    S b = 2*(s4*s2+s1*s5+s3*s6);
-    S c = s4*s4+s5*s5+s6*s6-s7;
+    //Ray - cylinder intersection
+    //Transform origin to local cylinder frame
+    const Vector<S,3> originLocal(origin[0]-x1[0],
+                                  origin[1]-x1[1],
+                                  origin[2]-x1[2]);
+
+    Vector<S,3> directionLocal(direction[0],
+                               direction[1],
+                               direction[2]);
+
+    //Normalise local direction vector
+    S dirMag = directionLocal[0]*directionLocal[0] + directionLocal[1]*directionLocal[1] + directionLocal[2]*directionLocal[2];
+    if (dirMag >= 0.) {
+      directionLocal[0] = directionLocal[0]/sqrt(dirMag);
+      directionLocal[1] = directionLocal[1]/sqrt(dirMag);
+      directionLocal[2] = directionLocal[2]/sqrt(dirMag);
+    }
+    else {
+      //std::cout << "ERROR: DIRECTION OF ZERO SPECIFIED" << endl;
+      distance = -pow(10,6);
+      return true;
+    }
+
+    S a = directionLocal[0] * directionLocal[0] + directionLocal[1] * directionLocal[1]; 
+    S b = 2. * originLocal[0] * directionLocal[0] + 2. * originLocal[1] * directionLocal[1];
+    S c = originLocal[0] * originLocal[0] + originLocal[1] * originLocal[1] - r * r;
     S sol1 = -1.;
     S sol2 = -1.;
 
     S discriminant = b*b - 4.*a*c;
 
-    if (discriminant >= 0. && a > 0.) {
+    if (util::nearZero(discriminant))
+      discriminant = 0.0;
+
+    if (discriminant >= 0. && a != 0.) {
       sol1 = (-b-pow(discriminant,0.5))/(2.*a);
       sol2 = (-b+pow(discriminant,0.5))/(2.*a);
-      distance[0] = sol1;
-      distance[1] = sol2;
-      return true;
+    
+    //Both positive - outside cylinder - take smallest (incoming intersection)
+    if (( sol1 >= 0.) && (sol2 >= 0.)) {
+      distance = std::min(sol1, sol2);
+      }
+    //Both near zero
+    else if (util::nearZero(sol1) && util::nearZero(sol2)) {
+      distance = 0.;
     }
-    //else if (discriminant > -pow(10,-15) && a > 0.) {
-    //  discriminant = 0.;
-      //std::cout << "Set discriminant to zero!" << endl;
-    //  sol1 = (-b-pow(discriminant,0.5))/(2.*a);
-    //  sol2 = (-b+pow(discriminant,0.5))/(2.*a);
-    //  distance[0] = sol1;
-    //  distance[1] = sol2;
-    //}
+    //One negative - inside - take positive
+    else if (sol1 * sol2 < 0.0 ) {
+      distance = std::max(sol1, sol2);
+    }
     else {
-      //std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
-      distance[0] = -pow(10,6);
-      distance[1] = -pow(10,6);
-      return true;
+      std::cout << "UNEXPECTED CYLINDER DISTANCES " << sol1 << " " << sol2 << std::endl;
+      distance = -pow(10,6);
+    } 
+  }
+  else {
+    //std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
+    distance = -pow(10,6);
     }
-    return true;
+  return true;
   };
   
   //Plane
@@ -961,6 +980,9 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
     S denom = direction[0]*pNormal[0] + direction[1]*pNormal[1] + direction[2]*pNormal[2];
     if (denom != 0.) {
       distance = ((origin[0]-pOrigin[0])*pNormal[0]+(origin[1]-pOrigin[1])*pNormal[1]+(origin[2]-pOrigin[2])*pNormal[2])/denom;
+      //Only consider +ve distances
+      if (distance < 0.)
+        distance = -pow(10, 6);
       return true;
     }
     else {
@@ -1003,11 +1025,7 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
   };
 
   bool isInside;
-  S d1, d2;
-  Vector<S,2> d3;
-  Vector<S,2> d4;
-  Vector<S,2> d5;
-  Vector<S,2> d6;
+  S d1, d2, d3, d4, d5, d6;
 
   planeDistance(d1, originLocal, directionLocal, Vector<S,3>{0.,0.,0.}, Vector<S,3>{0.,0.,-1.});
   Vector<S,3> intersect1;
@@ -1028,39 +1046,27 @@ bool IndicatorBladeDca3D<S>::distance(S& distance, const Vector<S,3>& origin,
     d2 = -pow(10,6);
   }
   cylDistance(d3, originLocal, directionLocal, Vector<S,3>{-_xc2,0.,0.}, Vector<S,3>{-_xc2,0.,_span},_radius2);
-  Vector<S,2> intersectCyl3x;
-  for (int i=0;i<2;++i){
-    intersectCyl3x[i] = originLocal[0] + d3[i] * directionLocal[0];
-    if (intersectCyl3x[i] < -_chord/2. - pow(10,-15) || intersectCyl3x[i] > -_xp + pow(10,-15.)) {
-      d3[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
-    }
+  S intersectCyl3x = originLocal[0] + d3 * directionLocal[0];
+  if (intersectCyl3x < -_chord/2. - pow(10,-15) || intersectCyl3x > -_xp + pow(10,-15.)) {
+    d3 = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
   }
   cylDistance(d4, originLocal, directionLocal, Vector<S,3>{0.,-_yc1,0.},Vector<S,3>{0.,-_yc1,_span},_radius1);
-  Vector<S,2> intersectCyl4x;
-  for (int i=0;i<2;++i){
-    intersectCyl4x[i] = originLocal[0] + d4[i] * directionLocal[0];
-    if (intersectCyl4x[i] < -_xp || intersectCyl4x[i] > _xp) {
-      d4[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
-    }
+  S intersectCyl4x = originLocal[0] + d4 * directionLocal[0];
+  if (intersectCyl4x < -_xp || intersectCyl4x > _xp) {
+    d4 = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
   }
   cylDistance(d5, originLocal, directionLocal, Vector<S,3>{0.,_yc1,0.}, Vector<S,3>{0.,_yc1,_span},_radius1); 
-  Vector<S,2> intersectCyl5x;
-  for (int i=0;i<2;++i){
-    intersectCyl5x[i] = originLocal[0] + d5[i] * directionLocal[0];
-    if (intersectCyl5x[i] < -_xp || intersectCyl5x[i] > _xp) {
-      d5[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
-    }
+  S intersectCyl5x = originLocal[0] + d5 * directionLocal[0];
+  if (intersectCyl5x < -_xp || intersectCyl5x > _xp) {
+    d5 = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
   }
   cylDistance(d6, originLocal, directionLocal, Vector<S,3>{_xc2,0.,0.}, Vector<S,3>{_xc2,0.,_span},_radius2);
-  Vector<S,2> intersectCyl6x;
-  for (int i=0;i<2;++i){
-    intersectCyl6x[i] = originLocal[0] + d6[i] * directionLocal[0];
-    if (intersectCyl6x[i] < _xp - pow(10,-15) || intersectCyl6x[i] > _chord/2. + pow(10,-15.)) {
-      d6[i] = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
-    }
+  S intersectCyl6x = originLocal[0] + d6 * directionLocal[0];
+  if (intersectCyl6x < _xp - pow(10,-15) || intersectCyl6x > _chord/2. + pow(10,-15.)) {
+    d6 = -pow(10,6); //Distance invalid as x intersect is outside of the cylinder bounds
   }
   std::vector<S> absDistances;
-  absDistances.assign({abs(d1),abs(d2),abs(d3[0]),abs(d3[1]),abs(d4[0]),abs(d4[1]),abs(d5[0]),abs(d5[1]),abs(d6[0]),abs(d6[1])});
+  absDistances.assign({abs(d1),abs(d2),abs(d3),abs(d4),abs(d5),abs(d6)});
   distance = *std::min_element(std::begin(absDistances),std::end(absDistances));
   //std::cout << "---" << std::endl;  
   //std::cout << "ORIGIN LOCAL" << originLocal[0] << " " << originLocal[1] << " " << originLocal[2] << endl;;
