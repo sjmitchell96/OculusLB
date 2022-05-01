@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cassert>
 #include <sstream>
+#include <algorithm> //std::min
 
 #include "indicatorF3D.h"
 #include "indicCalc3D.h"
@@ -356,7 +357,77 @@ void IndicatorCylinder3D<S>::init()
   this->_myMax = {maxx, maxy, maxz};
 }
 
+//SM - Analytical cylinder distance method definitions
+//Currently just for infinite cylinder 
 
+template <typename S>
+bool IndicatorCylinder3D<S>::distance(S& distance, const Vector<S,3>& origin,
+                const Vector<S,3>& direction, int iC)
+{
+  const S r = sqrt(_radius2);
+  const Vector <S, 3> cylOrigin = getCenter1();
+
+  //Ray - cylinder intersection
+  //Transform origin and direction  (just translation for now)
+  const Vector<S,3> originLocal(_I[0]*(origin[0]-cylOrigin[0]) + _I[1]*(origin[1]-cylOrigin[1]) + _I[2]*(origin[2]-cylOrigin[2]),
+                                  _J[0]*(origin[0]-cylOrigin[0]) + _J[1]*(origin[1]-cylOrigin[1]) + _J[2]*(origin[2]-cylOrigin[2]),
+                                  _K[0]*(origin[0]-cylOrigin[0]) + _K[1]*(origin[1]-cylOrigin[1]) + _K[2]*(origin[2]-cylOrigin[2]));
+
+  Vector<S,3> directionLocal(_I[0]*direction[0] + _I[1]*direction[1] + _I[2]*direction[2],
+                             _J[0]*direction[0] + _J[1]*direction[1] + _J[2]*direction[2],
+                             _K[0]*direction[0] + _K[1]*direction[1] + _K[2]*direction[2]);
+
+  //Normalise local direction vector
+  S dirMag = directionLocal[0]*directionLocal[0] + directionLocal[1]*directionLocal[1] + directionLocal[2]*directionLocal[2];
+  if (dirMag >= 0.) {
+    directionLocal[0] = directionLocal[0]/sqrt(dirMag);
+    directionLocal[1] = directionLocal[1]/sqrt(dirMag);
+    directionLocal[2] = directionLocal[2]/sqrt(dirMag);
+  }
+  else {
+    //std::cout << "ERROR: DIRECTION OF ZERO SPECIFIED" << endl;
+    distance = -pow(10,6);
+    return true;
+  }
+
+  S a = directionLocal[0] * directionLocal[0] + directionLocal[1] * directionLocal[1]; 
+  S b = 2. * originLocal[0] * directionLocal[0] + 2. * originLocal[1] * directionLocal[1];
+  S c = originLocal[0] * originLocal[0] + originLocal[1] * originLocal[1] - r * r;
+  S sol1 = -1.;
+  S sol2 = -1.;
+
+  S discriminant = b*b - 4.*a*c;
+
+  if (util::nearZero(discriminant))
+    discriminant = 0.0;
+
+  if (discriminant >= 0. && a != 0.) {
+    sol1 = (-b-pow(discriminant,0.5))/(2.*a);
+    sol2 = (-b+pow(discriminant,0.5))/(2.*a);
+    
+    //Both positive - outside cylinder - take smallest (incoming intersection)
+    if (( sol1 >= 0.) && (sol2 >= 0.)) {
+      distance = std::min(sol1, sol2);
+    }
+     //Both near zero
+    else if (util::nearZero(sol1) && util::nearZero(sol2)) {
+      distance = 0.;
+    }
+    //One negative - inside - take positive
+    else if (sol1 * sol2 < 0.0 ) {
+      distance = std::max(sol1, sol2);
+    }
+    else {
+      std::cout << "UNEXPECTED CYLINDER DISTANCES " << sol1 << " " << sol2 << std::endl;
+      distance = -pow(10,6);
+    } 
+  }
+  else {
+    std::cout << "No real distance to infinite cylinder found! " << b*b - 4*a*c << endl;
+    distance = -pow(10,6);
+    }
+  return true;
+}
 
 template <typename S>
 Vector<S,3> const& IndicatorCylinder3D<S>::getCenter1() const

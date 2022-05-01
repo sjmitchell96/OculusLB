@@ -141,6 +141,9 @@ public:
   Vector<S,3> const& getCenter1() const;
   Vector<S,3> const& getCenter2() const;
   S getRadius() const;
+  //SM - Analytical distance function for cylinder - ray trace
+  bool distance(S& distance, const Vector<S,3>& origin,
+                const Vector<S,3>& direction, int iC=-1) override;
 };
 
 /// indicator function for a 3d frustum
