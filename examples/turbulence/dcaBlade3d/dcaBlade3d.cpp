@@ -562,14 +562,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  //onbc.addVelocityBoundary(sGeometry, 2, omega);
   onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
-  //bc.addVelocityBoundary(sGeometry, 3, omega);
-  //bc.addVelocityBoundary(sGeometry, 2, omega);
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
-  //bc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
- // bc.addConvectionBoundary(sGeometry, 4);
-  //onbc.addPressureBoundary(sGeometry, 4, omega); 
 
 
   #if defined(Bouzidi)
@@ -686,122 +680,6 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtmWriter.write(iT);
 
 }
-
-/*
-//2D VTK WRITE - CHANGE TO HEATMAP
-void getVTK2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-	      SuperLatticeTimeAveragedF3D<T>& sAveragedVel,
-	      SuperLatticeTimeAveragedF3D<T>& sAveragedP,
-	      SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wss,
-	      SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP,
-	      SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus) {
-
-  OstreamManager clout( std::cout,"getVTK2D" );
-
-  auto& converter = grid.getConverter();
-  auto& sLattice  = grid.getSuperLattice();
-  auto& sGeometry = grid.getSuperGeometry();
-
-  //1st 2D VTK - x-y along centre span
-  //Hyperplane
-  auto plane1 = 
-    Hyperplane3D<T>().originAt({0.271,0.136,0.158}).normalTo({0,0,1});
-
-  //3D functors
-  SuperLatticePhysVelocity3D<T,DESCRIPTOR> velocity(sLattice, converter);
-  SuperLatticePhysPressure3D<T,DESCRIPTOR> pressure(sLattice, converter);
-  SuperLatticeGeometry3D<T,DESCRIPTOR> geometry(sLattice, sGeometry);
-
-  //Reduce 3D functors to 2D in plane1
-  BlockReduction3D2D<T> plane1Velocity(velocity,plane1,
-		                       BlockDataSyncMode::ReduceAndBcast,
-				       BlockDataReductionMode::Discrete);
-  BlockReduction3D2D<T> plane1Pressure(pressure,plane1,
-		                       BlockDataSyncMode::ReduceAndBcast,
-				       BlockDataReductionMode::Discrete);
-  BlockReduction3D2D<T> plane1Geometry(geometry,plane1,
-		                       BlockDataSyncMode::ReduceAndBcast,
-				       BlockDataReductionMode::Discrete);
-  BlockReduction3D2D<T> plane1sAveragedVel(sAveragedVel,plane1,
-		                           BlockDataSyncMode::ReduceAndBcast,
-					   BlockDataReductionMode::Discrete);
-  BlockReduction3D2D<T> plane1sAveragedP(sAveragedP,plane1,
-		                         BlockDataSyncMode::ReduceAndBcast,
-					 BlockDataReductionMode::Discrete);
-        
-  //Might be worth outputting just images instead 
-  //2D vtm writer
-  BlockVTKwriter2D<T> vtkWriter(prefix);
-  vtkWriter.addFunctor(plane1Velocity);
-  vtkWriter.addFunctor(plane1Pressure);
-  vtkWriter.addFunctor(plane1Geometry);
-  vtkWriter.addFunctor(plane1sAveragedVel);
-  vtkWriter.addFunctor(plane1sAveragedP);
-  vtkWriter.write(iT);
-}
-*/
-
-//TMRW - MODIFY TO OUTPUT HEATMAP AS CSV - ALIGN WITH LOCATION OF MAT NUM 7 NODES (BLADE CENTRE)
-void getCSV2D(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-  BlockReduction3D2D<T>& geom, BlockReduction3D2D<T>& xVel,
-  BlockReduction3D2D<T>& yVel, BlockReduction3D2D<T>& zVel,
-  BlockReduction3D2D<T>& normVel, BlockReduction3D2D<T>& vorticity,
-  BlockReduction3D2D<T>& pressure, BlockReduction3D2D<T>& wp,
-  BlockReduction3D2D<T>& ws) {
-  OstreamManager clout( std::cout,"getVTK2D" );
-
-  heatmap::plotParam<T> param{};
-  param.writeCSV = true;
-
-  //Update block data
-  geom.update();
-  xVel.update();
-  yVel.update();
-  zVel.update();
-  normVel.update();
-  vorticity.update();
-  pressure.update();
-  wp.update();
-  ws.update();
-
-  param.name = prefix + "_geometry";
-  heatmap::write(geom,iT, param); 
-  param.name = prefix + "_xVel";
-  heatmap::write(xVel,iT, param); 
-  param.name = prefix + "_yVel";
-  heatmap::write(yVel,iT, param); 
-  param.name = prefix + "_zVel";
-  heatmap::write(zVel,iT, param); 
-  param.name = prefix + "_normVel";
-  heatmap::write(normVel,iT, param);
-  param.name = prefix + "_vorticity";
-  heatmap::write(vorticity,iT, param); 
-  param.name = prefix + "_pressure";
-  heatmap::write(pressure,iT, param); 
-  param.name = prefix + "_wp";
-  heatmap::write(wp,iT, param); 
-  param.name = prefix + "_ws";
-  heatmap::write(ws,iT, param); 
-
-}
-
-
-void getVTKcP(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP)
-  {
-
-  OstreamManager clout( std::cout,"getVTKcP" );
-  SuperVTMwriter3D<T> vtmWriter(prefix);
-  vtmWriter.addFunctor(wssp);
-  vtmWriter.addFunctor(sAveragedWSSP);
-
-  if (iT==0) {
-     vtmWriter.createMasterFile();
-  }
-  vtmWriter.write(iT);
-}
-
 
 void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
                Timer<T> timer) {

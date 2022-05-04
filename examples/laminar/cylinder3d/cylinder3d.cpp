@@ -43,11 +43,6 @@
 #ifndef OLB_PRECOMPILED // Unless precompiled version is used,
 #include "olb3D.hh"   // include full template code
 #endif
-#include "olb2D.h"
-#ifndef OLB_PRECOMPILED // Unless precompiled version is used,
-#include "olb2D.hh"   // include full template code
-#endif
-
 #include <vector>
 #include <cmath>
 #include <iostream>
@@ -60,8 +55,7 @@ using namespace olb::util;
 using namespace std;
 
 typedef double T;
-//#define DESCRIPTOR D3Q19<>
-#define DESCRIPTOR D3Q27descriptorKBC
+#define DESCRIPTOR D3Q19<>
 
 
 // Parameters for the simulation setup
@@ -171,14 +165,31 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
                         SuperGeometry3D<T>& superGeometry ) {
 
   OstreamManager clout( std::cout,"setBoundaryValues" );
-    std::vector<T> inVel( 3,0 );
-    maxVelocity[0] = converter.getCharLatticeVelocity();
-    T inRho = 1.0;
-    
-    AnalyticalConst3D<T> inRhoConst(inRho);
-    AnalyticalConst3D<T> inVelConst(inVel);
 
-    sLattice.defineRhoU(superGeometry, 3, inRho, inVel);
+  // No of time steps for smooth start-up
+  int iTmaxStart = converter.getLatticeTime( maxPhysT*0.4 );
+  int iTupdate = 30;
+
+  if ( iT%iTupdate == 0 && iT <= iTmaxStart ) {
+    // Smooth start curve, sinus
+    // SinusStartScale<T,int> StartScale(iTmaxStart, T(1));
+
+    // Smooth start curve, polynomial
+    PolynomialStartScale<T,int> StartScale( iTmaxStart, T( 1 ) );
+
+    // Creates and sets the Poiseuille inflow profile using functors
+    //Gradual start-up to aid stability
+    int iTvec[1] = {iT};
+    T frac[1] = {};
+    StartScale( frac,iTvec );
+    std::vector<T> maxVelocity( 3,0 );
+    maxVelocity[0] = 2.25*frac[0]*converter.getCharLatticeVelocity();
+
+    T distance2Wall = converter.getConversionFactorLength()/2.;
+    RectanglePoiseuille3D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall, distance2Wall, distance2Wall );
+    sLattice.defineU( superGeometry, 3, poiseuilleU );
+
+    clout << "step=" << iT << "; maxVel=" << maxVelocity[0] << std::endl;
   }
 }
 
@@ -194,12 +205,11 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity( sLattice, converter );
   SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure( sLattice, converter );
   SuperLatticeYplus3D<T, DESCRIPTOR> yPlus( sLattice, converter, superGeometry, stlReader, 5 );
-  
   vtmWriter.addFunctor( velocity );
   vtmWriter.addFunctor( pressure );
   vtmWriter.addFunctor( yPlus );
 
-  const int vtkIter  = converter.getLatticeTime( .01 );
+  const int vtkIter  = converter.getLatticeTime( .3 );
   const int statIter = converter.getLatticeTime( .1 );
 
   if ( iT==0 ) {
@@ -207,7 +217,6 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
     SuperLatticeCuboid3D<T, DESCRIPTOR> cuboid( sLattice );
     SuperLatticeRank3D<T, DESCRIPTOR> rank( sLattice );
-
     vtmWriter.write( geometry );
     vtmWriter.write( cuboid );
     vtmWriter.write( rank );
@@ -216,46 +225,14 @@ void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
   }
 
   // Writes the vtk files
-  if ( iT%1/*vtkIter*/ == 0 ) {
+  if ( iT%vtkIter == 0 ) {
     vtmWriter.write( iT );
 
-    //SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    //BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
+    SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
+    BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
     // write output as JPEG
-  //  heatmap::write(planeReduction, iT);
+    heatmap::write(planeReduction, iT);
   }
-
-/*
-  //2D BLOCK VTK
-  BlockVTKwriter2D<T> vtkWriter( "cylinder2d" );
-  
-  std::cout << "TEST" << std::endl;
-  BlockReduction3D2D<T> planeReductionVel( velocity, {0, 0, 1} );
-  BlockReduction3D2D<T> planeReductionP( pressure, {0, 0, 1} );
-
-  vtkWriter.addFunctor( planeReductionVel );
-  vtkWriter.addFunctor( planeReductionP );
-  std::cout << "TEST" << std::endl;
-  if ( iT==0 ) {
-    // Writes the geometry, cuboid no. and rank no. as vti file for visualization
-    SuperLatticeGeometry3D<T, DESCRIPTOR> geometry( sLattice, superGeometry );
-
-    BlockReduction3D2D<T> planeReductionGeometry( geometry, {0, 0, 1} );
-    vtkWriter.write( planeReductionGeometry );
-  }
-
-  // Writes the vtk files
-  //if ( iT%1vtkIter == 0 ) {
-  //  vtkWriter.write( iT );
-    
-
-    //SuperEuklidNorm3D<T, DESCRIPTOR> normVel( velocity );
-    //BlockReduction3D2D<T> planeReduction( normVel, {0, 0, 1} );
-    // write output as JPEG
-  //  heatmap::write(planeReduction, iT);
-  */
-  //}
-
 
   // Writes output on the console
   if ( iT%statIter == 0 ) {
@@ -331,7 +308,7 @@ int main( int argc, char* argv[] ) {
 
   // Instantiation of the STLreader class
   // file name, voxel size in meter, stl unit in meter, outer voxel no., inner voxel no.
-  STLreader<T> stlReader( "cylinder3d_1.stl", converter.getConversionFactorLength(), 0.001, 2, true );
+  STLreader<T> stlReader( "cylinder3d.stl", converter.getConversionFactorLength(), 0.001 );
   IndicatorLayer3D<T> extendedDomain( stlReader, converter.getConversionFactorLength() );
 
   // Instantiation of a cuboidGeometry with weights
@@ -352,13 +329,12 @@ int main( int argc, char* argv[] ) {
 
   // === 3rd Step: Prepare Lattice ===
   SuperLattice3D<T, DESCRIPTOR> sLattice( superGeometry );
-  //BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
-  KBCdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
+  BGKdynamics<T, DESCRIPTOR> bulkDynamics( converter.getLatticeRelaxationFrequency(), instances::getBulkMomenta<T, DESCRIPTOR>() );
 
   // choose between local and non-local boundary condition
   sOnLatticeBoundaryCondition3D<T,DESCRIPTOR> sBoundaryCondition( sLattice );
-  //createInterpBoundaryCondition3D<T,DESCRIPTOR>( sBoundaryCondition );
-  createLocalBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
+  createInterpBoundaryCondition3D<T,DESCRIPTOR>( sBoundaryCondition );
+  // createLocalBoundaryCondition3D<T,DESCRIPTOR>(sBoundaryCondition);
 
   sOffLatticeBoundaryCondition3D<T, DESCRIPTOR> sOffBoundaryCondition( sLattice );
   createBouzidiBoundaryCondition3D<T, DESCRIPTOR> ( sOffBoundaryCondition );
@@ -380,7 +356,6 @@ int main( int argc, char* argv[] ) {
 
     // === 7th Step: Computation and Output of the Results ===
     getResults( sLattice, converter, iT, superGeometry, timer, stlReader );
-
   }
 
   timer.stop();

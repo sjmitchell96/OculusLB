@@ -204,16 +204,16 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
   const Vector<T,2> hn4 = {0.1 * diameter, 0.1 * diameter}; 
-  const Vector<T,2> hp4 = {0.1 * diameter, 0.1 * diameter}; // '' positive
+  const Vector<T,2> hp4 = {0.2 * diameter, 0.1 * diameter}; // '' positive
 
   const Vector<T,2> hn3 = {0.2 * diameter, 0.2 * diameter};
-  const Vector<T,2> hp3 = {0.6 * diameter, 0.2 * diameter};
+  const Vector<T,2> hp3 = {3.0 * diameter, 0.2 * diameter};
 
   const Vector<T,2> hn2 = {0.4 * diameter, 0.4 * diameter};
-  const Vector<T,2> hp2 = {1.2 * diameter, 0.4 * diameter};
+  const Vector<T,2> hp2 = {6.0 * diameter, 0.4 * diameter};
 
   const Vector<T,2> hn1 = {0.8 * diameter, 0.8 * diameter}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * diameter, 0.8 * diameter};
+  const Vector<T,2> hp1 = {12.0 * diameter, 0.8 * diameter};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -731,7 +731,7 @@ int main( int argc, char* argv[] ) {
   const T span = 6.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 4; //14        // resolution of the model (coarse cells per chord)
+  const int N = 6; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 4;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 20.*diameter; //Length of domain in physical units (m)
