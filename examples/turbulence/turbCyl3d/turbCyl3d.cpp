@@ -67,7 +67,7 @@ typedef double T;
 //#define WALE
 //#define Smagorinsky
 #define KBC
-//#define sponge 
+#define sponge 
 
 //Boundary condition choice
 #define Bouzidi 
@@ -204,7 +204,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
   const Vector<T,2> hn4 = {0.1 * diameter, 0.1 * diameter}; 
-  const Vector<T,2> hp4 = {0.2 * diameter, 0.1 * diameter}; // '' positive
+  const Vector<T,2> hp4 = {0.1 * diameter, 0.1 * diameter}; // '' positive
 
   const Vector<T,2> hn3 = {0.2 * diameter, 0.2 * diameter};
   const Vector<T,2> hp3 = {3.0 * diameter, 0.2 * diameter};
@@ -593,29 +593,28 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   //Define and initialise viscosity sponge zones
   //Sponge indicator
-  //const T physChord = 0.051;
-  //const T deltaX = converter.getPhysDeltaX();
-  //const Vector<T,3> spongeOrigin = {12 * physChord - deltaX /2, - deltaX / 2,
-  //  - 4 * deltaX};
-  //const Vector<T,3> spongeExtend = {4 * physChord + deltaX,
-  //  8 * physChord + deltaX,
-  //  0.2 * physChord + 8 * deltaX};
-  //IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
+  const T physChord = 1.00;
+  const T deltaX = converter.getPhysDeltaX();
+  const Vector<T,3> spongeOrigin = {19. * physChord - deltaX /2000, - deltaX / 2,
+    - 4. * deltaX};
+  const Vector<T,3> spongeExtend = {1. * physChord + deltaX / 1000,
+    10. * physChord + deltaX,
+    3. * physChord + 8. * deltaX};
+  IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
-  //const Vector<T,3> spongeOrientation = {1., 0., 0.};
+  const Vector<T,3> spongeOrientation = {1., 0., 0.};
   //Min and max tau limits
-  //const T tauSpongeBase = 1. / omega;
-  //const T tauSpongeMax = 1.;
-  //std::vector<int> spongeMaterials = {1,2,3,4,6};
+  const T tauSpongeBase = 1. / omega;
+  const T tauSpongeMax = 1.;
+  std::vector<int> spongeMaterials = {1,2,3,4,6};
 
-  //sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
-  //createViscositySponge3D(outletSponge);
+  sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
+  createViscositySponge3D(outletSponge);
 
- // outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
-  //  tauSpongeBase, tauSpongeMax, spongeMaterials);
+  outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
+    tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  //sLattice.initialiseSponges();
-
+  sLattice.initialiseSponges();
 
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
@@ -731,8 +730,8 @@ int main( int argc, char* argv[] ) {
   const T span = 6.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 6; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+  const int N = 25; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 20.*diameter; //Length of domain in physical units (m)
   const T lDomainPhysy = 10.*diameter;

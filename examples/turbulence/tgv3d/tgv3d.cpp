@@ -72,8 +72,8 @@ typedef double T;
 #define DESCRIPTOR WALED3Q19Descriptor
 #else
 //#define DESCRIPTOR D3Q19<>
-#define DESCRIPTOR D3Q27<>
-//#define DESCRIPTOR D3Q27descriptorKBC
+//#define DESCRIPTOR D3Q27<>
+#define DESCRIPTOR D3Q27descriptorKBC
 #endif
 
 // Global constants
@@ -371,8 +371,8 @@ int main(int argc, char* argv[])
 #if defined(RLB)
   bulkDynamics.reset(new RLBdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(DNS)
-  bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
-  //bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getKBCBulkMomenta<T, DESCRIPTOR>()));
+  //bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
+  bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getKBCBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(WALE)
   bulkDynamics.reset(new WALEBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst));

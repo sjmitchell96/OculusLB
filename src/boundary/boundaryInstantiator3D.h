@@ -1112,7 +1112,7 @@ void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addOutletB
   BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int nextX, int nextY, int nextZ, int nextOppX, int nextOppY, int nextOppZ, int nextRevX, int nextRevY, int nextRevZ,  int iPop)
 {
   //Sort for special treatment of corner nodes - specular reflection (slip bc) at y-z planes
-  bool reflectInY = true;
+  bool reflectInY = false;
   //Specular reflection for any pops with y-component and not upstream in x
   if (reflectInY) {
 

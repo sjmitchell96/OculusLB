@@ -66,20 +66,22 @@ SineSpongeRegion3D<T,DESCRIPTOR>::SineSpongeRegion3D(
   //Decide on orientation (distanceStart) based on input
   if (orientation[0] == 1 && orientation[1] == 0 && orientation[2] == 0) {
     dir = 0;     
+  //Compute start distance from sponge indicator min
+    spStartPhys = spongeIndicator.getMin()[dir];
+    spEndPhys = spongeIndicator.getMax()[dir];
+  }
+  else if (orientation[0] == 0 && orientation[1] == 1 && orientation[2] == 0) {
+    dir = 1;     
+    spStartPhys = spongeIndicator.getMin()[dir];
+    spEndPhys = spongeIndicator.getMax()[dir];
   }
   else {
     std::cout << "SPONGE WARNING: INVALID ORIENTATION PLANE" << std::endl;
     dir = 0;
   }
-
-  //Compute start distance from sponge indicator min
-  spStartPhys = spongeIndicator.getMin()[dir];
-  spEndPhys = spongeIndicator.getMax()[dir];
-
   //Initialise quantities for tau_effective calc (sine formula)
   amp = 0.5 * (tauMax - tauBase);
   angFreq = M_PI / (spEndPhys - spStartPhys);
-
 }
 
 template<typename T, typename DESCRIPTOR> 
@@ -87,34 +89,35 @@ void SineSpongeRegion3D<T,DESCRIPTOR>::initialise(BlockLattice3D<T, DESCRIPTOR>&
 {
   //Loop over all nodes
   int iX;
-  //#ifdef PARALLEL_MODE_OMP
-  //  #pragma omp parallel for schedule(dynamic,1)
-  //#endif
   for (iX = 0; iX <= blockLattice.getNx() - 1; ++iX) {
     for (int iY = 0; iY <= blockLattice.getNy() - 1; ++iY) {
       for (int iZ = 0; iZ <= blockLattice.getNz() - 1; ++iZ) {
-        //std::cout << iX << " " << iY << " " << iZ << std::endl;
         T physR[3];
 
         blockGeometryStructure.getPhysR(physR,iX,iY,iZ);
         int mat = blockGeometryStructure.getMaterial(iX, iY, iZ);
-        bool isBulk = ( mat == 1 || mat == 2 || mat ==4 );//bulkIndicator(iX, iY, iZ);
+        bool isBulk = ( mat == 1 || mat == 2 || mat == 3 || mat ==4 );//bulkIndicator(iX, iY, iZ);
         bool isSponge = spongeIndicator(physR);
 
-        //std::cout << "BULK " <<  bulkIndicator(10,10,10) << std::endl; 
-        //std::cout << "x " << physR[0] << "y " << physR[1] << "z " << physR[2]  << std::endl;
-        //std::cout << "ISBULK " << isBulk << "isSponge " << isSponge << std::endl;
         if (isBulk && isSponge) {
           T d = physR[dir];   
-          const T tauEff = amp * sin(angFreq * (d - spStartPhys - 0.25 * (spEndPhys - spStartPhys))) + /*tauBase*/ + amp;
+          const T tauEffOld = blockLattice.get(iX,iY,iZ).template getField<descriptors::TAU_EFF>();
+          //std::cout << "TAUEFFOLD" << tauEffOld << std::endl;
+          T tauEff = tauEffOld + ( amp * sin(angFreq * (d - spStartPhys - 0.5 
+            * (spEndPhys - spStartPhys))) + /*tauBase*/ + amp);
+          if (tauBase + tauEff > tauMax) {
+            tauEff = tauMax - tauBase;
+          }
+          //std::cout << iX << " " << iY << " " << iZ << std::endl;
           //std::cout << "TAU EFF " << tauEff << std::endl;
           blockLattice.get(iX,iY,iZ).template defineField<descriptors::TAU_EFF>(&tauEff);
+          //std::cout << "TAUEFF" << tauEff + tauBase << std::endl;
         }
-        else { 
-          const T tauEff = 0.;
+        //else { 
+        //  const T tauEff = 0.;
           //std::cout << "TAU EFF " << tauEff << std::endl;
-          blockLattice.get(iX,iY,iZ).template defineField<descriptors::TAU_EFF>(&tauEff);
-        }
+        //  blockLattice.get(iX,iY,iZ).template defineField<descriptors::TAU_EFF>(&tauEff);
+        //}
       }
     }
   }

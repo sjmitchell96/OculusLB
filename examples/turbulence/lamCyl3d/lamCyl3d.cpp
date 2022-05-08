@@ -93,7 +93,7 @@ typedef double T;
 void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
 		      Vector<T,3> const& origin,
                       Vector<T,3> const& extend,
-                      IndicatorBladeDca3D<T>& indicatorBlade) {
+                      IndicatorCylinder3D<T>& indicatorCylinder) {
 
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
@@ -101,26 +101,27 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   auto& converter  = grid.getConverter();
   auto& sGeometry  = grid.getSuperGeometry();
   const T deltaX   = converter.getPhysDeltaX();
-  const T chord    = indicatorBlade.getChord();
+  const T diameter    = 2. * indicatorCylinder.getRadius();
 
-  const Vector<T,3> bladeOrigin = indicatorBlade.getOrigin();
+  const Vector<T,3> cylinderOrigin = indicatorCylinder.getCenter1();
+  const Vector<T,3> cylinderExtend = indicatorCylinder.getCenter2() - cylinderOrigin;
   const Vector<T,3> gridOrigin  = 
 	  grid.getSuperGeometry().getStatistics().getMinPhysR(0);
   const Vector<T,3> gridExtend = 
           grid.getSuperGeometry().getStatistics().getPhysExtend(0);
 
   sGeometry.rename(0,1);
-  sGeometry.rename(1, 5, indicatorBlade);
+  sGeometry.rename(1, 5, indicatorCylinder);
 
   //Material number for section of blade to read pressures
-  const Vector<T,3> pressureSection1Origin {bladeOrigin[0] - chord,
-	                                    bladeOrigin[1] - chord,
-                                            bladeOrigin[2] + 0.02 + 
-                                              0.5 * 0.2 * chord - 0.5 * deltaX};
-  const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
+  const Vector<T,3> pressureSection1Origin {cylinderOrigin[0] - diameter,
+	                                          cylinderOrigin[1] - diameter,
+                                            cylinderOrigin[2] + 0.5 * 
+                                            cylinderExtend[2] - 0.5 * deltaX};
+  const Vector<T,3> pressureSection1Extend {2. * diameter, 2. * diameter, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
-  sGeometry.rename(5, 7, pressureSection1);
+  //sGeometry.rename(5, 7, pressureSection1);
 
   //Front face
   {
@@ -128,7 +129,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
                                   origin[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
     const Vector<T,3> indiExtend {deltaX,
-                                  extend[1] + deltaX,
+                                  extend[1] +deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> ff(indiExtend, indiOrigin);
     sGeometry.rename(1, 3, ff);
@@ -139,11 +140,11 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
     const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] + extend[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
-    const Vector<T,3> indiExtend {extend[0],
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> uf(indiExtend, indiOrigin);
-    sGeometry.rename(1, 4, uf);
+    sGeometry.rename(1, 2, uf);
   }
 
   //Lower face
@@ -151,20 +152,20 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
     const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
-    const Vector<T,3> indiExtend {extend[0],
+    const Vector<T,3> indiExtend {extend[0] - deltaX,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> lf(indiExtend, indiOrigin);
-    sGeometry.rename(1, 3, lf);
+    sGeometry.rename(1, 2, lf);
   }
 
   //Rear face
   {
     const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
-                                  origin[1] + deltaX / 2.,
+                                  origin[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
     const Vector<T,3> indiExtend {deltaX,
-                                  extend[1] + deltaX / 2.,
+                                  extend[1] + deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> rf(indiExtend, indiOrigin);
     sGeometry.rename(1, 4, rf);
@@ -174,8 +175,8 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   sGeometry.clean();
 
   #ifdef Grad
-  IndicatorLayer3D<T> bladeLayer(indicatorBlade, deltaX);
-  sGeometry.rename(1,6,bladeLayer);
+  IndicatorLayer3D<T> cylinderLayer(indicatorCylinder, deltaX);
+  sGeometry.rename(1,6,cylinderLayer);
   #endif
 
   sGeometry.checkForErrors();
@@ -186,45 +187,45 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
 void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 		     Vector<T,3> const& domainOrigin,
 		     Vector<T,3> const& domainExtend,
-                     IndicatorBladeDca3D<T>& indicatorBlade,
+         IndicatorCylinder3D<T>& indicatorCylinder,
 		     const int n, const int nRefOut) {
 
-  T chord = indicatorBlade.getChord();
-  T thickness = indicatorBlade.getThickness();
-  Vector<T,3> bladeOrigin = indicatorBlade.getOrigin();
+  T radius = indicatorCylinder.getRadius();
+  T diameter = 2. * radius;
+  Vector<T,3> cylinderOrigin = indicatorCylinder.getCenter1();
   OstreamManager clout(std::cout, "setupRefinement");
   clout << "Setup Refinement ..." << std::endl;
 
   //Origin of sphere bounding box
-  Vector<T,3> bladeBoxOrigin = {bladeOrigin[0] - chord / 2,
-	                        bladeOrigin[1] - thickness / 2, 
-				bladeOrigin[2]};
-  
+  Vector<T,3> cylinderBoxOrigin = {cylinderOrigin[0] - diameter / 2.,
+	                                 cylinderOrigin[1] - diameter / 2., 
+				                           cylinderOrigin[2]};
+
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {0.1 * chord, 0.15 * chord}; 
-  const Vector<T,2> hp4 = {0.1 * chord, 0.15 * chord}; // '' positive
+  const Vector<T,2> hn4 = {2.5 * diameter, 1.5 * diameter}; 
+  const Vector<T,2> hp4 = {6.5 * diameter, 1.5 * diameter}; // '' positive
 
-  const Vector<T,2> hn3 = {0.2 * chord, 0.25 * chord};
-  const Vector<T,2> hp3 = {0.6 * chord, 0.25 * chord};
+  const Vector<T,2> hn3 = {0.5 * diameter, 0.5 * diameter};
+  const Vector<T,2> hp3 = {0.5 * diameter, 0.5 * diameter};
 
-  const Vector<T,2> hn2 = {0.4 * chord, 0.45 * chord};
-  const Vector<T,2> hp2 = {1.2 * chord, 0.45 * chord};
+  const Vector<T,2> hn2 = {1.5 * diameter, 1.0 * diameter};
+  const Vector<T,2> hp2 = {3.5 * diameter, 1.0 * diameter};
 
-  const Vector<T,2> hn1 = {0.8 * chord, 0.85 * chord}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * chord, 0.85 * chord};
+  const Vector<T,2> hn1 = {2.5 * diameter, 1.5 * diameter}; //Outermost
+  const Vector<T,2> hp1 = {6.5 * diameter, 1.5 * diameter};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
     T coarseDeltaX = coarseGrid.getConverter().getPhysDeltaX();
     Vector<T,3> fineOrigin = 
-      {bladeBoxOrigin[0] - hn1[0], bladeBoxOrigin[1] - hn1[1], domainOrigin[2]};
+      {cylinderBoxOrigin[0] - hn1[0], cylinderBoxOrigin[1] - hn1[1], domainOrigin[2]};
     Vector<T,3> fineExtend 
-      = {chord+hp1[0] + hn1[0], thickness + hp1[1] + hn1[1], domainExtend[2]};
+      = {diameter+hp1[0] + hn1[0], diameter + hp1[1] + hn1[1], domainExtend[2]};
 
     auto& fineGrid = coarseGrid.refine(fineOrigin, fineExtend, false, false,
 		                       true, false);
-    prepareGeometry(fineGrid, domainOrigin, domainExtend, indicatorBlade);
+    prepareGeometry(fineGrid, domainOrigin, domainExtend, indicatorCylinder);
 
     Vector<T,3> origin = fineGrid.getOrigin() +
       Vector<T,3> {0., 0., 0.5 * coarseDeltaX};
@@ -268,15 +269,15 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
       // Refinement around the wing box - level 2
       const T deltaX0 = fineGrid.getConverter().getPhysDeltaX();
       coarseDeltaX = deltaX0;	
-      Vector<T,3> fineOrigin2 = {bladeBoxOrigin[0] - hn2[0],
-	                         bladeBoxOrigin[1] - hn2[1],
+      Vector<T,3> fineOrigin2 = {cylinderBoxOrigin[0] - hn2[0],
+	                         cylinderBoxOrigin[1] - hn2[1],
 	                         domainOrigin[2] - deltaX0};
-      Vector<T,3> fineExtend2 = {chord + hp2[0] + hn2[0],
-	                         thickness+hp2[1] + hn2[1],
+      Vector<T,3> fineExtend2 = {diameter + hp2[0] + hn2[0],
+	                         diameter+hp2[1] + hn2[1],
 	                         domainExtend[2] + deltaX0};
       auto& fineGrid2 = fineGrid.refine(fineOrigin2, fineExtend2, false, false,
 		                        true, false);
-      prepareGeometry(fineGrid2, domainOrigin, domainExtend, indicatorBlade);
+      prepareGeometry(fineGrid2, domainOrigin, domainExtend, indicatorCylinder);
       origin = fineGrid2.getOrigin() + Vector<T,3> {0., 0., 0.5 * coarseDeltaX};
       extend = fineGrid2.getExtend() - Vector<T,3> {0., 0., 0.5 * coarseDeltaX};
       extendXZ = {extend[0], 0., extend[2]};
@@ -312,16 +313,16 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
         // Refinement around the wing box - level 3
 	      const T deltaX1 = fineGrid2.getConverter().getPhysDeltaX();
 	      coarseDeltaX = deltaX1;
-	      Vector<T,3> fineOrigin3 = {bladeBoxOrigin[0] - hn3[0], 
-		                   bladeBoxOrigin[1] - hn3[1],
+	      Vector<T,3> fineOrigin3 = {cylinderBoxOrigin[0] - hn3[0], 
+		                   cylinderBoxOrigin[1] - hn3[1],
 				               domainOrigin[2] - deltaX0 - deltaX1};
-	      Vector<T,3> fineExtend3 = {chord + hp3[0] + hn3[0],
-		                   thickness + hp3[1] + hn3[1],
+	      Vector<T,3> fineExtend3 = {diameter + hp3[0] + hn3[0],
+		                   diameter + hp3[1] + hn3[1],
 				               domainExtend[2] + deltaX0 + deltaX1};
 
 	      auto& fineGrid3 = fineGrid2.refine(fineOrigin3, fineExtend3, false,
 		                           false, true, false);
-	      prepareGeometry(fineGrid3, domainOrigin, domainExtend, indicatorBlade);
+	      prepareGeometry(fineGrid3, domainOrigin, domainExtend, indicatorCylinder);
 
 	      origin = fineGrid3.getOrigin() + Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
 	      extend = fineGrid3.getExtend() - Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
@@ -363,17 +364,17 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
           const T deltaX2 = fineGrid3.getConverter().getPhysDeltaX();
 	          coarseDeltaX = deltaX2;
 			
-	        Vector<T,3> fineOrigin4 = {bladeBoxOrigin[0] - hn4[0],
-		                     bladeBoxOrigin[1] - hn4[1],
+	        Vector<T,3> fineOrigin4 = {cylinderBoxOrigin[0] - hn4[0],
+		                     cylinderBoxOrigin[1] - hn4[1],
 				                 domainOrigin[2]-deltaX0-deltaX1-deltaX2};
 	        Vector<T,3> fineExtend4 = 
-	        {chord + hp4[0] + hn4[0], thickness + hp4[1] + hn4[1],
+	        {diameter + hp4[0] + hn4[0], diameter + hp4[1] + hn4[1],
                domainExtend[2] + deltaX0 + deltaX1 + deltaX2};
 
       	  auto& fineGrid4 = fineGrid3.refine(fineOrigin4, fineExtend4,
 				             false, false, true, false);
 	        prepareGeometry(fineGrid4, domainOrigin, domainExtend,
-			        indicatorBlade);
+			        indicatorCylinder);
 	        origin = fineGrid4.getOrigin() + 
                Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
       	  extend = fineGrid4.getExtend() - 
@@ -417,7 +418,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   
   if (nRefOut >= 1) {
     //Outlet refinement
-    const Vector<T,3> outRefineExtend {chord,
+    const Vector<T,3> outRefineExtend {diameter,
                                                               domainExtend[1],
                                                               domainExtend[2]};
     const Vector<T,3> outRefineOrigin {domainExtend[0] - outRefineExtend[0],
@@ -426,7 +427,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
     // add periodicity as well
     auto& outRefineGrid = coarseGrid.refine(outRefineOrigin, outRefineExtend,
                     false, false, true, false);
-    prepareGeometry(outRefineGrid, domainOrigin, domainExtend, indicatorBlade);
+    prepareGeometry(outRefineGrid, domainOrigin, domainExtend, indicatorCylinder);
     // add couplers manually
     {
       const T coarseDeltaXout = coarseGrid.getConverter().getPhysDeltaX();
@@ -452,7 +453,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
     if (nRefOut >= 2) {
       // Refinement at the outlet half
       const T deltaX0Out = outRefineGrid.getConverter().getPhysDeltaX();
-      const Vector<T,3> outRefineExtend2 {0.5 * chord,
+      const Vector<T,3> outRefineExtend2 {0.5 * diameter,
                                                                 domainExtend[1],
                                                                 domainExtend[2] + deltaX0Out};
       const Vector<T,3> outRefineOrigin2 {domainExtend[0] - outRefineExtend2[0],
@@ -461,7 +462,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
       // add periodicity as well
       auto& outRefineGrid2 = outRefineGrid.refine(outRefineOrigin2, outRefineExtend2,
                       false, false, true, false);
-      prepareGeometry(outRefineGrid2, domainOrigin, domainExtend, indicatorBlade);
+      prepareGeometry(outRefineGrid2, domainOrigin, domainExtend, indicatorCylinder);
       // add couplers manually
       {
               const T coarseDeltaXout = outRefineGrid.getConverter().getPhysDeltaX();
@@ -491,9 +492,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
 // Create lattice structures
 void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
-		    IndicatorBladeDca3D<T>& indicatorBlade,
-		    const bool& bouzidiOn,
-        const T& thetaBC) {
+		    IndicatorCylinder3D<T>& indicatorCylinder,
+		    const bool& bouzidiOn) {
   std::cout << "PREPAREL" << std::endl;
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare lattice ..." << std::endl;
@@ -524,6 +524,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCSpongeDynamics<T,DESCRIPTOR>(
+          //new KBCdynamics<T,DESCRIPTOR>(
             omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
     #else
      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
@@ -556,28 +557,34 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   // Define dynamics
   sLattice.defineDynamics(sGeometry, 0,
 		       	  &instances::getNoDynamics<T,DESCRIPTOR>());
+//  sLattice.defineDynamics(sGeometry, 2,
+//		       	  &instances::getNoDynamics<T,DESCRIPTOR>());
 
   auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4, 6});
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
+  //onbc.addVelocityBoundary(sGeometry, 2, omega);
   onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
+  //bc.addVelocityBoundary(sGeometry, 3, omega);
+  //bc.addVelocityBoundary(sGeometry, 2, omega);
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
-
-  //NEXT RECONFIGURE BCS TO INLET OUTLET
+  //bc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
+ // bc.addConvectionBoundary(sGeometry, 4);
+  //onbc.addPressureBoundary(sGeometry, 4, omega); 
 
 
   #if defined(Bouzidi)
     // material=5, 7 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
-    offBc.addZeroVelocityBoundary( sGeometry,7,indicatorBlade );
+    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorCylinder );
+    offBc.addZeroVelocityBoundary( sGeometry,7,indicatorCylinder );
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade,std::vector<int>{1,6} );
-    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorBlade,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorCylinder,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorCylinder,std::vector<int>{1,6} );
   #else
     //material=5,7 --> fullway bounceBack dynamics
     sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
@@ -585,14 +592,14 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #endif
 
   //Define and initialise viscosity sponge zones
-  //Sponge indicator 1 - y-z outlet
-  const T physChord = 0.051;
+  //Sponge indicator
+  const T physChord = 1.00;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {15. * physChord - deltaX /2000, - deltaX / 2,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend = {1. * physChord + deltaX/1000,
-    8 * physChord + deltaX,
-    0.2 * physChord + 8 * deltaX};
+  const Vector<T,3> spongeOrigin = {24. * physChord - deltaX /2000, - deltaX / 2,
+    - 4. * deltaX};
+  const Vector<T,3> spongeExtend = {1. * physChord + deltaX / 1000,
+    8. * physChord + deltaX,
+    8. * physChord + 8. * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
   const Vector<T,3> spongeOrientation = {1., 0., 0.};
@@ -607,33 +614,11 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
     tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  //Sponge indicator 2 - x-z 
-  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 7. * physChord - deltaX / 2000,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend2 = {16. * physChord + deltaX,
-    1. * physChord + deltaX / 1000,
-    0.2 * physChord + 8 * deltaX};
-  IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
-  //Orientation
-  const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
-
-  //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
-  //createViscositySponge3D(outletSponge2);
-
-  //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-  //  tauSpongeBase, tauSpongeMax, spongeMaterials);
-
-  outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
-
   sLattice.initialiseSponges();
 
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
-  Vector<T,3> velocityV {converter.getCharLatticeVelocity() * cos(thetaBC * M_PI / 180.),
-                         converter.getCharLatticeVelocity() * sin(thetaBC * M_PI / 180.), 
-                         0.};
-  //Rotation tranformation here
+  Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0., 0.};
   AnalyticalConst3D<T,T> uF(velocityV);
 
   // Initialize all values of distribution functions to their local equilibrium
@@ -647,7 +632,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 }
 
 // Set boundary values for start-scale inlet velocity
-void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
+void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 
 	OstreamManager clout(std::cout, "setBoundaryValues");
 
@@ -655,26 +640,21 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 	auto& sGeometry	= grid.getSuperGeometry();
 	auto& sLattice	= grid.getSuperLattice();
 
-  Vector<T,3> inVel {
-    converter.getCharLatticeVelocity() * cos(thetaBC * M_PI / 180.),
-    converter.getCharLatticeVelocity() * sin(thetaBC * M_PI / 180.),
-    0.};
-  T inRho = 1.0;
+    Vector<T,3> inVel {converter.getCharLatticeVelocity(), 0., 0.};
+    inVel[0] = converter.getCharLatticeVelocity();
+    T inRho = 1.0;
     
-  AnalyticalConst3D<T,T> inRhoConst(inRho);
-  AnalyticalConst3D<T,T> inVelConst(inVel);
+    AnalyticalConst3D<T,T> inRhoConst(inRho);
+    AnalyticalConst3D<T,T> inVelConst(inVel);
 
-  sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
-  sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
+    sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
+    sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
 }
 
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedVel,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedP,
 	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP,
-	    SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus) {
+	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP) {
 
   OstreamManager clout( std::cout,"getVTK" );
 
@@ -686,14 +666,9 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   SuperLatticePhysVelocity3D<T,DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure3D<T,DESCRIPTOR> pressure(sLattice, converter);
   SuperLatticeGeometry3D<T,DESCRIPTOR> geometry(sLattice, sGeometry);
-  SuperLatticeKnudsen3D<T,DESCRIPTOR> knudsen(sLattice);
-  SuperLatticeRefinementMetricKnudsen3D<T,DESCRIPTOR> quality(sLattice,
-		                                              converter);
   vtmWriter.addFunctor(geometry);
   vtmWriter.addFunctor(velocity);
   vtmWriter.addFunctor(pressure);
-  vtmWriter.addFunctor(sAveragedVel);
-  vtmWriter.addFunctor(sAveragedP);
   vtmWriter.addFunctor(wssp);
   vtmWriter.addFunctor(sAveragedWSSP);
 
@@ -702,7 +677,6 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   }
 
   vtmWriter.write(iT);
-
 }
 
 void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
@@ -717,60 +691,59 @@ void getStats( Grid3D<T,DESCRIPTOR>& grid, int iT,
   sLattice.getStatistics().print( iT,converter.getPhysTime( iT ) );
 }
 
-void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
+void getCylinderForce(Grid3D<T,DESCRIPTOR>& grid,
 		   const std::string& filePath,
-		   IndicatorBladeDca3D<T>& blade) {
+		   IndicatorCylinder3D<T>& cylinder) {
   auto& sLattice = grid.getSuperLattice();
   auto& superGeometry = grid.getSuperGeometry();
   auto& converter = grid.getConverter();
-  T theta = blade.getTheta();
-  T span = blade.getSpan();
-  T chord = blade.getChord();
+  T span = (cylinder.getCenter1() - cylinder.getCenter2())[2] * 0.5; 
+  T diameter = cylinder.getRadius() * 2.;
 
   SuperLatticePhysDragBlade3D<T,DESCRIPTOR> drag(sLattice, superGeometry,
 		                                 std::vector<int>{5,7},
-						 converter,0.5*span*chord); //physical span is half geometric!
-  T bladeForce[3];
+						 converter,span*diameter);
+  T cylinderForce[3];
   int input1[0];
-  drag(bladeForce,input1);
+  drag(cylinderForce,input1);
   //std::cout << "Lift = " << bladeForce[1] << endl;
   //std::cout << "Drag = " << bladeForce[0] << endl;
 
   ofstream myfile;
   std::string filename {filePath+".csv"};
   myfile.open(filename,fstream::app);
-  myfile << theta << "	" << bladeForce[1] << "	" << bladeForce[0] << std::endl;
+  myfile << cylinderForce[1] << "	" << cylinderForce[0] << std::endl;
   myfile.close();
 }	
 
 int main( int argc, char* argv[] ) {
 
-  //Blade parameters
-  const T chord = 0.051;
-  const T thickness = 0.00382;
-  const T span = 0.2 * chord * 2.; //Twice as wide, to ensure entire domain is spanned
-  const T r1 = 0.1836;
-  const T r2 = 0.00015;
-  const T xp = 0.02538;
-  const T theta = -0.00; //Pitch (+ve = anticlockwise)
-  const T thetaBC = 10.00;
-  const Vector<T,3> bladeOrigin = {4.5 * chord, 4. * chord, - 0.25 * span}; //Origin of blade
+  //Cylinder parameters
+  const T diameter = 1.00;
+  const Vector<T,3> cylinderOrigin = {5.0 * diameter,
+                                      4.0 * diameter,
+                                      -4.00 * diameter}; 
+  const Vector<T,3> cylinderExtend = {0.0 * diameter,
+                                      0.0 * diameter,
+                                      16.00 * diameter}; 
+
+  const T span = 16.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 25; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
+  const int N = 4; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 3;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
-  const T lDomainPhysy = 8.*chord;
-  const T lDomainPhysz = 0.2*chord; //
+  const T lDomainPhysx = 25.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 8.0*diameter;
+  const T lDomainPhysz = 8.0*diameter; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
-  const T physL = chord; //Physical reference length (m)
+  const T physL = diameter; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100000.;       // Reynolds number
-  const T Mach = 0.1;
+  const T Re = 100.;       // Reynolds number
+  const T Mach = 0.035;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physuC = 4.116; //Physical characteristic velocity
+  const T physuC = 12; //Physical characteristic velocity
   const T rho = 1.2;	//Density
   const T physNu = physuC * physL / Re;//m2/s
 
@@ -778,15 +751,15 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 1000; //Every 10% of max physical time
-  const int statIter  	   = 1000;
+  const int vtkIter   	   = 100; //Every 10% of max physical time
+  const int statIter  	   = 10;
   const int checkIter 	   = 1000;
-  const int bladeForceIter = 1000;
+  const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
 
   //Names of output files
-  std::string bladeForceFile = "tmp/bladeForces";
+  std::string cylinderForceFile = "tmp/cylinderForces";
 
   //Characteristics needed by Grid3D
   const Characteristics<T> PhysCharacteristics(
@@ -808,8 +781,9 @@ int main( int argc, char* argv[] ) {
   IndicatorCuboid3D<T> coarseDomain(extend, origin);
 
   // Indicator for blade
-  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, span, r1, r2, xp,
-    theta);
+  IndicatorCylinder3D<T> cylinder(cylinderOrigin,
+                                  cylinderOrigin + cylinderExtend,
+                                  diameter * 0.5);
 
   // Construct a background coarse grid
   Grid3D<T,DESCRIPTOR> coarseGrid(
@@ -826,33 +800,31 @@ int main( int argc, char* argv[] ) {
     	  coarseGrid.getSuperGeometry().getStatistics().getPhysExtend(0);
 
   // === 2nd Step: Prepare Geometry ===
-  prepareGeometry(coarseGrid, domainOrigin, domainExtend, blade);
-  setupRefinement(coarseGrid, domainOrigin, domainExtend, blade, nRefinement, nRefinementOutlet);
+  prepareGeometry(coarseGrid, domainOrigin, domainExtend, cylinder);
+  setupRefinement(coarseGrid, domainOrigin, domainExtend, cylinder,
+                  nRefinement, nRefinementOutlet);
 
   // === 3rd Step: Prepare Lattice ===
   coarseGrid.forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&,
-    IndicatorBladeDca3D<T>&, const bool&, const T&)>(prepareLattice),blade,bouzidiOn,thetaBC); 
+    IndicatorCylinder3D<T>&, const bool&)>(prepareLattice),cylinder,bouzidiOn); 
   clout << "Total number of active cells: " << coarseGrid.getActiveVoxelN() 
 	      << std::endl;
 
   //Reference to finest grid containing wing
-  Grid3D<T,DESCRIPTOR>& wingGrid = coarseGrid.locate(
-    Vector<T,3>(bladeOrigin[0],bladeOrigin[1],bladeOrigin[2]+span/2.));
+  Grid3D<T,DESCRIPTOR>& cylinderGrid = coarseGrid.locate(
+    Vector<T,3>(cylinderOrigin[0],cylinderOrigin[1],cylinderOrigin[2]+span/2.));
 
 	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
-	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedVel;
-	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedP;
 	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
     T,DESCRIPTOR>>> wssp;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
-	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
 
   //Helper lambdas for initialisation and management of data
   auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP,
-	  auto& sAveragedVel, auto& sAveragedP, auto& wssp, auto& sAveragedWSSP,
-	  auto& yPlus, IndicatorBladeDca3D<T>& indicatorBlade) {
+	   auto& wssp, auto& sAveragedWSSP,
+	   IndicatorCylinder3D<T>& indicatorCylinder) {
 			auto& sGeometry = grid.getSuperGeometry();
 			auto& sLattice = grid.getSuperLattice();
 			auto& converter = grid.getConverter();
@@ -863,23 +835,15 @@ int main( int argc, char* argv[] ) {
         type::value_type sPtype;
       typedef typename std::remove_reference<decltype(wssp)>::
         type::value_type wsspType;
-      typedef typename std::remove_reference<decltype(yPlus)>::
-        type::value_type yPlusType;
-      typedef typename std::remove_reference<decltype(sAveragedP)>::
+      typedef typename std::remove_reference<decltype(sAveragedWSSP)>::
         type::value_type taType;
 
 			sVel.push_back(sVelType(new typename sVelType::element_type(
         sLattice, converter)));
-			sAveragedVel.push_back(taType(new typename taType::element_type(
-        *sVel.back())));
 			sP.push_back(sPtype(new typename sPtype::element_type(
         sLattice, converter)));
-			sAveragedP.push_back(taType(new typename taType::element_type(
-        *sP.back())));
 			wssp.push_back(wsspType(new typename wsspType::element_type(
-        sLattice,converter, sGeometry,7,indicatorBlade)));
-			yPlus.push_back(yPlusType(new typename yPlusType::element_type(
-        sLattice,converter,sGeometry,indicatorBlade,7)));
+        sLattice,converter, sGeometry,7,indicatorCylinder)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
         *wssp.back())));
 	};
@@ -889,31 +853,26 @@ int main( int argc, char* argv[] ) {
       grid.getSuperLattice().load(id+".checkpoint");
 			std::cout << checkpoint + " checkpoint loaded." << std::endl;
       i_grid++;
-      id = "dcaBlade3d_"+std::to_string(i_grid)+"_"+checkpoint;
+      id = "cylinder3d_"+std::to_string(i_grid)+"_"+checkpoint;
   };
 
-  auto addTaEnsemble = [](Grid3D<T,DESCRIPTOR>& grid, auto& sAveragedVel,
-				auto& sAveragedP, auto& sAveragedWSSP, int& i_grid) {
+  auto addTaEnsemble = [](Grid3D<T,DESCRIPTOR>& grid, 
+				  auto& sAveragedWSSP, int& i_grid) {
 					auto& sLattice = grid.getSuperLattice();
 		      sLattice.communicate();
-					sAveragedVel[i_grid]->addEnsemble();
-					sAveragedP[i_grid]->addEnsemble();
 					sAveragedWSSP[i_grid]->addEnsemble();
 					i_grid++;
 	};
  
   auto writeTaVTK = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
-	  auto& sAveragedVelVector, auto& sAveragedPVector, auto& wsspVector,
-		auto& sAveragedWSSPVector, auto& yPlusVector, int& i_grid){
-		  auto& sAveragedVel = *sAveragedVelVector[i_grid]; 
-			auto& sAveragedP = *sAveragedPVector[i_grid]; 
+	  auto& wsspVector,
+		auto& sAveragedWSSPVector, int& i_grid){
 			auto& wssp= *wsspVector[i_grid];
 			auto& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
-			auto& yPlus = *yPlusVector[i_grid];
-			getVTK(grid, id, iT, sAveragedVel, sAveragedP, wssp,
-        sAveragedWSSP, yPlus);
+			getVTK(grid, id, iT, wssp,
+        sAveragedWSSP);
 			i_grid++;
-      id = "dcaBlade3d_"+std::to_string(i_grid);
+      id = "cylinder3d_"+std::to_string(i_grid);
       std::cout << "Get results vtk" << endl;
 	};
 
@@ -922,15 +881,15 @@ int main( int argc, char* argv[] ) {
       grid.getSuperLattice().save(id+".checkpoint");
 			std::cout << checkpoint + " checkpoint saved." << std::endl;
       i_grid++;
-      id = "dcaBlade3d_"+std::to_string(i_grid)+"_"+checkpoint;
+      id = "cylinder3d_"+std::to_string(i_grid)+"_"+checkpoint;
   };
 
   //counter for multi-grid operations (TODO update grid structure to avoid this)
   int i_grid = 0;
 
 	//Pass functor vectors and create new averaged functors for each grid 
-  coarseGrid.forEachGrid(initialiseVTK, sVel, sP, sAveragedVel, sAveragedP,
-    wssp, sAveragedWSSP, yPlus, blade);
+  coarseGrid.forEachGrid(initialiseVTK, sVel, sP,
+    wssp, sAveragedWSSP, cylinder);
 
 	// === 4th Step: Main Loop with Timer ===
 	clout << "starting simulation..." << endl;
@@ -945,28 +904,27 @@ int main( int argc, char* argv[] ) {
 		// Load last checkpoint at startup
 		if (iT == 0) {
       i_grid = 0;
-			coarseGrid.forEachGrid(loadCheckpoint,"dcaBlade3d_"+
+			coarseGrid.forEachGrid(loadCheckpoint,"cylinder3d_"+
         std::to_string(i_grid)+"_"+checkpoint, checkpoint, i_grid);
 		}
 
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();
 
-    setBoundaryValues(coarseGrid,iT,thetaBC);
+    setBoundaryValues(coarseGrid,iT);
 
     // === 7th Step: Computation and Output of the Results ===
 		//Add ensemble to time-averaged functors
 		if ( iT % timeAvgIter == 0) {
 			i_grid = 0;
-			coarseGrid.forEachGrid(addTaEnsemble, sAveragedVel, sAveragedP,
-       sAveragedWSSP, i_grid);
+			coarseGrid.forEachGrid(addTaEnsemble, sAveragedWSSP, i_grid);
 		}
 
 		//Add time-averaged functor vector into getVTK functions
     if ( iT % vtkIter == 0 ) {
 			i_grid = 0;	
-      coarseGrid.forEachGrid(writeTaVTK,"dcaBlade3d_"+std::to_string(i_grid),
-        iT, sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus, i_grid);
+      coarseGrid.forEachGrid(writeTaVTK,"cylinder3d_"+std::to_string(i_grid),
+        iT, wssp, sAveragedWSSP, i_grid);
 		}
 
 		// Save checkpoint
@@ -974,12 +932,12 @@ int main( int argc, char* argv[] ) {
 			if (iT % (2 * checkIter) == 0) {
         i_grid = 0;
 				coarseGrid.forEachGrid(saveCheckpoint,
-          "dcaBlade3d_"+std::to_string(i_grid)+"_even", "even", i_grid);
+          "cylinder3d_"+std::to_string(i_grid)+"_even", "even", i_grid);
 			}
 			else {
         i_grid = 0;
 				coarseGrid.forEachGrid(saveCheckpoint,
-          "dcaBlade3d_"+std::to_string(i_grid)+"_odd", "odd", i_grid);
+          "cylinder3d_"+std::to_string(i_grid)+"_odd", "odd", i_grid);
 			}
 		}
 
@@ -988,8 +946,8 @@ int main( int argc, char* argv[] ) {
 			clout << "Get results stats" << endl;
    		}
 
-		if (iT % bladeForceIter == 0) {
-			getBladeForce(wingGrid,bladeForceFile,blade);
+		if (iT % cylinderForceIter == 0) {
+			getCylinderForce(cylinderGrid,cylinderForceFile,cylinder);
 		}
 
   }
