@@ -670,11 +670,8 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedVel,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedP,
 	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
-	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP,
-	    SuperLatticeYplus3D<T,DESCRIPTOR>& yPlus) {
+	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP) {
 
   OstreamManager clout( std::cout,"getVTK" );
 
@@ -686,14 +683,10 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   SuperLatticePhysVelocity3D<T,DESCRIPTOR> velocity(sLattice, converter);
   SuperLatticePhysPressure3D<T,DESCRIPTOR> pressure(sLattice, converter);
   SuperLatticeGeometry3D<T,DESCRIPTOR> geometry(sLattice, sGeometry);
-  SuperLatticeKnudsen3D<T,DESCRIPTOR> knudsen(sLattice);
-  SuperLatticeRefinementMetricKnudsen3D<T,DESCRIPTOR> quality(sLattice,
-		                                              converter);
+
   vtmWriter.addFunctor(geometry);
   vtmWriter.addFunctor(velocity);
   vtmWriter.addFunctor(pressure);
-  vtmWriter.addFunctor(sAveragedVel);
-  vtmWriter.addFunctor(sAveragedP);
   vtmWriter.addFunctor(wssp);
   vtmWriter.addFunctor(sAveragedWSSP);
 
@@ -778,8 +771,8 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 1000; //Every 10% of max physical time
-  const int statIter  	   = 1000;
+  const int vtkIter   	   = 100; //Every 10% of max physical time
+  const int statIter  	   = 100;
   const int checkIter 	   = 1000;
   const int bladeForceIter = 1000;
   const int timeAvgIter    = 1000;
@@ -842,17 +835,14 @@ int main( int argc, char* argv[] ) {
 	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
-	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedVel;
-	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedP;
 	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
     T,DESCRIPTOR>>> wssp;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
-	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> yPlus;
 
   //Helper lambdas for initialisation and management of data
   auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP,
-	  auto& sAveragedVel, auto& sAveragedP, auto& wssp, auto& sAveragedWSSP,
-	  auto& yPlus, IndicatorBladeDca3D<T>& indicatorBlade) {
+	  auto& wssp, auto& sAveragedWSSP,
+	  IndicatorBladeDca3D<T>& indicatorBlade) {
 			auto& sGeometry = grid.getSuperGeometry();
 			auto& sLattice = grid.getSuperLattice();
 			auto& converter = grid.getConverter();
@@ -863,23 +853,15 @@ int main( int argc, char* argv[] ) {
         type::value_type sPtype;
       typedef typename std::remove_reference<decltype(wssp)>::
         type::value_type wsspType;
-      typedef typename std::remove_reference<decltype(yPlus)>::
-        type::value_type yPlusType;
-      typedef typename std::remove_reference<decltype(sAveragedP)>::
+      typedef typename std::remove_reference<decltype(sAveragedWSSP)>::
         type::value_type taType;
 
 			sVel.push_back(sVelType(new typename sVelType::element_type(
         sLattice, converter)));
-			sAveragedVel.push_back(taType(new typename taType::element_type(
-        *sVel.back())));
 			sP.push_back(sPtype(new typename sPtype::element_type(
         sLattice, converter)));
-			sAveragedP.push_back(taType(new typename taType::element_type(
-        *sP.back())));
 			wssp.push_back(wsspType(new typename wsspType::element_type(
         sLattice,converter, sGeometry,7,indicatorBlade)));
-			yPlus.push_back(yPlusType(new typename yPlusType::element_type(
-        sLattice,converter,sGeometry,indicatorBlade,7)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
         *wssp.back())));
 	};
@@ -892,26 +874,20 @@ int main( int argc, char* argv[] ) {
       id = "dcaBlade3d_"+std::to_string(i_grid)+"_"+checkpoint;
   };
 
-  auto addTaEnsemble = [](Grid3D<T,DESCRIPTOR>& grid, auto& sAveragedVel,
-				auto& sAveragedP, auto& sAveragedWSSP, int& i_grid) {
+  auto addTaEnsemble = [](Grid3D<T,DESCRIPTOR>& grid,
+				auto& sAveragedWSSP, int& i_grid) {
 					auto& sLattice = grid.getSuperLattice();
 		      sLattice.communicate();
-					sAveragedVel[i_grid]->addEnsemble();
-					sAveragedP[i_grid]->addEnsemble();
 					sAveragedWSSP[i_grid]->addEnsemble();
 					i_grid++;
 	};
  
   auto writeTaVTK = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
-	  auto& sAveragedVelVector, auto& sAveragedPVector, auto& wsspVector,
-		auto& sAveragedWSSPVector, auto& yPlusVector, int& i_grid){
-		  auto& sAveragedVel = *sAveragedVelVector[i_grid]; 
-			auto& sAveragedP = *sAveragedPVector[i_grid]; 
+	  auto& wsspVector, auto& sAveragedWSSPVector, int& i_grid){
 			auto& wssp= *wsspVector[i_grid];
 			auto& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
-			auto& yPlus = *yPlusVector[i_grid];
-			getVTK(grid, id, iT, sAveragedVel, sAveragedP, wssp,
-        sAveragedWSSP, yPlus);
+			getVTK(grid, id, iT, wssp,
+        sAveragedWSSP);
 			i_grid++;
       id = "dcaBlade3d_"+std::to_string(i_grid);
       std::cout << "Get results vtk" << endl;
@@ -929,8 +905,8 @@ int main( int argc, char* argv[] ) {
   int i_grid = 0;
 
 	//Pass functor vectors and create new averaged functors for each grid 
-  coarseGrid.forEachGrid(initialiseVTK, sVel, sP, sAveragedVel, sAveragedP,
-    wssp, sAveragedWSSP, yPlus, blade);
+  coarseGrid.forEachGrid(initialiseVTK, sVel, sP,
+    wssp, sAveragedWSSP, blade);
 
 	// === 4th Step: Main Loop with Timer ===
 	clout << "starting simulation..." << endl;
@@ -958,7 +934,7 @@ int main( int argc, char* argv[] ) {
 		//Add ensemble to time-averaged functors
 		if ( iT % timeAvgIter == 0) {
 			i_grid = 0;
-			coarseGrid.forEachGrid(addTaEnsemble, sAveragedVel, sAveragedP,
+			coarseGrid.forEachGrid(addTaEnsemble,
        sAveragedWSSP, i_grid);
 		}
 
@@ -966,7 +942,7 @@ int main( int argc, char* argv[] ) {
     if ( iT % vtkIter == 0 ) {
 			i_grid = 0;	
       coarseGrid.forEachGrid(writeTaVTK,"dcaBlade3d_"+std::to_string(i_grid),
-        iT, sAveragedVel, sAveragedP, wssp, sAveragedWSSP, yPlus, i_grid);
+        iT, wssp, sAveragedWSSP, i_grid);
 		}
 
 		// Save checkpoint
