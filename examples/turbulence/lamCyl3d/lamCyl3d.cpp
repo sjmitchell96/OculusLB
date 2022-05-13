@@ -67,7 +67,7 @@ typedef double T;
 //#define WALE
 //#define Smagorinsky
 #define KBC
-#define sponge 
+//#define sponge 
 
 //Boundary condition choice
 #define Bouzidi 
@@ -494,7 +494,6 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 		    IndicatorCylinder3D<T>& indicatorCylinder,
 		    const bool& bouzidiOn) {
-  std::cout << "PREPAREL" << std::endl;
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare lattice ..." << std::endl;
 
@@ -591,14 +590,15 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     sLattice.defineDynamics( sGeometry, 7, &instances::getBounceBack<T, DESCRIPTOR>() );
   #endif
 
+/*
   //Define and initialise viscosity sponge zones
   //Sponge indicator
   const T physChord = 1.00;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {24. * physChord - deltaX /2000, - deltaX / 2,
+  const Vector<T,3> spongeOrigin = {28. * physChord - deltaX /2000, - deltaX / 2,
     - 4. * deltaX};
-  const Vector<T,3> spongeExtend = {1. * physChord + deltaX / 1000,
-    8. * physChord + deltaX,
+  const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
+    16. * physChord + deltaX,
     8. * physChord + 8. * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
@@ -615,7 +615,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     tauSpongeBase, tauSpongeMax, spongeMaterials);
 
   sLattice.initialiseSponges();
-
+*/
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
   Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0., 0.};
@@ -721,7 +721,7 @@ int main( int argc, char* argv[] ) {
   //Cylinder parameters
   const T diameter = 1.00;
   const Vector<T,3> cylinderOrigin = {5.0 * diameter,
-                                      4.0 * diameter,
+                                      8.0 * diameter,
                                       -4.00 * diameter}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
@@ -730,11 +730,11 @@ int main( int argc, char* argv[] ) {
   const T span = 16.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 4; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 3;	//Number of refinement levels (current max = 4)
+  const int N = 10; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 25.*diameter; //Length of domain in physical units (m)
-  const T lDomainPhysy = 8.0*diameter;
+  const T lDomainPhysx = 32.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 16.0*diameter;
   const T lDomainPhysz = 8.0*diameter; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = diameter; //Physical reference length (m)
@@ -752,8 +752,8 @@ int main( int argc, char* argv[] ) {
 
   //Time-loop options
   const int vtkIter   	   = 100; //Every 10% of max physical time
-  const int statIter  	   = 10;
-  const int checkIter 	   = 1000;
+  const int statIter  	   = 100;
+  const int checkIter 	   = 10000;
   const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;
   const std::string checkpoint = "odd"; //load even or odd checkpoint

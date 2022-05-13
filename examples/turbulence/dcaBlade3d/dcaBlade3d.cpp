@@ -691,7 +691,7 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtmWriter.addFunctor(sAveragedWSSP);
 
   if (iT==0) {
-     vtmWriter.createMasterFile();
+    vtmWriter.createMasterFile();
   }
 
   vtmWriter.write(iT);
