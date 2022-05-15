@@ -121,7 +121,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> pressureSection1Extend {2. * diameter, 2. * diameter, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
-  //sGeometry.rename(5, 7, pressureSection1);
+  sGeometry.rename(5, 7, pressureSection1);
 
   //Front face
   {
@@ -697,7 +697,7 @@ void getCylinderForce(Grid3D<T,DESCRIPTOR>& grid,
   auto& sLattice = grid.getSuperLattice();
   auto& superGeometry = grid.getSuperGeometry();
   auto& converter = grid.getConverter();
-  T span = (cylinder.getCenter1() - cylinder.getCenter2())[2] * 0.5; 
+  T span = (cylinder.getCenter2() - cylinder.getCenter1())[2] * 0.5; 
   T diameter = cylinder.getRadius() * 2.;
 
   SuperLatticePhysDragBlade3D<T,DESCRIPTOR> drag(sLattice, superGeometry,

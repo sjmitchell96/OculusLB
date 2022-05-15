@@ -430,6 +430,34 @@ bool IndicatorCylinder3D<S>::distance(S& distance, const Vector<S,3>& origin,
 }
 
 template <typename S>
+bool IndicatorCylinder3D<S>::normal(Vector<S,3>& normal,
+  const Vector<S,3>& origin, const Vector<S,3>& direction, int iC)
+{
+  S dist;
+  if(!distance(dist, origin, direction, iC)) {
+    return false;
+  }
+
+  const Vector <S, 3> cylOrigin = getCenter1();
+  //Intersection point
+  const Vector<S, 3> intersect = origin + dist * direction;
+
+  //Convert to cylinder local
+  const Vector<S,3> intersectLocal(_I[0]*(intersect[0]-cylOrigin[0]) + _I[1]*(intersect[1]-cylOrigin[1]) + _I[2]*(intersect[2]-cylOrigin[2]),
+                                _J[0]*(intersect[0]-cylOrigin[0]) + _J[1]*(intersect[1]-cylOrigin[1]) + _J[2]*(intersect[2]-cylOrigin[2]),
+                                _K[0]*(intersect[0]-cylOrigin[0]) + _K[1]*(intersect[1]-cylOrigin[1]) + _K[2]*(intersect[2]-cylOrigin[2]));
+
+  const S mag = sqrt(intersectLocal[0] * intersectLocal[0] + intersectLocal[1] * intersectLocal[1]);
+  normal[0] = intersectLocal[0] / mag;
+  normal[1] = intersectLocal[1] / mag;
+  normal[2] = 0;   
+  
+  std::cout << "normal" << std::endl;
+
+  return true;  
+} 
+
+template <typename S>
 Vector<S,3> const& IndicatorCylinder3D<S>::getCenter1() const
 {
   return _center1;

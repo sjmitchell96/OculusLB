@@ -741,7 +741,7 @@ int main( int argc, char* argv[] ) {
   //Blade parameters
   const T chord = 0.051;
   const T thickness = 0.00382;
-  const T span = 0.2 * chord * 2.; //Twice as wide, to ensure entire domain is spanned
+  const T span = 0.2 * chord * 2.; //Twice as wide as true physical span, to ensure entire domain is spanned
   const T r1 = 0.1836;
   const T r2 = 0.00015;
   const T xp = 0.02538;

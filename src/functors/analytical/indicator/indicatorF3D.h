@@ -144,6 +144,7 @@ public:
   //SM - Analytical distance function for cylinder - ray trace
   bool distance(S& distance, const Vector<S,3>& origin,
                 const Vector<S,3>& direction, int iC=-1) override;
+  bool normal(Vector<S,3>& normal, const Vector<S,3>& origin, const Vector<S,3>& direction, int iC=-1) override;
 };
 
 /// indicator function for a 3d frustum
