@@ -712,7 +712,7 @@ void getCylinderForce(Grid3D<T,DESCRIPTOR>& grid,
   ofstream myfile;
   std::string filename {filePath+".csv"};
   myfile.open(filename,fstream::app);
-  myfile << cylinderForce[1] << "	" << cylinderForce[0] << std::endl;
+  myfile << "0.0  " << cylinderForce[1] << "  " << cylinderForce[0] << std::endl;
   myfile.close();
 }	
 
