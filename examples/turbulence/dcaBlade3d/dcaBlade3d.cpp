@@ -591,7 +591,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> spongeOrigin = {12. * physChord - deltaX /2000, - deltaX / 2,
     - 4 * deltaX};
   const Vector<T,3> spongeExtend = {4. * physChord + deltaX/1000,
-    16 * physChord + deltaX,
+    8 * physChord + deltaX,
     0.2 * physChord + 8 * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
@@ -608,10 +608,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     tauSpongeBase, tauSpongeMax, spongeMaterials);
 
   //Sponge indicator 2 - x-z 
-  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
+  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 7. * physChord - deltaX / 2000,
     - 4 * deltaX};
   const Vector<T,3> spongeExtend2 = {16. * physChord + deltaX,
-    4. * physChord + deltaX / 1000,
+    1. * physChord + deltaX / 1000,
     0.2 * physChord + 8 * deltaX};
   IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
   //Orientation
@@ -746,15 +746,15 @@ int main( int argc, char* argv[] ) {
   const T r2 = 0.00015;
   const T xp = 0.02538;
   const T theta = -0.00; //Pitch (+ve = anticlockwise)
-  const T thetaBC = 10.00;
-  const Vector<T,3> bladeOrigin = {4.5 * chord, 8. * chord, - 0.25 * span}; //Origin of blade
+  const T thetaBC = 12.00;
+  const Vector<T,3> bladeOrigin = {4.5 * chord, 4. * chord, - 0.25 * span}; //Origin of blade
 
   //Domain and simulation parameters
   const int N = 25; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 1;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
-  const T lDomainPhysy = 16.*chord;
+  const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = chord; //Physical reference length (m)
