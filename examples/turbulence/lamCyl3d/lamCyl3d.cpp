@@ -67,7 +67,7 @@ typedef double T;
 //#define WALE
 //#define Smagorinsky
 #define KBC
-//#define sponge 
+#define sponge 
 
 //Boundary condition choice
 #define Bouzidi 
@@ -590,7 +590,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     sLattice.defineDynamics( sGeometry, 7, &instances::getBounceBack<T, DESCRIPTOR>() );
   #endif
 
-/*
+
   //Define and initialise viscosity sponge zones
   //Sponge indicator
   const T physChord = 1.00;
@@ -615,7 +615,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     tauSpongeBase, tauSpongeMax, spongeMaterials);
 
   sLattice.initialiseSponges();
-*/
+
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
   Vector<T,3> velocityV {converter.getCharLatticeVelocity(), 0., 0.};
