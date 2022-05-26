@@ -714,7 +714,41 @@ void getCylinderForce(Grid3D<T,DESCRIPTOR>& grid,
   myfile.open(filename,fstream::app);
   myfile << "0.0  " << cylinderForce[1] << "  " << cylinderForce[0] << std::endl;
   myfile.close();
-}	
+}
+
+// Capture the pressure around the cylinder --- middle z
+void capturePressure(Grid3D<T,DESCRIPTOR>& grid,
+                     IndicatorCylinder3D<T>& indicatorCylinder,
+                      int iT) {
+	auto& sLattice = grid.getSuperLattice();
+	auto& converter = grid.getConverter();
+	const T dR = converter.getPhysDeltaX();
+	SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
+	AnalyticalFfromSuperF3D<T> interpolatePressure(pressure, true);
+	const T radiusCylinder = indicatorCylinder.getRadius();
+  const T cylinderCenterX = indicatorCylinder.getCenter1()[0];
+  const T cylinderCenterY = indicatorCylinder.getCenter1()[1];
+  const T lz = indicatorCylinder.getCenter2()[2] - indicatorCylinder.getCenter1()[2];
+
+	ofstream myfile;
+	std::string filename {"tmp/pressure_" + to_string(iT) + ".csv"};
+	myfile.open(filename, fstream::app);
+
+	for(int i = 0; i < 180; ++i) {
+		const T degree = i * 2. * 3.14159 / 180.0;
+		const T point[3] {cylinderCenterX
+						  + (radiusCylinder + 1.5 * dR) * std::cos(degree),
+						  cylinderCenterY
+						  + (radiusCylinder + 1.5 * dR) * std::sin(degree),
+						  lz/2.};
+		T pressureAtPoint {};
+		interpolatePressure(&pressureAtPoint, point);
+
+		myfile << degree << " " << pressureAtPoint << std::endl;
+	}
+
+   myfile.close();
+}
 
 int main( int argc, char* argv[] ) {
 
@@ -948,6 +982,7 @@ int main( int argc, char* argv[] ) {
 
 		if (iT % cylinderForceIter == 0) {
 			getCylinderForce(cylinderGrid,cylinderForceFile,cylinder);
+      capturePressure(cylinderGrid, cylinder, iT);
 		}
 
   }
