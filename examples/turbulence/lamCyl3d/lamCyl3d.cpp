@@ -140,7 +140,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
     const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] + extend[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
-    const Vector<T,3> indiExtend {extend[0] - deltaX,
+    const Vector<T,3> indiExtend {extend[0] + deltaX,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> uf(indiExtend, indiOrigin);
@@ -152,7 +152,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
     const Vector<T,3> indiOrigin {origin[0] + deltaX / 2,
                                   origin[1] - deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
-    const Vector<T,3> indiExtend {extend[0] - deltaX,
+    const Vector<T,3> indiExtend {extend[0] + deltaX,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> lf(indiExtend, indiOrigin);
@@ -162,10 +162,10 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   //Rear face
   {
     const Vector<T,3> indiOrigin {origin[0] + extend[0] - deltaX / 2.,
-                                  origin[1] - deltaX / 2.,
+                                  origin[1] + deltaX / 2.,
                                   origin[2] - 50 * deltaX / 2.};
     const Vector<T,3> indiExtend {deltaX,
-                                  extend[1] + deltaX,
+                                  extend[1] - deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> rf(indiExtend, indiOrigin);
     sGeometry.rename(1, 4, rf);
@@ -563,8 +563,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  //onbc.addVelocityBoundary(sGeometry, 2, omega);
-  onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
+  //bc.addVelocityBoundary(sGeometry, 2, omega);
+  //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
   //bc.addVelocityBoundary(sGeometry, 3, omega);
   //bc.addVelocityBoundary(sGeometry, 2, omega);
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
@@ -641,14 +641,17 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 	auto& sLattice	= grid.getSuperLattice();
 
     Vector<T,3> inVel {converter.getCharLatticeVelocity(), 0., 0.};
-    inVel[0] = converter.getCharLatticeVelocity();
+    //inVel[0] = converter.getCharLatticeVelocity();
     T inRho = 1.0;
     
     AnalyticalConst3D<T,T> inRhoConst(inRho);
     AnalyticalConst3D<T,T> inVelConst(inVel);
 
-    sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
-    sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
+    sLattice.defineU(sGeometry, 2, inVelConst);
+    sLattice.defineU(sGeometry, 3, inVelConst);
+    //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
+    //sLattice.iniEquilibrium(sGeometry, 2, inRhoConst, inVelConst);
+    //sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
 }
 
 // Output results to vtk files
@@ -764,7 +767,7 @@ int main( int argc, char* argv[] ) {
   const T span = 16.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 10; //14        // resolution of the model (coarse cells per chord)
+  const int N = 4; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 0;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 32.*diameter; //Length of domain in physical units (m)
@@ -786,7 +789,7 @@ int main( int argc, char* argv[] ) {
 
   //Time-loop options
   const int vtkIter   	   = 100; //Every 10% of max physical time
-  const int statIter  	   = 100;
+  const int statIter  	   = 10;
   const int checkIter 	   = 10000;
   const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;
