@@ -518,18 +518,18 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCSpongeDynamics<T,DESCRIPTOR>(
           //new KBCdynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #else
      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCdynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #endif
   #endif
 
@@ -565,12 +565,12 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   // Define boundary conditions
   //bc.addVelocityBoundary(sGeometry, 2, omega);
   //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
-  //bc.addVelocityBoundary(sGeometry, 3, omega);
-  //bc.addVelocityBoundary(sGeometry, 2, omega);
-  bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
-  //bc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
- // bc.addConvectionBoundary(sGeometry, 4);
-  //onbc.addPressureBoundary(sGeometry, 4, omega); 
+  //onbc.addVelocityBoundary(sGeometry, 3, omega);
+  //onbc.addVelocityBoundary(sGeometry, 2, omega);
+  onbc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
+  //onbc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
+  //bc.addConvectionBoundary(sGeometry, 4);
+  //bc.addPressureBoundary(sGeometry, 4, omega); 
 
 
   #if defined(Bouzidi)
@@ -595,10 +595,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   //Sponge indicator
   const T physChord = 1.00;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {28. * physChord - deltaX /2000, - deltaX / 2,
+  const Vector<T,3> spongeOrigin = {71. * physChord - deltaX /2000, - deltaX / 2,
     - 4. * deltaX};
   const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
-    16. * physChord + deltaX,
+    50. * physChord + deltaX,
     8. * physChord + 8. * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
@@ -614,6 +614,26 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
     tauSpongeBase, tauSpongeMax, spongeMaterials);
 
+/*
+  //Sponge indicator 2 - x-z 
+  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
+    - 4 * deltaX};
+  const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
+    4. * physChord + deltaX / 1000,
+    8 * physChord + 8 * deltaX};
+  IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
+  //Orientation
+  const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
+
+  //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
+  //createViscositySponge3D(outletSponge2);
+
+  //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+  //  tauSpongeBase, tauSpongeMax, spongeMaterials);
+
+  outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+    tauSpongeBase, tauSpongeMax, spongeMaterials);
+*/
   sLattice.initialiseSponges();
 
   // Initial conditions - characteristic physical velocity and density for inflow
@@ -642,16 +662,19 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 
     Vector<T,3> inVel {converter.getCharLatticeVelocity(), 0., 0.};
     //inVel[0] = converter.getCharLatticeVelocity();
+    if (iT > 200 && iT < 400) {
+      inVel[1] = converter.getCharLatticeVelocity();
+    }
     T inRho = 1.0;
     
     AnalyticalConst3D<T,T> inRhoConst(inRho);
     AnalyticalConst3D<T,T> inVelConst(inVel);
 
-    sLattice.defineU(sGeometry, 2, inVelConst);
-    sLattice.defineU(sGeometry, 3, inVelConst);
+    //sLattice.defineU(sGeometry, 2, inVelConst);
+    //sLattice.defineU(sGeometry, 3, inVelConst);
     //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
-    //sLattice.iniEquilibrium(sGeometry, 2, inRhoConst, inVelConst);
-    //sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
+    sLattice.iniEquilibrium(sGeometry, 2, inRhoConst, inVelConst);
+    sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
 }
 
 // Output results to vtk files
@@ -757,22 +780,22 @@ int main( int argc, char* argv[] ) {
 
   //Cylinder parameters
   const T diameter = 1.00;
-  const Vector<T,3> cylinderOrigin = {5.0 * diameter,
-                                      8.0 * diameter,
-                                      -4.00 * diameter}; 
+  const T span = 8.0 * diameter;
+  const Vector<T,3> cylinderOrigin = {25.0 * diameter,
+                                      25.0 * diameter,
+                                      -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
-                                      16.00 * diameter}; 
+                                      2. * span}; 
 
-  const T span = 16.00 * diameter;
 
   //Domain and simulation parameters
-  const int N = 4; //14        // resolution of the model (coarse cells per chord)
+  const int N = 2; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 0;	//Number of refinement levels (current max = 4)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 32.*diameter; //Length of domain in physical units (m)
-  const T lDomainPhysy = 16.0*diameter;
-  const T lDomainPhysz = 8.0*diameter; //
+  const T lDomainPhysx = 75.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 50.0*diameter;
+  const T lDomainPhysz = span; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = diameter; //Physical reference length (m)
 

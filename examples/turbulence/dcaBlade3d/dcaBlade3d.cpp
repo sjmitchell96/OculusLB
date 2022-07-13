@@ -519,17 +519,17 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCSpongeDynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #else
      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCdynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #endif
   #endif
 

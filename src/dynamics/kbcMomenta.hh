@@ -104,8 +104,8 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineU (
   T fNeq[DESCRIPTOR::q];
   kbcLbHelpers<T,DESCRIPTOR>::computeFneq(cell, fNeq, rho, oldU);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
-                 fNeq[iPop];
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr);// +
+                 //fNeq[iPop];
   }
 
 }
@@ -135,7 +135,7 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineAllMomenta (
 {
   T uSqr = util::normSqr<T,DESCRIPTOR::d>(u);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = lbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
                  firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, pi);
   }
 }
