@@ -121,7 +121,7 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineRhoU (
   T fNeq[DESCRIPTOR::q];
   kbcLbHelpers<T,DESCRIPTOR>::computeFneq(cell, fNeq, oldRho, oldU);
   for (int iPop=0; iPop < DESCRIPTOR::q; ++iPop) {
-    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr)
+    cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
                  fNeq[iPop];
   }
 }
