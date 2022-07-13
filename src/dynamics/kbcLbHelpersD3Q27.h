@@ -55,13 +55,6 @@ struct kbcLbHelpers<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>> {
     const T bUz = (2. * u[2] + std::sqrt(1. + 3. * u[2] * u[2])) / (1. - u[2]);
     
     return rho * t * phi * pow(bUx, c[0]) * pow(bUy, c[1]) * pow(bUz, c[2]) - t;  
-
-    //return rho * descriptors::t<T,L>(iPop) * (2. - sqrt(1. + 3. * u[0] * u[0])) *
-    //       (2. - sqrt(1. + 3. * u[1] * u[1])) * (2. - sqrt(1. + 3. * u[2] * u[2])) *
-    //       pow((2. * u[0] + sqrt(1. + 3. * u[0] * u[0])) / (1. - u[0]), descriptors::c<L>(iPop,0)) *
-    //       pow((2. * u[1] + sqrt(1. + 3. * u[1] * u[1])) / (1. - u[1]), descriptors::c<L>(iPop,1)) *
-    //       pow((2. * u[2] + sqrt(1. + 3. * u[2] * u[2])) / (1. - u[2]), descriptors::c<L>(iPop,2))
-    //       - descriptors::t<T,L>(iPop);
   }
 
   static void computeFneq (
