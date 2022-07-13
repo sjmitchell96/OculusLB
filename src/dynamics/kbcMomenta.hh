@@ -107,7 +107,6 @@ void KBCBulkMomenta<T,DESCRIPTOR>::defineU (
     cell[iPop] = kbcLbHelpers<T,DESCRIPTOR>::equilibrium(iPop, rho, u, uSqr) +
                  fNeq[iPop];
   }
-
 }
 
 template<typename T, typename DESCRIPTOR>

@@ -1198,8 +1198,8 @@ void BoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
 addOutletBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, BlockIndicatorF3D<T>& bulkIndicator)
 {
   bool isPeriodic = true;
-  bool gNode1 = false;
-  bool gNode2 = false;
+  bool gNode1 = true;
+  bool gNode2 = true;
 
   typedef DESCRIPTOR L;
   for (int iPop = 1; iPop < L::q ; ++iPop) {
