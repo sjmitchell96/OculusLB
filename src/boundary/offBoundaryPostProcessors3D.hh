@@ -36,8 +36,8 @@ namespace olb {
 /* Bouzidi Interpolation scheme of second order
  *
  * fluid nodes               wall  solid node
- * --o-------<-o->-----<-o->--|----x----
- *            xB         x        xN
+ * --o------<-o->------<-o->-----<-o->--|----x----
+ *            xB2        xB        x         xN
  * directions: --> iPop
  *             <-- opp
  *
@@ -46,12 +46,12 @@ namespace olb {
 template<typename T, typename DESCRIPTOR>
 ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>::
 ZeroVelocityBouzidiQuadraticPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
-  : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
+  : x(x_), y(y_), z(z_), iPop(iPop_)
 {
 #ifndef QUIET
-  if (dist < 0 || dist > 1)
+  if (dist_ < 0 || dist_ > 1)
     std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
-              << dist << std::endl;
+              << dist_ << std::endl;
 #endif
   typedef DESCRIPTOR L;
   const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
@@ -61,17 +61,33 @@ ZeroVelocityBouzidiQuadraticPostProcessor3D(int x_, int y_, int z_, int iPop_, T
   yN = y + c[1];
   zN = z + c[2];
 
-  if (dist >= 0.5) {
-    xB = x - c[0];
-    yB = y - c[1];
-    zB = z - c[2];
-    q = 1/(2*dist);
+  if (dist_ >= 0.5) {
+    xB1 = x - c[0];
+    yB1 = y - c[1];
+    zB1 = z - c[2];
+
+    xB2 = x - 2 * c[0];
+    yB2 = y - 2 * c[1];
+    zB2 = z - 2 * c[2];
+
+    a1 = 1. / (dist_ * (2. * dist_ + 1)); 
+    a2 = (2. * dist_ - 1) / dist_;
+    a3 = (1. - 2. * dist_) / (1. + 2. * dist_);
+
     iPop2 = opp;
   } else {
-    xB = x;
-    yB = y;
-    zB = z;
-    q = 2*dist;
+    xB1 = x;
+    yB1 = y;
+    zB1 = z;
+
+    xB2 = x - c[0]; 
+    yB2 = y - c[1];
+    zB2 = z - c[2]; 
+
+    a1 = dist_ * (2. * dist_ + 1.);
+    a2 = (1. + 2. * dist_) * (1. - 2. * dist_);
+    a3 = - dist_ * (1. - 2.* dist_);
+
     iPop2 = iPop;
   }
   
@@ -95,9 +111,10 @@ template<typename T, typename DESCRIPTOR>
 void ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>::
 process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
-  blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
-                                   (1-q)*blockLattice.get(xB, yB, zB)[iPop2];
-  //BOUNCEBACK blockLattice.get(x, y, z)[opp] = blockLattice.get(xN, yN, zN)[iPop];
+  blockLattice.get(x, y, z)[opp] = a1 * blockLattice.get(xN, yN, zN)[iPop] +
+                                   a2 * blockLattice.get(xB1, yB1, zB1)[iPop2] +
+                                   a3 * blockLattice.get(xB2, yB2, zB2)[iPop2];
+                                   
 }
 
 /////////// LinearBouzidiPostProcessor3D /////////////////////////////////////

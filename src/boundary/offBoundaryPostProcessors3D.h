@@ -50,9 +50,9 @@ public:
                                 int x0_, int x1_, int y0_, int y1_, int z0_, int z1_ ) override;
 private:
   int x, y, z;
-  int xN, yN, zN, xB, yB, zB;
+  int xN, yN, zN, xB1, yB1, zB1, xB2, yB2, zB2;
   int iPop, opp, iPop2;
-  T q, dist;
+  T a1, a2, a3;
 };
 
 /**
