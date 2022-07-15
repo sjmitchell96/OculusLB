@@ -46,12 +46,14 @@ public:
   getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>* //SM - second order BZ
+  getThreePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
-  getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances,
+  getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances, //SM - redundant but needed to compile
     std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
   static Dynamics<T,DESCRIPTOR>*
   getOffDynamics(T location[DESCRIPTOR::d]);
@@ -76,6 +78,15 @@ BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new ZeroVelocityBouzidiLinearPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getThreePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D
          <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
@@ -127,11 +138,12 @@ getOffDynamics(T location[DESCRIPTOR::d], T distances[DESCRIPTOR::q])
 template<typename T, typename DESCRIPTOR, class MixinDynamics>
 class GradBoundaryManager3D {
 public:
-
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
+  static PostProcessorGenerator3D<T,DESCRIPTOR>*
+  getThreePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances,
     std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
@@ -161,6 +173,15 @@ GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getTwoPointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
 {
   return new ZeroVelocityBouzidiLinearPostProcessorGenerator3D
+         <T, DESCRIPTOR>(x, y, z, iPop, dist);
+}
+
+template<typename T, typename DESCRIPTOR, class MixinDynamics>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
+getThreePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist)
+{
+  return new ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D
          <T, DESCRIPTOR>(x, y, z, iPop, dist);
 }
 
@@ -229,6 +250,16 @@ void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroVelocityBoundary(
 }
 
 template<typename T, typename DESCRIPTOR>
+void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addSecondOrderZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  BlockIndicatorMaterial3D<T> boundaryIndicator(blockGeometryStructure, material);
+  addSecondOrderZeroVelocityBoundary(boundaryIndicator, bulkIndicator, geometryIndicator);
+}
+
+template<typename T, typename DESCRIPTOR>
 void OffLatticeBoundaryCondition3D<T, DESCRIPTOR>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int material,
   IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
@@ -271,6 +302,17 @@ createBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
          BouzidiBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
 }
 
+//SM - second order BZ
+template<typename T, typename DESCRIPTOR, typename MixinDynamics>
+OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
+createSecondOrderBouzidiBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)
+{
+  return new OffBoundaryConditionInstantiator3D <
+         T, DESCRIPTOR,
+         BouzidiBoundaryManager3D<T,DESCRIPTOR, MixinDynamics> > (block);
+}
+
+//SM - Grad 
 template<typename T, typename DESCRIPTOR, typename MixinDynamics>
 OffLatticeBoundaryCondition3D<T,DESCRIPTOR>*
 createGradBoundaryCondition3D(BlockLatticeStructure3D<T,DESCRIPTOR>& block)

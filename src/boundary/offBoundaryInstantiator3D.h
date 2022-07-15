@@ -53,6 +53,7 @@ public:
 
   void addOnePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
+  void addThreePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances,
                                          std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
   void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
@@ -67,6 +68,13 @@ public:
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
   void addZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
   void addZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
+
+  //SM - second order BZ
+  void addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist) override;
+  void addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q]);
+  void addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
+  void addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
+  void addSecondOrderZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
   //void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist, std::vector<T> distances, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) override;
   void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing);
@@ -172,6 +180,19 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addTwoP
 {
   PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getTwoPointZeroVelocityBoundaryProcessor
+    (x, y, z, iPop, dist);
+  if (postProcessor) {
+    this->getBlock().addPostProcessor(*postProcessor);
+  }
+}
+
+//SM - for second order BZ
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addThreePointZeroVelocityBoundary(
+  int x, int y, int z, int iPop, T dist)
+{
+  PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
+    BoundaryManager::getThreePointZeroVelocityBoundaryProcessor
     (x, y, z, iPop, dist);
   if (postProcessor) {
     this->getBlock().addPostProcessor(*postProcessor);
@@ -394,6 +415,151 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
   }
 }
 
+//SM - second order BZ
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSecondOrderZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist)
+{
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+  if (blockGeometryStructure.getMaterial(x- 2 * c[0], y- 2 * c[1], z- 2 * c[2]) != 1) {
+    if (blockGeometryStructure.getMaterial(x- c[0], y- c[1], z- c[2]) != 1) {
+      addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
+    }
+    else {
+      addTwoPointZeroVelocityBoundary(x, y, z, iPop, dist);
+    }
+  }
+  else {
+    addThreePointZeroVelocityBoundary(x, y, z, iPop, dist);
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::
+addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, T distances[DESCRIPTOR::q])
+{
+  typedef DESCRIPTOR L;
+  //T location[DESCRIPTOR::d];
+  //location[0] = blockGeometryStructure.physCoordX(x);
+  //location[1] = blockGeometryStructure.physCoordY(y);
+  //location[2] = blockGeometryStructure.physCoordZ(z);
+  //T distancesCopy[L::q];
+  //T spacing = blockGeometryStructure.getDeltaR();
+  //for (int iPop = 1; iPop < L::q ; ++iPop) {
+  //  distancesCopy[iPop] = spacing*(1.-distances[iPop]);
+  //  if (distances[iPop] == -1)
+  //    distancesCopy[iPop] = -1;
+  //}
+  //addOffDynamics(x, y, z, location, distancesCopy);
+
+  for (int iPop = 1; iPop < L::q ; ++iPop) {
+    if ( !util::nearZero(distances[iPop]+1) ) {
+      const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+      addSecondOrderZeroVelocityBoundary(blockGeometryStructure, x-c[0], y-c[1], z-c[2], iPop, distances[iPop]);
+    }
+  }
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSecondOrderZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
+{
+  T distances[DESCRIPTOR::q];
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    distances[iPop] = -1;
+  }
+
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+    const int iXn = iX + c[0];
+    const int iYn = iY + c[1];
+    const int iZn = iZ + c[2];
+    if (blockGeometryStructure.isInside(iXn,iYn,iZn) && bulkIndicator(iXn,iYn,iZn)) {
+      T dist = -1;
+      T physR[3];
+      blockGeometryStructure.getPhysR(physR,iXn,iYn,iZn);
+      T voxelSize=blockGeometryStructure.getDeltaR();
+
+      Vector<T,3> physC(physR);
+
+      Vector<T,3> direction(-voxelSize*c[0],-voxelSize*c[1],-voxelSize*c[2]);
+      T cPhysNorm = voxelSize*sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
+
+      if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
+        T epsX = voxelSize*c[0]*this->_epsFraction;
+        T epsY = voxelSize*c[1]*this->_epsFraction;
+        T epsZ = voxelSize*c[2]*this->_epsFraction;
+
+        Vector<T,3> physC2(physC);
+        physC2[0] += epsX;
+        physC2[1] += epsY;
+        physC2[2] += epsZ;
+        Vector<T,3> direction2(direction);
+        direction2[0] -= 2.*epsX;
+        direction2[1] -= 2.*epsY;
+        direction2[2] -= 2.*epsZ;
+
+        if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+          clout << "ERROR: no boundary found at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop)
+                << std::endl;
+        }
+        T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+        if (distNew < 0.5) {
+          dist = 0;
+        }
+        else {
+          dist = 0.5 * cPhysNorm;
+          clout << "WARNING: distance at (" << iXn << "," << iYn << "," << iZn <<") ~ ("
+                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                << "in direction " << util::opposite<DESCRIPTOR >(iPop) << ": "
+                << distNew
+                << " rounded to "
+                << dist/cPhysNorm
+                << std::endl;
+        }
+      }
+      distances[util::opposite<DESCRIPTOR >(iPop)] = dist/cPhysNorm;
+    } // bulkMaterials if
+  } // iPop loop
+  addSecondOrderZeroVelocityBoundary(blockGeometryStructure, iX, iY, iZ, distances);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSecondOrderZeroVelocityBoundary(
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
+  IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> bulkIndicator(blockGeometryStructure, bulkMaterials);
+  addSecondOrderZeroVelocityBoundary(blockGeometryStructure, iX, iY, iZ,
+                          geometryIndicator,
+                          bulkIndicator);
+}
+
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSecondOrderZeroVelocityBoundary(
+  BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator)
+{
+  if ( !boundaryIndicator.isEmpty() ) {
+    const Vector<int,3> min = boundaryIndicator.getMin();
+    const Vector<int,3> max = boundaryIndicator.getMax();
+
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (boundaryIndicator(iX,iY,iZ)) {
+            addSecondOrderZeroVelocityBoundary(boundaryIndicator.getBlockGeometryStructure(), iX, iY, iZ,
+                                    geometryIndicator, bulkIndicator);
+          }
+        }
+      }
+    }
+  }
+}
+
+//SM - Grad boundary
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing)

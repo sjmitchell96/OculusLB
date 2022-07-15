@@ -31,6 +31,75 @@
 
 namespace olb {
 
+/////////// SM - QuadraticBouzidiPostProcessor3D /////////////////////////////////////
+
+/* Bouzidi Interpolation scheme of second order
+ *
+ * fluid nodes               wall  solid node
+ * --o-------<-o->-----<-o->--|----x----
+ *            xB         x        xN
+ * directions: --> iPop
+ *             <-- opp
+ *
+*/
+
+template<typename T, typename DESCRIPTOR>
+ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>::
+ZeroVelocityBouzidiQuadraticPostProcessor3D(int x_, int y_, int z_, int iPop_, T dist_)
+  : x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
+{
+#ifndef QUIET
+  if (dist < 0 || dist > 1)
+    std::cout << "WARNING: Bogus distance at (" << x << "," << y << "," << z << "): "
+              << dist << std::endl;
+#endif
+  typedef DESCRIPTOR L;
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+  opp = util::opposite<L>(iPop);
+  
+  xN = x + c[0]; 
+  yN = y + c[1];
+  zN = z + c[2];
+
+  if (dist >= 0.5) {
+    xB = x - c[0];
+    yB = y - c[1];
+    zB = z - c[2];
+    q = 1/(2*dist);
+    iPop2 = opp;
+  } else {
+    xB = x;
+    yB = y;
+    zB = z;
+    q = 2*dist;
+    iPop2 = iPop;
+  }
+  
+    /*std::cout << "ZeroVelocityQuadratic (" << x << "," << y << "," << z <<
+      "), iPop: " << iPop << ", nP: (" << xN << "," << yN << "," << zN <<
+      "), opp: " << opp << ", bP: (" << xB << "," << yB << "," << zB <<
+      "), dist: " << dist << ", q: " << q << std::endl;*/
+  
+}
+
+template<typename T, typename DESCRIPTOR>
+void ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>::
+processSubDomain(BlockLattice3D<T,DESCRIPTOR>& blockLattice, int x0_, int x1_, int y0_, int y1_, int z0_, int z1_)
+{
+  if (util::contained(x, y, z, x0_, x1_, y0_, y1_, z0_, z1_)) {
+    process(blockLattice);
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+void ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>::
+process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
+{
+  blockLattice.get(x, y, z)[opp] = q*blockLattice.get(xN, yN, zN)[iPop] +
+                                   (1-q)*blockLattice.get(xB, yB, zB)[iPop2];
+  //BOUNCEBACK blockLattice.get(x, y, z)[opp] = blockLattice.get(xN, yN, zN)[iPop];
+}
+
 /////////// LinearBouzidiPostProcessor3D /////////////////////////////////////
 
 /* Bouzidi Interpolation scheme of first order
@@ -529,6 +598,31 @@ for (unsigned i = 0; i < iDirty.size(); ++i) {
        pi[yz] * ci[1] * ci[2]))) - 1.); //(fi - ti) needs to be stored
   }
 
+}
+
+//////// SM - QuadraticBouzidiBoundaryPostProcessorGenerator ////////////////////////////////
+
+template<typename T, typename DESCRIPTOR>
+ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D<T,DESCRIPTOR>::
+ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D(int x_, int y_, int z_, int iPop_, T dist_)
+  : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
+    x(x_), y(y_), z(z_), iPop(iPop_), dist(dist_)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+PostProcessor3D<T,DESCRIPTOR>*
+ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D<T,DESCRIPTOR>::generate() const
+{
+  return new ZeroVelocityBouzidiQuadraticPostProcessor3D<T,DESCRIPTOR>
+         ( this->x, this->y, this->z, this->iPop, this->dist);
+}
+
+template<typename T, typename DESCRIPTOR>
+PostProcessorGenerator3D<T,DESCRIPTOR>*
+ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
+{
+  return new ZeroVelocityBouzidiQuadraticPostProcessorGenerator3D<T,DESCRIPTOR>
+         (this->x, this->y, this->z, this->iPop, this->dist);
 }
 
 ////////  LinearBouzidiBoundaryPostProcessorGenerator ////////////////////////////////
