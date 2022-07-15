@@ -629,8 +629,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     // material=5, 7 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
-    offBc.addZeroVelocityBoundary( sGeometry,7,indicatorBlade );
+    offBc.addSecondOrderZeroVelocityBoundary( sGeometry,5,indicatorBlade );
+    offBc.addSecondOrderZeroVelocityBoundary( sGeometry,7,indicatorBlade );
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );

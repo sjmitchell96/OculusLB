@@ -577,8 +577,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     // material=5, 7 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityBoundary( sGeometry,5,indicatorCylinder );
-    offBc.addZeroVelocityBoundary( sGeometry,7,indicatorCylinder );
+    offBc.addSecondOrderZeroVelocityBoundary( sGeometry,5,indicatorCylinder );
+    offBc.addSecondOrderZeroVelocityBoundary( sGeometry,7,indicatorCylinder );
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
@@ -781,8 +781,8 @@ int main( int argc, char* argv[] ) {
   //Cylinder parameters
   const T diameter = 1.00;
   const T span = 8.0 * diameter;
-  const Vector<T,3> cylinderOrigin = {25.0 * diameter,
-                                      25.0 * diameter,
+  const Vector<T,3> cylinderOrigin = {25.0 * diameter + diameter/10000,
+                                      25.0 * diameter + diameter/10000,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
