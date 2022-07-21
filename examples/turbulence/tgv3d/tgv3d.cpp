@@ -62,7 +62,7 @@ typedef double T;
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
-//#define DNS
+#define DNS
 
 #define finiteDiff //for N<256
 

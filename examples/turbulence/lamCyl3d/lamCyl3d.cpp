@@ -303,9 +303,9 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 				 innerExtendXZ);
 
       refinedOrigin = origin + 
-        Vector<T,3> {2. * coarseDeltaX, 2. * coarseDeltaX, - 2. * coarseDeltaX};
+        Vector<T,3> {2. * coarseDeltaX, 1.9 * coarseDeltaX, - 2. * coarseDeltaX};
       refinedExtend = extend - 
-        Vector<T,3> {4. * coarseDeltaX, 4. * coarseDeltaX, - 4. * coarseDeltaX};
+        Vector<T,3> {4. * coarseDeltaX, 3.9 * coarseDeltaX, - 4. * coarseDeltaX};
       IndicatorCuboid3D<T> refined2(refinedExtend, refinedOrigin);
       fineGrid.getSuperGeometry().reset(refined2);
 
@@ -781,8 +781,8 @@ int main( int argc, char* argv[] ) {
   //Cylinder parameters
   const T diameter = 1.00;
   const T span = 8.0 * diameter;
-  const Vector<T,3> cylinderOrigin = {25.0 * diameter + diameter/10000,
-                                      25.0 * diameter + diameter/10000,
+  const Vector<T,3> cylinderOrigin = {25.0 * diameter - 0.00045,
+                                      25.0 * diameter - 0.0045,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
