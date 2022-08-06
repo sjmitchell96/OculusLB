@@ -115,8 +115,8 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   //Material number for section of blade to read pressures
   const Vector<T,3> pressureSection1Origin {bladeOrigin[0] - chord,
 	                                    bladeOrigin[1] - chord,
-                                            bladeOrigin[2] +  
-                                              0.5 * chord - 0.5 * deltaX};
+                                            bladeOrigin[2] + 0.02 + 
+                                              0.5 * 0.2 * chord - 0.5 * deltaX};
   const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
@@ -202,17 +202,21 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {0.1 * chord, 0.15 * chord}; 
-  const Vector<T,2> hp4 = {0.1 * chord, 0.15 * chord}; // '' positive
 
-  const Vector<T,2> hn3 = {0.2 * chord, 0.25 * chord};
-  const Vector<T,2> hp3 = {0.6 * chord, 0.25 * chord};
+  const Vector<T,2> hn5 = {0.015 * chord, 0.015 * chord}; 
+  const Vector<T,2> hp5 = {0.015 * chord, 0.015 * chord}; // '' positive
 
-  const Vector<T,2> hn2 = {0.4 * chord, 0.45 * chord};
-  const Vector<T,2> hp2 = {1.2 * chord, 0.45 * chord};
+  const Vector<T,2> hn4 = {0.045 * chord, 0.045 * chord}; 
+  const Vector<T,2> hp4 = {0.045 * chord, 0.045 * chord}; // '' positive
 
-  const Vector<T,2> hn1 = {0.8 * chord, 0.85 * chord}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * chord, 0.85 * chord};
+  const Vector<T,2> hn3 = {0.105 * chord, 0.105 * chord};
+  const Vector<T,2> hp3 = {0.6 * chord, 0.105 * chord};
+
+  const Vector<T,2> hn2 = {0.225 * chord, 0.225 * chord};
+  const Vector<T,2> hp2 = {1.2 * chord, 0.225 * chord};
+
+  const Vector<T,2> hn1 = {0.465 * chord, 0.465 * chord}; //Outermost
+  const Vector<T,2> hp1 = {2.4 * chord, 0.465 * chord};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -410,6 +414,60 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 			                      	- 4. * coarseDeltaX};
 	        IndicatorCuboid3D<T> refined4(refinedExtend, refinedOrigin);
 	        fineGrid3.getSuperGeometry().reset(refined4);
+
+          if(n >= 5) {
+	          // Refinement around the wing box - level 5 (current innermost)
+            const T deltaX3 = fineGrid4.getConverter().getPhysDeltaX();
+	            coarseDeltaX = deltaX3;
+			
+	          Vector<T,3> fineOrigin5 = {bladeBoxOrigin[0] - hn5[0],
+		                       bladeBoxOrigin[1] - hn5[1],
+				                   domainOrigin[2]-deltaX0-deltaX1-deltaX2-deltaX3};
+	          Vector<T,3> fineExtend5 = 
+	          {chord + hp5[0] + hn5[0], thickness + hp5[1] + hn5[1],
+                 domainExtend[2] + deltaX0 + deltaX1 + deltaX2 + deltaX3};
+
+        	  auto& fineGrid5 = fineGrid4.refine(fineOrigin5, fineExtend5,
+		  		             false, false, true, false);
+	          prepareGeometry(fineGrid5, domainOrigin, domainExtend,
+			          indicatorBlade);
+	          origin = fineGrid5.getOrigin() + 
+                 Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+      	    extend = fineGrid5.getExtend() - 
+              Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+	          extendXZ = {extend[0], 0., extend[2]};
+	          extendYZ = {0., extend[1], extend[2]};
+            fineGrid4.addFineCoupling(fineGrid5, origin, extendXZ);
+	          fineGrid4.addFineCoupling(fineGrid5, origin, extendYZ);
+            extendX = {extend[0], 0., 0.};
+	          extendY = {0., extend[1], 0.};
+            fineGrid4.addFineCoupling(fineGrid5, origin + extendX, extendYZ);
+  	        fineGrid4.addFineCoupling(fineGrid5, origin + extendY, extendXZ);
+
+        	  innerOrigin = origin + Vector<T,3> {coarseDeltaX, coarseDeltaX, 0.};
+            innerExtendXZ = {extend[0] - 2. * coarseDeltaX , 0., extend[2]};
+	          innerExtendYZ = {0., extend[1] - 2. * coarseDeltaX, extend[2]};
+	          fineGrid4.addCoarseCoupling(fineGrid5, innerOrigin, innerExtendXZ);
+            fineGrid4.addCoarseCoupling(fineGrid5, innerOrigin, innerExtendYZ);
+
+        	  innerExtendX = {extend[0] - 2. * coarseDeltaX, 0., 0.};
+	          innerExtendY = {0., extend[1] - 2. * coarseDeltaX, 0.};
+	          fineGrid4.addCoarseCoupling(fineGrid5,
+			                innerOrigin + innerExtendX,
+				        innerExtendYZ);
+	          fineGrid4.addCoarseCoupling(fineGrid5,
+			                innerOrigin + innerExtendY,
+				        innerExtendXZ);
+
+        	  refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
+		                                  2. * coarseDeltaX,
+				  	       	- 2. * coarseDeltaX};
+	          refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
+		                                  4. * coarseDeltaX,
+			                        	- 4. * coarseDeltaX};
+	          IndicatorCuboid3D<T> refined5(refinedExtend, refinedOrigin);
+	          fineGrid4.getSuperGeometry().reset(refined5);
+          }
   	    }
       }
     }
@@ -519,17 +577,17 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
-            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCSpongeDynamics<T,DESCRIPTOR>(
-            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
     #else
      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCdynamics<T,DESCRIPTOR>(
-            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
     #endif
   #endif
 
@@ -561,7 +619,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
+  //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
 
   //NEXT RECONFIGURE BCS TO INLET OUTLET
@@ -571,8 +629,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     // material=5, 7 --> no dynamics + bouzidi zero velocity
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    //offBc.addZeroVelocityBoundary( sGeometry,5,indicatorBlade );
-    //offBc.addZeroVelocityBoundary( sGeometry,7,indicatorBlade );
     offBc.addSecondOrderZeroVelocityBoundary( sGeometry,5,indicatorBlade );
     offBc.addSecondOrderZeroVelocityBoundary( sGeometry,7,indicatorBlade );
   #elif defined(Grad)
@@ -590,9 +646,9 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   //Sponge indicator 1 - y-z outlet
   const T physChord = 0.051;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {12. * physChord - deltaX /2000, - deltaX / 2,
+  const Vector<T,3> spongeOrigin = {15. * physChord - deltaX /2000, - deltaX / 2,
     - 4 * deltaX};
-  const Vector<T,3> spongeExtend = {4. * physChord + deltaX/1000,
+  const Vector<T,3> spongeExtend = {1. * physChord + deltaX/1000,
     8 * physChord + deltaX,
     0.2 * physChord + 8 * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
@@ -600,7 +656,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   const Vector<T,3> spongeOrientation = {1., 0., 0.};
   //Min and max tau limits
   const T tauSpongeBase = 1. / omega;
-  const T tauSpongeMax = 1.0;
+  const T tauSpongeMax = 1.;
   std::vector<int> spongeMaterials = {1,2,3,4,6};
 
   sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
@@ -648,7 +704,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-// Set boundary values for start-scale inlet velocity
 void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 
 	OstreamManager clout(std::cout, "setBoundaryValues");
@@ -666,7 +721,7 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
   AnalyticalConst3D<T,T> inRhoConst(inRho);
   AnalyticalConst3D<T,T> inVelConst(inVel);
 
-  sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
+  //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
   sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
 }
 
@@ -734,50 +789,55 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
   ofstream myfile;
   std::string filename {filePath+".csv"};
   myfile.open(filename,fstream::app);
-  myfile << theta << "  " << bladeForce[1] << " " << bladeForce[0] << std::endl;
+  myfile << theta << "	" << bladeForce[1] << "	" << bladeForce[0] << std::endl;
   myfile.close();
 }	
 
 int main( int argc, char* argv[] ) {
 
-  //Blade parameters
-  const T chord = 0.051;
+  //Blade physical parameters
+  const T chord = 0.051; //m
   const T thickness = 0.00382;
-  const T span = 0.2 * chord * 2.; //Twice as wide as true physical span, to ensure entire domain is spanned
-  const T r1 = 0.1836;
-  const T r2 = 0.00015;
-  const T xp = 0.02538;
-  const T theta = -0.00; //Pitch (+ve = anticlockwise)
-  const T thetaBC = 12.00;
-  const Vector<T,3> bladeOrigin = {4.5 * chord, 4. * chord, - 0.25 * span}; //Origin of blade
+  const T span = 0.2 * chord * 2.; //Twice as wide, to ensure entire domain is spanned
+  const T r1 = 0.1836;  //Upper/lower radius
+  const T r2 = 0.00015; //LE/TE radius
+  const T xp = 0.02538; //Intersect point
+  const T theta = 0.00; //Pitch (+ve = anticlockwise)
+  const T thetaBC = 10.00; //Inlet flow angle
+  const Vector<T,3> bladeOrigin = {4.5 * chord + chord / 12800., 4. * chord + chord / 12800., - 0.25 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 25; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 1;	//Number of refinement levels (current max = 4)
+  const int N = 100; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 5;	//Number of refinement levels (current max = 5)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
-  const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
   const T Re = 100000.;       // Reynolds number
   const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physuC = 34.3; //Physical characteristic velocity
+  const T physuC = Mach * 343.; //Physical characteristic velocity
   const T rho = 1.2;	//Density
   const T physNu = physuC * physL / Re;//m2/s
+  const T normFactor = physL / physuC;  //Factor for physical -> convective time (s)
+
+  const T maxNormT = 10; //Max normalised 'convective' time
+  const T maxPhysT = maxNormT * normFactor; // max. simulation time in s, SI unit
 
   //Options for blade surface boundary condition
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 100; //Every 10% of max physical time
-  const int statIter  	   = 100;
-  const int checkIter 	   = 1000;
-  const int bladeForceIter = 1000;
-  const int timeAvgIter    = 1000;
+  const T vtkInterval	       = 0.3 * normFactor; //Physical time intervals
+  const T statInterval       = 0.1 * normFactor; //(Defined in terms of convective time)
+  const T checkInterval 	   = 0.3 * normFactor;
+  const T bladeForceInterval = 0.01 * normFactor;
+  const T timeAvgInterval    = 1.0 * normFactor;
+
+  //Checkpoint option
   const std::string checkpoint = "odd"; //load even or odd checkpoint
 
   //Names of output files
@@ -813,6 +873,17 @@ int main( int argc, char* argv[] ) {
     N,
     PhysCharacteristics,
     false,false,true);
+
+  //Compute lattice time intervals using coarse converter
+  const int vtkIter   	   = coarseGrid.getConverter().getLatticeTime(vtkInterval); 
+  const int statIter  	   = coarseGrid.getConverter().getLatticeTime(statInterval);
+  const int checkIter 	   = coarseGrid.getConverter().getLatticeTime(checkInterval);
+  const int bladeForceIter = coarseGrid.getConverter().getLatticeTime(bladeForceInterval);
+  const int timeAvgIter    = coarseGrid.getConverter().getLatticeTime(timeAvgInterval);
+
+  std::cout << "vtkIter " << vtkIter << std::endl; 
+  std::cout << "vtkInterval " << vtkIter << std::endl; 
+  std::cout << "maxPhysT " << maxPhysT << std::endl; 
 
   //Overall domain dimensions
   const Vector<T,3> domainOrigin =
