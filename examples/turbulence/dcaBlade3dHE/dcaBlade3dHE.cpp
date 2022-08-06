@@ -619,7 +619,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
+  //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
   bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
 
   //NEXT RECONFIGURE BCS TO INLET OUTLET
@@ -704,7 +704,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   clout << "Prepare Lattice ... OK" << std::endl;
 }
 
-// Set boundary values for start-scale inlet velocity
 void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 
 	OstreamManager clout(std::cout, "setBoundaryValues");
@@ -722,7 +721,7 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
   AnalyticalConst3D<T,T> inRhoConst(inRho);
   AnalyticalConst3D<T,T> inVelConst(inVel);
 
-  sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
+  //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
   sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
 }
 
@@ -796,44 +795,49 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
 
 int main( int argc, char* argv[] ) {
 
-  //Blade parameters
-  const T chord = 0.051;
+  //Blade physical parameters
+  const T chord = 0.051; //m
   const T thickness = 0.00382;
   const T span = 0.2 * chord * 2.; //Twice as wide, to ensure entire domain is spanned
-  const T r1 = 0.1836;
-  const T r2 = 0.00015;
-  const T xp = 0.02538;
-  const T theta = -0.00; //Pitch (+ve = anticlockwise)
-  const T thetaBC = 10.00;
-  const Vector<T,3> bladeOrigin = {4.5 * chord, 4. * chord, - 0.25 * span}; //Origin of blade
+  const T r1 = 0.1836;  //Upper/lower radius
+  const T r2 = 0.00015; //LE/TE radius
+  const T xp = 0.02538; //Intersect point
+  const T theta = 0.00; //Pitch (+ve = anticlockwise)
+  const T thetaBC = 10.00; //Inlet flow angle
+  const Vector<T,3> bladeOrigin = {4.5 * chord + chord / 12800., 4. * chord + chord / 12800., - 0.25 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 25; //14        // resolution of the model (coarse cells per chord)
+  const int N = 100; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 0;	//Number of refinement levels (current max = 5)
   const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
-  const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = chord; //Physical reference length (m)
 
   //Flow conditions
   const T Re = 100000.;       // Reynolds number
   const T Mach = 0.1;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physuC = 4.116; //Physical characteristic velocity
+  const T physuC = Mach * 343.; //Physical characteristic velocity
   const T rho = 1.2;	//Density
   const T physNu = physuC * physL / Re;//m2/s
+  const T normFactor = physL / physuC;  //Factor for physical -> convective time (s)
+
+  const T maxNormT = 10; //Max normalised 'convective' time
+  const T maxPhysT = maxNormT * normFactor; // max. simulation time in s, SI unit
 
   //Options for blade surface boundary condition
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 100; //Every 10% of max physical time
-  const int statIter  	   = 100;
-  const int checkIter 	   = 1000;
-  const int bladeForceIter = 1000;
-  const int timeAvgIter    = 1000;
+  const T vtkInterval	       = 0.3 * normFactor; //Physical time intervals
+  const T statInterval       = 0.1 * normFactor; //(Defined in terms of convective time)
+  const T checkInterval 	   = 0.3 * normFactor;
+  const T bladeForceInterval = 0.01 * normFactor;
+  const T timeAvgInterval    = 1.0 * normFactor;
+
+  //Checkpoint option
   const std::string checkpoint = "odd"; //load even or odd checkpoint
 
   //Names of output files
@@ -869,6 +873,17 @@ int main( int argc, char* argv[] ) {
     N,
     PhysCharacteristics,
     false,false,true);
+
+  //Compute lattice time intervals using coarse converter
+  const int vtkIter   	   = coarseGrid.getConverter().getLatticeTime(vtkInterval); 
+  const int statIter  	   = coarseGrid.getConverter().getLatticeTime(statInterval);
+  const int checkIter 	   = coarseGrid.getConverter().getLatticeTime(checkInterval);
+  const int bladeForceIter = coarseGrid.getConverter().getLatticeTime(bladeForceInterval);
+  const int timeAvgIter    = coarseGrid.getConverter().getLatticeTime(timeAvgInterval);
+
+  std::cout << "vtkIter " << vtkIter << std::endl; 
+  std::cout << "vtkInterval " << vtkIter << std::endl; 
+  std::cout << "maxPhysT " << maxPhysT << std::endl; 
 
   //Overall domain dimensions
   const Vector<T,3> domainOrigin =
