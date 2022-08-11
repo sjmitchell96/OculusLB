@@ -144,7 +144,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> uf(indiExtend, indiOrigin);
-    sGeometry.rename(1, 2, uf);
+    sGeometry.rename(1, 3, uf);
   }
 
   //Lower face
@@ -156,7 +156,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
                                   deltaX,
                                   extend[2] + 100 * deltaX};
     IndicatorCuboid3D<T> lf(indiExtend, indiOrigin);
-    sGeometry.rename(1, 2, lf);
+    sGeometry.rename(1, 3, lf);
   }
 
   //Rear face
@@ -188,7 +188,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 		     Vector<T,3> const& domainOrigin,
 		     Vector<T,3> const& domainExtend,
          IndicatorCylinder3D<T>& indicatorCylinder,
-		     const int n, const int nRefOut) {
+		     const int n) {
 
   T radius = indicatorCylinder.getRadius();
   T diameter = 2. * radius;
@@ -415,78 +415,6 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
       }
     }
   }
-  
-  if (nRefOut >= 1) {
-    //Outlet refinement
-    const Vector<T,3> outRefineExtend {diameter,
-                                                              domainExtend[1],
-                                                              domainExtend[2]};
-    const Vector<T,3> outRefineOrigin {domainExtend[0] - outRefineExtend[0],
-                                                              domainOrigin[1],
-                                                              domainOrigin[2]};
-    // add periodicity as well
-    auto& outRefineGrid = coarseGrid.refine(outRefineOrigin, outRefineExtend,
-                    false, false, true, false);
-    prepareGeometry(outRefineGrid, domainOrigin, domainExtend, indicatorCylinder);
-    // add couplers manually
-    {
-      const T coarseDeltaXout = coarseGrid.getConverter().getPhysDeltaX();
-      const Vector<T,3> originOut        = outRefineGrid.getOrigin()
-                      + Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
-      const Vector<T,3> extendOut        = outRefineGrid.getExtend()
-                      - Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
-      const Vector<T,3> extendYZout      = {0, extendOut[1], extendOut[2]};
-      coarseGrid.addFineCoupling(outRefineGrid, originOut, extendYZout);
-
-      const Vector<T,3> innerOriginOut = originOut
-                                              + Vector<T,3> {coarseDeltaXout, 0, 0};
-      coarseGrid.addCoarseCoupling(outRefineGrid, innerOriginOut, extendYZout);
-
-      const Vector<T,3> refinedOriginOut = originOut
-                      + Vector<T,3> {2*coarseDeltaXout, 0, -2*coarseDeltaXout};
-      const Vector<T,3> refinedExtendOut = extendOut
-                      - Vector<T,3> {2*coarseDeltaXout, 0, -4*coarseDeltaXout};
-      IndicatorCuboid3D<T> refinedOut(refinedExtendOut, refinedOriginOut);
-      coarseGrid.getSuperGeometry().reset(refinedOut);
-    }
-
-    if (nRefOut >= 2) {
-      // Refinement at the outlet half
-      const T deltaX0Out = outRefineGrid.getConverter().getPhysDeltaX();
-      const Vector<T,3> outRefineExtend2 {0.5 * diameter,
-                                                                domainExtend[1],
-                                                                domainExtend[2] + deltaX0Out};
-      const Vector<T,3> outRefineOrigin2 {domainExtend[0] - outRefineExtend2[0],
-                                                                domainOrigin[1],
-                                                                domainOrigin[2] - deltaX0Out};
-      // add periodicity as well
-      auto& outRefineGrid2 = outRefineGrid.refine(outRefineOrigin2, outRefineExtend2,
-                      false, false, true, false);
-      prepareGeometry(outRefineGrid2, domainOrigin, domainExtend, indicatorCylinder);
-      // add couplers manually
-      {
-              const T coarseDeltaXout = outRefineGrid.getConverter().getPhysDeltaX();
-              const Vector<T,3> originOut        = outRefineGrid2.getOrigin()
-                              + Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
-              const Vector<T,3> extendOut        = outRefineGrid2.getExtend()
-                              - Vector<T,3> {0., 0., 0.5*coarseDeltaXout};
-              const Vector<T,3> extendYZout      = {0, extendOut[1], extendOut[2]};
-              outRefineGrid.addFineCoupling(outRefineGrid2, originOut, extendYZout);
-
-              const Vector<T,3> innerOriginOut = originOut
-                                                      + Vector<T,3> {coarseDeltaXout, 0, 0};
-              outRefineGrid.addCoarseCoupling(outRefineGrid2, innerOriginOut, extendYZout);
-
-              const Vector<T,3> refinedOriginOut = originOut
-                              + Vector<T,3> {2*coarseDeltaXout, 0, -2*coarseDeltaXout};
-              const Vector<T,3> refinedExtendOut = extendOut
-                              - Vector<T,3> {2*coarseDeltaXout, 0, -4*coarseDeltaXout};
-              IndicatorCuboid3D<T> refinedOut(refinedExtendOut, refinedOriginOut);
-              outRefineGrid.getSuperGeometry().reset(refinedOut);
-      }
-    }
-  }
-
   clout << "Setup Refinement ... OK" << std::endl;
 }
 
@@ -563,15 +491,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
   // Define boundary conditions
-  //bc.addVelocityBoundary(sGeometry, 2, omega);
-  //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
-  //onbc.addVelocityBoundary(sGeometry, 3, omega);
-  //onbc.addVelocityBoundary(sGeometry, 2, omega);
-  onbc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
-  //onbc.addOutletBoundary(sGeometry, 2, {1, 2, 3, 4, 6});
-  //bc.addConvectionBoundary(sGeometry, 4);
-  //bc.addPressureBoundary(sGeometry, 4, omega); 
-
+  bc.addVelocityBoundary(sGeometry, 3, omega);
+  bc.addPressureBoundary(sGeometry, 4, omega); 
 
   #if defined(Bouzidi)
     // material=5, 7 --> no dynamics + bouzidi zero velocity
@@ -792,7 +713,6 @@ int main( int argc, char* argv[] ) {
   //Domain and simulation parameters
   const int N = 2; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 0;	//Number of refinement levels (current max = 4)
-  const int nRefinementOutlet = 0;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 75.*diameter; //Length of domain in physical units (m)
   const T lDomainPhysy = 50.0*diameter;
   const T lDomainPhysz = span; //
@@ -862,7 +782,7 @@ int main( int argc, char* argv[] ) {
   // === 2nd Step: Prepare Geometry ===
   prepareGeometry(coarseGrid, domainOrigin, domainExtend, cylinder);
   setupRefinement(coarseGrid, domainOrigin, domainExtend, cylinder,
-                  nRefinement, nRefinementOutlet);
+                  nRefinement);
 
   // === 3rd Step: Prepare Lattice ===
   coarseGrid.forEachGrid(std::function<void(Grid3D<T,DESCRIPTOR>&,
@@ -971,7 +891,7 @@ int main( int argc, char* argv[] ) {
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();
 
-    setBoundaryValues(coarseGrid,iT);
+    //setBoundaryValues(coarseGrid,iT);
 
     // === 7th Step: Computation and Output of the Results ===
 		//Add ensemble to time-averaged functors
