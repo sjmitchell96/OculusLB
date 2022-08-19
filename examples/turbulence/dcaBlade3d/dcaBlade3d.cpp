@@ -102,6 +102,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   auto& sGeometry  = grid.getSuperGeometry();
   const T deltaX   = converter.getPhysDeltaX();
   const T chord    = indicatorBlade.getChord();
+  const T span    = indicatorBlade.getSpan();
 
   const Vector<T,3> bladeOrigin = indicatorBlade.getOrigin();
   const Vector<T,3> gridOrigin  = 
@@ -115,8 +116,8 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   //Material number for section of blade to read pressures
   const Vector<T,3> pressureSection1Origin {bladeOrigin[0] - chord,
 	                                    bladeOrigin[1] - chord,
-                                            bladeOrigin[2] + 0.02 + 
-                                              0.5 * 0.2 * chord - 0.5 * deltaX};
+                                            bladeOrigin[2]  
+                                              + 0.5 * span - 0.5 * deltaX};
   const Vector<T,3> pressureSection1Extend {2. * chord, 2. * chord, deltaX};
   IndicatorCuboid3D<T> pressureSection1(pressureSection1Extend,
                                         pressureSection1Origin);
@@ -216,20 +217,20 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
 
-  const Vector<T,2> hn5 = {0.015 * chord, 0.015 * chord}; 
-  const Vector<T,2> hp5 = {0.015 * chord, 0.015 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.01 * chord, 0.01 * chord}; 
+  const Vector<T,2> hp5 = {0.01 * chord, 0.01 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.045 * chord, 0.045 * chord}; 
-  const Vector<T,2> hp4 = {0.045 * chord, 0.045 * chord}; // '' positive
+  const Vector<T,2> hn4 = {0.03 * chord, 0.03 * chord}; 
+  const Vector<T,2> hp4 = {0.03 * chord, 0.03 * chord}; // '' positive
 
-  const Vector<T,2> hn3 = {0.105 * chord, 0.105 * chord};
-  const Vector<T,2> hp3 = {0.6 * chord, 0.105 * chord};
+  const Vector<T,2> hn3 = {0.07 * chord, 0.07 * chord};
+  const Vector<T,2> hp3 = {0.6 * chord, 0.07 * chord};
 
-  const Vector<T,2> hn2 = {0.225 * chord, 0.225 * chord};
-  const Vector<T,2> hp2 = {1.2 * chord, 0.225 * chord};
+  const Vector<T,2> hn2 = {0.15 * chord, 0.15 * chord};
+  const Vector<T,2> hp2 = {1.2 * chord, 0.15 * chord};
 
-  const Vector<T,2> hn1 = {0.465 * chord, 0.465 * chord}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * chord, 0.465 * chord};
+  const Vector<T,2> hn1 = {0.31 * chord, 0.31 * chord}; //Outermost
+  const Vector<T,2> hp1 = {2.4 * chord, 0.31 * chord};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -735,19 +736,19 @@ int main( int argc, char* argv[] ) {
   //Blade physical parameters
   const T chord = 0.051; //m
   const T thickness = 0.00382;
-  const T span = 0.2 * chord * 2.; //Twice as wide, to ensure entire domain is spanned
+  const T span = 0.2 * chord; //Twice as wide, to ensure entire domain is spanned
   const T r1 = 0.1836;  //Upper/lower radius
   const T r2 = 0.00015; //LE/TE radius
   const T xp = 0.02538; //Intersect point
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
   const T thetaBC = 10.00; //Inlet flow angle
-  const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 0.25 * span}; //Origin of blade (make sure it's off-node!)
+  const Vector<T,3> bladeOrigin = {4.5 * chord + chord / 12800., 4. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
   const int N = 100; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 5;	//Number of refinement levels (current max = 5)
-  const T lDomainPhysx = 32.*chord; //Length of domain in physical units (m)
-  const T lDomainPhysy = 16.*chord;
+  const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
+  const T lDomainPhysy = 8.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T physL = chord; //Physical reference length (m)
 
@@ -799,7 +800,7 @@ int main( int argc, char* argv[] ) {
   IndicatorCuboid3D<T> coarseDomain(extend, origin);
 
   // Indicator for blade
-  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, span, r1, r2, xp,
+  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, 2. * span, r1, r2, xp,
     theta);
 
   // Construct a background coarse grid
