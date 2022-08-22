@@ -420,7 +420,7 @@ template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSecondOrderZeroVelocityBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist)
 {
-  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop);
+  const Vector<int,3> c = descriptors::c<DESCRIPTOR>(iPop); /*
   if (blockGeometryStructure.getMaterial(x- 2 * c[0], y- 2 * c[1], z- 2 * c[2]) != 1) {
     if (blockGeometryStructure.getMaterial(x- c[0], y- c[1], z- c[2]) != 1) {
       addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
@@ -431,6 +431,18 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSeco
   }
   else {
     addThreePointZeroVelocityBoundary(x, y, z, iPop, dist);
+  }
+  */
+  if (blockGeometryStructure.getMaterial(x - c[0], y - c[1], z - c[2]) == 1) {
+    if (blockGeometryStructure.getMaterial(x - 2 * c[0], y - 2 * c[1], z - 2 * c[2]) == 1) {
+      addThreePointZeroVelocityBoundary(x, y, z, iPop, dist);
+    }
+    else {
+      addTwoPointZeroVelocityBoundary(x, y, z, iPop, dist);
+    }  
+  }
+  else {
+    addOnePointZeroVelocityBoundary(x, y, z, iPop, dist);
   }
 }
 
