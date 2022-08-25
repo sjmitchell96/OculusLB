@@ -232,8 +232,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   const Vector<T,2> hn2 = {0.31 * chord, 0.31 * chord}; //Outermost
   const Vector<T,2> hp2 = {4.8 * chord, 0.31 * chord};
 
-  const Vector<T,2> hn1 = {1.0 * chord, 1.0 * chord}; 
-  const Vector<T,2> hp1 = {16.0 * chord, 1.0 * chord}; // '' positive
+  const Vector<T,2> hn1 = {2.0 * chord, 2.0 * chord}; 
+  const Vector<T,2> hp1 = {16.0 * chord, 2.0 * chord}; // '' positive
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -825,11 +825,11 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const T vtkInterval	       = 0.3 * normFactor; //Physical time intervals
-  const T statInterval       = 0.1 * normFactor; //(Defined in terms of convective time)
-  const T checkInterval 	   = 0.3 * normFactor;
-  const T bladeForceInterval = 0.01 * normFactor;
-  const T timeAvgInterval    = 1.0 * normFactor;
+  const int vtkIter	       = 500; 
+  const int statIter       = 100; 
+  const int checkIter 	   = 500;
+  const int bladeForceIter = 1;
+  const int timeAvgIter    = 500;
 
   //Checkpoint option
   const std::string checkpoint = "odd"; //load even or odd checkpoint
@@ -867,17 +867,6 @@ int main( int argc, char* argv[] ) {
     N,
     PhysCharacteristics,
     false,false,true);
-
-  //Compute lattice time intervals using coarse converter
-  const int vtkIter   	   = coarseGrid.getConverter().getLatticeTime(vtkInterval); 
-  const int statIter  	   = coarseGrid.getConverter().getLatticeTime(statInterval);
-  const int checkIter 	   = coarseGrid.getConverter().getLatticeTime(checkInterval);
-  const int bladeForceIter = coarseGrid.getConverter().getLatticeTime(bladeForceInterval);
-  const int timeAvgIter    = coarseGrid.getConverter().getLatticeTime(timeAvgInterval);
-
-  std::cout << "vtkIter " << vtkIter << std::endl; 
-  std::cout << "vtkInterval " << vtkIter << std::endl; 
-  std::cout << "maxPhysT " << maxPhysT << std::endl; 
 
   //Overall domain dimensions
   const Vector<T,3> domainOrigin =

@@ -219,20 +219,20 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   const Vector<T,2> hn6 = {0.005 * chord, 0.005 * chord}; 
   const Vector<T,2> hp6 = {-0.95 * chord, 0.005 * chord}; // '' positive
 
-  const Vector<T,2> hn5 = {0.015 * chord, 0.015 * chord}; 
-  const Vector<T,2> hp5 = {0.015 * chord, 0.015 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.01 * chord, 0.01 * chord}; 
+  const Vector<T,2> hp5 = {0.01 * chord, 0.01 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.045 * chord, 0.045 * chord}; 
-  const Vector<T,2> hp4 = {0.045 * chord, 0.045 * chord}; // '' positive
+  const Vector<T,2> hn4 = {0.03 * chord, 0.03 * chord}; 
+  const Vector<T,2> hp4 = {0.03 * chord, 0.03 * chord}; // '' positive
 
-  const Vector<T,2> hn3 = {0.105 * chord, 0.105 * chord};
-  const Vector<T,2> hp3 = {0.6 * chord, 0.105 * chord};
+  const Vector<T,2> hn3 = {0.07 * chord, 0.07 * chord};
+  const Vector<T,2> hp3 = {0.6 * chord, 0.07 * chord};
 
-  const Vector<T,2> hn2 = {0.225 * chord, 0.225 * chord};
-  const Vector<T,2> hp2 = {1.2 * chord, 0.225 * chord};
+  const Vector<T,2> hn2 = {0.15 * chord, 0.15 * chord};
+  const Vector<T,2> hp2 = {1.2 * chord, 0.15 * chord};
 
-  const Vector<T,2> hn1 = {0.465 * chord, 0.465 * chord}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * chord, 0.465 * chord};
+  const Vector<T,2> hn1 = {0.31 * chord, 0.31 * chord}; //Outermost
+  const Vector<T,2> hp1 = {2.4 * chord, 0.31 * chord};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1

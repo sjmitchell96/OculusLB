@@ -203,17 +203,17 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {2.5 * diameter, 1.5 * diameter}; 
-  const Vector<T,2> hp4 = {6.5 * diameter, 1.5 * diameter}; // '' positive
+  const Vector<T,2> hn4 = {0.1 * diameter, 0.1 * diameter}; 
+  const Vector<T,2> hp4 = {0.5 * diameter, 0.1 * diameter}; // '' positive
 
-  const Vector<T,2> hn3 = {0.5 * diameter, 0.5 * diameter};
-  const Vector<T,2> hp3 = {0.5 * diameter, 0.5 * diameter};
+  const Vector<T,2> hn3 = {0.3 * diameter, 0.3 * diameter};
+  const Vector<T,2> hp3 = {6.0 * diameter, 0.3 * diameter};
 
-  const Vector<T,2> hn2 = {1.5 * diameter, 1.0 * diameter};
-  const Vector<T,2> hp2 = {3.5 * diameter, 1.0 * diameter};
+  const Vector<T,2> hn2 = {0.7 * diameter, 0.7 * diameter};
+  const Vector<T,2> hp2 = {12.0 * diameter, 0.7 * diameter};
 
-  const Vector<T,2> hn1 = {2.5 * diameter, 1.5 * diameter}; //Outermost
-  const Vector<T,2> hp1 = {6.5 * diameter, 1.5 * diameter};
+  const Vector<T,2> hn1 = {1.5 * diameter, 1.5 * diameter}; //Outermost
+  const Vector<T,2> hp1 = {16.0 * diameter, 1.5 * diameter};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -516,11 +516,11 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   //Sponge indicator
   const T physChord = 1.00;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {71. * physChord - deltaX /2000, - deltaX / 2,
+  const Vector<T,3> spongeOrigin = {18. * physChord - deltaX /2000, - deltaX / 2,
     - 4. * deltaX};
-  const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
-    50. * physChord + deltaX,
-    8. * physChord + 8. * deltaX};
+  const Vector<T,3> spongeExtend = {2. * physChord + deltaX / 1000,
+    10. * physChord + deltaX,
+    3. * physChord + 8. * deltaX};
   IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
   //Orientation
   const Vector<T,3> spongeOrientation = {1., 0., 0.};
@@ -701,9 +701,9 @@ int main( int argc, char* argv[] ) {
 
   //Cylinder parameters
   const T diameter = 1.00;
-  const T span = 8.0 * diameter;
-  const Vector<T,3> cylinderOrigin = {25.0 * diameter - 0.00045,
-                                      25.0 * diameter - 0.0045,
+  const T span = 3. * diameter;
+  const Vector<T,3> cylinderOrigin = {5.0 * diameter + 0.00045,
+                                      5.0 * diameter + 0.00045,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
@@ -711,17 +711,17 @@ int main( int argc, char* argv[] ) {
 
 
   //Domain and simulation parameters
-  const int N = 2; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 75.*diameter; //Length of domain in physical units (m)
-  const T lDomainPhysy = 50.0*diameter;
+  const int N = 22; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+  const T lDomainPhysx = 20.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 10.*diameter;
   const T lDomainPhysz = span; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = diameter; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100.;       // Reynolds number
-  const T Mach = 0.035;
+  const T Re = 3900.;       // Reynolds number
+  const T Mach = 0.12;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physuC = 12; //Physical characteristic velocity
   const T rho = 1.2;	//Density
@@ -731,9 +731,9 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 100; //Every 10% of max physical time
+  const int vtkIter   	   = 500; //Every 10% of max physical time
   const int statIter  	   = 10;
-  const int checkIter 	   = 10000;
+  const int checkIter 	   = 500;
   const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
