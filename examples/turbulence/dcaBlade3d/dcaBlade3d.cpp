@@ -217,20 +217,23 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
 
-  const Vector<T,2> hn5 = {0.01 * chord, 0.01 * chord}; 
-  const Vector<T,2> hp5 = {0.01 * chord, 0.01 * chord}; // '' positive
+  const Vector<T,2> hn6 = {0.01 * chord, 0.01 * chord}; 
+  const Vector<T,2> hp6 = {0.01 * chord, 0.01 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.03 * chord, 0.03 * chord}; 
-  const Vector<T,2> hp4 = {0.03 * chord, 0.03 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.03 * chord, 0.03 * chord}; 
+  const Vector<T,2> hp5 = {0.03 * chord, 0.03 * chord}; // '' positive
 
-  const Vector<T,2> hn3 = {0.07 * chord, 0.07 * chord};
-  const Vector<T,2> hp3 = {0.6 * chord, 0.07 * chord};
+  const Vector<T,2> hn4 = {0.07 * chord, 0.07 * chord};
+  const Vector<T,2> hp4 = {0.6 * chord, 0.07 * chord};
 
-  const Vector<T,2> hn2 = {0.15 * chord, 0.15 * chord};
-  const Vector<T,2> hp2 = {1.2 * chord, 0.15 * chord};
+  const Vector<T,2> hn3 = {0.15 * chord, 0.15 * chord};
+  const Vector<T,2> hp3 = {1.2 * chord, 0.15 * chord};
 
-  const Vector<T,2> hn1 = {0.31 * chord, 0.31 * chord}; //Outermost
-  const Vector<T,2> hp1 = {2.4 * chord, 0.31 * chord};
+  const Vector<T,2> hn2 = {0.31 * chord, 0.31 * chord}; //Outermost
+  const Vector<T,2> hp2 = {4.8 * chord, 0.31 * chord};
+
+  const Vector<T,2> hn1 = {1.0 * chord, 1.0 * chord}; 
+  const Vector<T,2> hp1 = {16.0 * chord, 1.0 * chord}; // '' positive
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -481,6 +484,60 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 			                        	- 4. * coarseDeltaX};
 	          IndicatorCuboid3D<T> refined5(refinedExtend, refinedOrigin);
 	          fineGrid4.getSuperGeometry().reset(refined5);
+
+            if(n >= 6) {
+	            // Refinement around the wing box - level 5 (current innermost)
+              const T deltaX4 = fineGrid5.getConverter().getPhysDeltaX();
+	              coarseDeltaX = deltaX4;
+			
+	            Vector<T,3> fineOrigin6 = {bladeBoxOrigin[0] - hn6[0],
+		                         bladeBoxOrigin[1] - hn6[1],
+				                     domainOrigin[2]-deltaX0-deltaX1-deltaX2-deltaX3-deltaX4};
+	            Vector<T,3> fineExtend6 = 
+	            {chord + hp6[0] + hn6[0], thickness + hp6[1] + hn6[1],
+                   domainExtend[2] + deltaX0 + deltaX1 + deltaX2 + deltaX3 + deltaX4};
+
+          	  auto& fineGrid6 = fineGrid5.refine(fineOrigin6, fineExtend6,
+		    		             false, false, true, false);
+	            prepareGeometry(fineGrid6, domainOrigin, domainExtend,
+			            indicatorBlade);
+	            origin = fineGrid6.getOrigin() + 
+                   Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+      	      extend = fineGrid6.getExtend() - 
+                Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+	            extendXZ = {extend[0], 0., extend[2]};
+	            extendYZ = {0., extend[1], extend[2]};
+              fineGrid5.addFineCoupling(fineGrid6, origin, extendXZ);
+	            fineGrid5.addFineCoupling(fineGrid6, origin, extendYZ);
+              extendX = {extend[0], 0., 0.};
+	            extendY = {0., extend[1], 0.};
+              fineGrid5.addFineCoupling(fineGrid6, origin + extendX, extendYZ);
+  	          fineGrid5.addFineCoupling(fineGrid6, origin + extendY, extendXZ);
+
+          	  innerOrigin = origin + Vector<T,3> {coarseDeltaX, coarseDeltaX, 0.};
+              innerExtendXZ = {extend[0] - 2. * coarseDeltaX , 0., extend[2]};
+	            innerExtendYZ = {0., extend[1] - 2. * coarseDeltaX, extend[2]};
+	            fineGrid5.addCoarseCoupling(fineGrid6, innerOrigin, innerExtendXZ);
+              fineGrid5.addCoarseCoupling(fineGrid6, innerOrigin, innerExtendYZ);
+
+          	  innerExtendX = {extend[0] - 2. * coarseDeltaX, 0., 0.};
+	            innerExtendY = {0., extend[1] - 2. * coarseDeltaX, 0.};
+	            fineGrid5.addCoarseCoupling(fineGrid6,
+			                  innerOrigin + innerExtendX,
+				          innerExtendYZ);
+	            fineGrid5.addCoarseCoupling(fineGrid6,
+			                  innerOrigin + innerExtendY,
+				          innerExtendXZ);
+
+          	  refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
+		                                    2. * coarseDeltaX,
+				    	       	- 2. * coarseDeltaX};
+	            refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
+		                                    4. * coarseDeltaX,
+			                          	- 4. * coarseDeltaX};
+	            IndicatorCuboid3D<T> refined6(refinedExtend, refinedOrigin);
+	            fineGrid5.getSuperGeometry().reset(refined6);
+            }
           }
   	    }
       }
@@ -590,7 +647,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   //Sponge indicator 1 - y-z outlet
   const T physChord = 0.051;
   const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {30. * physChord - deltaX /2000, - deltaX / 2,
+  const Vector<T,3> spongeOrigin = {34. * physChord - deltaX /2000, - deltaX / 2,
     - 4 * deltaX};
   const Vector<T,3> spongeExtend = {2. * physChord + deltaX/1000,
     16 * physChord + deltaX,
@@ -612,7 +669,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   //Sponge indicator 2 - x-z 
   const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 14. * physChord - deltaX / 2000,
     - 4 * deltaX};
-  const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
+  const Vector<T,3> spongeExtend2 = {36. * physChord + deltaX,
     2. * physChord + deltaX / 1000,
     0.2 * physChord + 8 * deltaX};
   IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
@@ -742,13 +799,13 @@ int main( int argc, char* argv[] ) {
   const T xp = 0.02538; //Intersect point
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
   const T thetaBC = 10.00; //Inlet flow angle
-  const Vector<T,3> bladeOrigin = {4.5 * chord + chord / 12800., 4. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
+  const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 100; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 5;	//Number of refinement levels (current max = 5)
-  const T lDomainPhysx = 16.*chord; //Length of domain in physical units (m)
-  const T lDomainPhysy = 8.*chord;
+  const int N = 50; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 6;	//Number of refinement levels (current max = 5)
+  const T lDomainPhysx = 36.*chord; //Length of domain in physical units (m)
+  const T lDomainPhysy = 16.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T physL = chord; //Physical reference length (m)
 
