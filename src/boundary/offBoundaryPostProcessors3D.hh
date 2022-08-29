@@ -439,7 +439,7 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
     std::cout << "GradBC Warning: No suitable stencil point in z" << std::endl;
 
   //Set nMissing based on mode
-  if (mode == 0)
+  if (mode == 1)
     nMissing = iClean.size();
   else
     nMissing = iClean.size() + iDirty.size();
@@ -530,14 +530,14 @@ for (unsigned i = 0; i < iClean.size(); ++i) {
 }
 
 //std::cout << iDirty.size() << std::endl;
-for (unsigned i = 0; i < iDirty.size(); ++i) {
-    invDist = distancesDirty[i] / (distancesDirty[i] + 1);
-    //std::cout << invDist << std::endl;
-
-    uTarget[0] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[0];
-    uTarget[1] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[1];
-    uTarget[2] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[2];
-}
+//for (unsigned i = 0; i < iDirty.size(); ++i) {
+//    invDist = distancesDirty[i] / (distancesDirty[i] + 1);
+//    //std::cout << invDist << std::endl;
+//
+//    uTarget[0] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[0];
+//    uTarget[1] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[1];
+//    uTarget[2] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[2];
+//}
 
 //std::cout << "PROCESS5" << std::endl;
 T invNmissing = 1. / nMissing;

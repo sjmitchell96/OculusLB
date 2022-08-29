@@ -723,8 +723,8 @@ int main( int argc, char* argv[] ) {
   const T Re = 3900.;       // Reynolds number
   const T Mach = 0.12;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physuC = 12; //Physical characteristic velocity
-  const T rho = 1.2;	//Density
+  const T physuC = 1.; //Physical characteristic velocity
+  const T rho = 1;	//Density
   const T physNu = physuC * physL / Re;//m2/s
 
   //Options for blade surface boundary condition

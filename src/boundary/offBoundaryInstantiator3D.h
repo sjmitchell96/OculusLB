@@ -645,7 +645,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
 
   //Update: Input is now Xb cells!
   if (blockGeometryStructure.isInside(iX,iY,iZ) && bulkIndicator(iX, iY, iZ)) {
-
+    
     T physR[3];
     blockGeometryStructure.getPhysR(physR,iX,iY,iZ);
     T voxelSize=blockGeometryStructure.getDeltaR();
