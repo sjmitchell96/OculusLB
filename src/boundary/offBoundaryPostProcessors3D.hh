@@ -370,17 +370,24 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
   //Sort boundary nodes based on adjacent fluid node properties
   for (unsigned i = 0; i < iMissing_.size(); ++i){
     Vector<int, 3> cf = descriptors::c<DESCRIPTOR>(iMissing_[i]);
-    std::vector<int> xFtemp = getNext(x + cf[0], y + cf[1], z + cf[2]);
+    //std::vector<int> xFtemp = getNext(x + cf[0], y + cf[1], z + cf[2]);
+    std::vector<int> xFtemp = {x + cf[0], y + cf[1], z + cf[2]};
 
     bool isClean = true;
-    for (int j = 0; j < DESCRIPTOR::q; ++j) {
+    /*for (int j = 0; j < DESCRIPTOR::q; ++j) {
       Vector<int, 3> cf2 = descriptors::c<DESCRIPTOR>(j);
-      std::vector<int> xFtemp2 = getNext(xFtemp[0] + cf2[0], xFtemp[1] + cf2[1], xFtemp[2] + cf2[2]);
+      //std::vector<int> xFtemp2 = getNext(xFtemp[0] + cf2[0], xFtemp[1] + cf2[1], xFtemp[2] + cf2[2]);
+      std::vector<int> xFtemp2 = {xFtemp[0] + cf2[0], xFtemp[1] + cf2[1], xFtemp[2] + cf2[2]};
       if (blockGeometryStructure.getMaterial(xFtemp2[0], xFtemp2[1], xFtemp2[2]) != 1) {
         isClean = false;
         break;
       }
+    }*/
+    
+    if (blockGeometryStructure.getMaterial(xFtemp[0], xFtemp[1], xFtemp[2]) != 1) {
+      isClean = false;
     }
+
     if (isClean) {
       iClean.push_back(iMissing_[i]);
       xFclean.push_back(xFtemp[0]);
