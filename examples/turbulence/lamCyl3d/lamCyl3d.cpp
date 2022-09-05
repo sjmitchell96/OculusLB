@@ -67,7 +67,7 @@ typedef double T;
 //#define WALE
 //#define Smagorinsky
 #define KBC
-#define sponge 
+//#define sponge 
 
 //Boundary condition choice
 //#define Bouzidi 
@@ -522,48 +522,50 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   //Define and initialise viscosity sponge zones
   //Sponge indicator
-  const T physChord = 1.00;
-  const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {71. * physChord - deltaX /2000, - deltaX / 2,
-    - 4. * deltaX};
-  const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
-    50. * physChord + deltaX,
-    8. * physChord + 8. * deltaX};
-  IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
-  //Orientation
-  const Vector<T,3> spongeOrientation = {1., 0., 0.};
-  //Min and max tau limits
-  const T tauSpongeBase = 1. / omega;
-  const T tauSpongeMax = 1.;
-  std::vector<int> spongeMaterials = {1,2,3,4,6};
+  #ifdef sponge
+    const T physChord = 1.00;
+    const T deltaX = converter.getPhysDeltaX();
+    const Vector<T,3> spongeOrigin = {71. * physChord - deltaX /2000, - deltaX / 2,
+      - 4. * deltaX};
+    const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
+      50. * physChord + deltaX,
+      8. * physChord + 8. * deltaX};
+    IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
+    //Orientation
+    const Vector<T,3> spongeOrientation = {1., 0., 0.};
+    //Min and max tau limits
+    const T tauSpongeBase = 1. / omega;
+    const T tauSpongeMax = 1.;
+    std::vector<int> spongeMaterials = {1,2,3,4,6};
 
-  sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
-  createViscositySponge3D(outletSponge);
+    sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
+    createViscositySponge3D(outletSponge);
+  
+    outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
+  /*
+    //Sponge indicator 2 - x-z 
+    const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
+      - 4 * deltaX};
+    const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
+      4. * physChord + deltaX / 1000,
+      8 * physChord + 8 * deltaX};
+    IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
+    //Orientation
+    const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
 
-/*
-  //Sponge indicator 2 - x-z 
-  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
-    4. * physChord + deltaX / 1000,
-    8 * physChord + 8 * deltaX};
-  IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
-  //Orientation
-  const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
+    //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
+    //createViscositySponge3D(outletSponge2);
 
-  //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
-  //createViscositySponge3D(outletSponge2);
+    //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+    //  tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-  //  tauSpongeBase, tauSpongeMax, spongeMaterials);
-
-  outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
+    outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
 */
-  sLattice.initialiseSponges();
+    sLattice.initialiseSponges();
+  #endif
 
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
