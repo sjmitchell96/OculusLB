@@ -70,23 +70,25 @@ typedef double T;
 #define sponge 
 
 //Boundary condition choice
-#define Bouzidi 
-//#define Grad
+//#define Bouzidi 
+#define Grad
 
 #ifdef WALE
 #define DESCRIPTOR WALED3Q19Descriptor
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
 #elif defined (KBC)
-#if defined (sponge)
+#ifdef Grad
+#ifdef sponge
+#define DESCRIPTOR D3Q27descriptorKBCGradSponge
+#else
+#define DESCRIPTOR D3Q27descriptorKBCGrad
+#endif
+#elif defined(sponge)
 #define DESCRIPTOR D3Q27descriptorKBCSponge
 #else
 #define DESCRIPTOR D3Q27descriptorKBC
 #endif
-#endif
-
-#ifdef Grad
-#define DESCRIPTOR D3Q27descriptorKBCGrad
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -443,10 +445,17 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
           omega, instances::getBulkMomenta<T,DESCRIPTOR>(), 0.1)));
   #elif defined(KBC)
     #if defined(Grad)
+      #if defined(sponge)
+        Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+        grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+          new KBCGradSpongeDynamics<T,DESCRIPTOR>(
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #else
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
             omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #endif
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
@@ -503,8 +512,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorCylinder,std::vector<int>{1,6} );
-    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorCylinder,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,6,indicatorCylinder,std::vector<int>{1,6} );
   #else
     //material=5,7 --> fullway bounceBack dynamics
     sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );

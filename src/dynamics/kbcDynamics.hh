@@ -112,7 +112,6 @@ void KBCGradDynamics<T, DESCRIPTOR>::collide(
 
   T uSqr = kbcLbH::kbcCollision(cell, rho, u, KBCdynamics<T,DESCRIPTOR>::getBeta());
 
-  //Possibly recompute velocity here (post-collision) for use in Grad BC
 
   statistics.incrementStats(rho, uSqr);
 }
@@ -156,19 +155,40 @@ void KBCSpongeDynamics<T, DESCRIPTOR>::collide(
   statistics.incrementStats(rho, uSqr);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////// GET KBC BULK MOMENTA //////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//==============================================================================//
+/////////////////////////// Class KBCGradSpongeDynamics ///////////////////////////////
+//==============================================================================//
 
-//namespace instances {
-//template<typename T, typename DESCRIPTOR>
-//KBCBulkMomenta<T, DESCRIPTOR>& getKBCBulkMomenta()
-//{
-//  static KBCBulkMomenta<T, DESCRIPTOR> kbcBulkMomentaSingleton;
-//  return kbcBulkMomentaSingleton;
-//} 
+template<typename T, typename DESCRIPTOR>
+KBCGradSpongeDynamics<T, DESCRIPTOR>::KBCGradSpongeDynamics(
+  T omega, Momenta<T, DESCRIPTOR>& momenta)
+  : KBCdynamics<T, DESCRIPTOR>(omega, momenta)
+{ }
 
-//}
+template<typename T, typename DESCRIPTOR>
+void KBCGradSpongeDynamics<T, DESCRIPTOR>::collide(
+  Cell<T, DESCRIPTOR>& cell, LatticeStatistics<T>& statistics)
+{
+
+  typedef kbcLbHelpers<T, DESCRIPTOR> kbcLbH;
+
+  //Compute rho, u
+  T rho, u[DESCRIPTOR::d];
+  this -> _momenta.computeRhoU(cell, rho, u);
+
+  //Store pre-collision velocities within velocity field
+  cell.template defineField<descriptors::VELOCITY>(u);
+
+  //COMPUTE EFFECTIVE RELAXATION (INCL SPONGE) AND PASS TO COLLISION 
+  T tauEff = 1. / KBCdynamics<T,DESCRIPTOR>::getOmega() + cell.template getField<descriptors::TAU_EFF>();
+
+  T betaEff = 0.5 * 1. / tauEff;
+
+  T uSqr = kbcLbH::kbcCollision(cell, rho, u, betaEff);
+
+  statistics.incrementStats(rho, uSqr);
+}
+
 
 } //namespace
 
