@@ -338,12 +338,9 @@ template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessor3D<T,DESCRIPTOR>::
 ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
                                 std::vector<T> distances_,
-                                std::vector<unsigned> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
+                                std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
   : x(x_), y(y_), z(z_), blockGeometryStructure(blockGeometryStructure_)
 {
-
-  //Option 
-  int mode =1;
 
   //Check bogus distances  
   #ifndef QUIET
@@ -355,7 +352,7 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
   #endif
  
   //Generate iNotMissing  
-  for (unsigned i = 0; i < DESCRIPTOR::q; i++) {
+  for (int i = 0; i < DESCRIPTOR::q; i++) {
     bool missing = false;
     for (unsigned j = 0; j < iMissing_.size(); ++j) {
       if (i == iMissing_[j]) {
@@ -370,32 +367,16 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
   //Sort boundary nodes based on adjacent fluid node properties
   for (unsigned i = 0; i < iMissing_.size(); ++i){
     Vector<int, 3> cf = descriptors::c<DESCRIPTOR>(iMissing_[i]);
-    //std::vector<int> xFtemp = getNext(x + cf[0], y + cf[1], z + cf[2]);
     std::vector<int> xFtemp = {x + cf[0], y + cf[1], z + cf[2]};
 
-    bool isClean = true;
-    /*for (int j = 0; j < DESCRIPTOR::q; ++j) {
-      Vector<int, 3> cf2 = descriptors::c<DESCRIPTOR>(j);
-      //std::vector<int> xFtemp2 = getNext(xFtemp[0] + cf2[0], xFtemp[1] + cf2[1], xFtemp[2] + cf2[2]);
-      std::vector<int> xFtemp2 = {xFtemp[0] + cf2[0], xFtemp[1] + cf2[1], xFtemp[2] + cf2[2]};
-      if (blockGeometryStructure.getMaterial(xFtemp2[0], xFtemp2[1], xFtemp2[2]) != 1) {
-        isClean = false;
-        break;
-      }
-    }*/
-    
-    if (blockGeometryStructure.getMaterial(xFtemp[0], xFtemp[1], xFtemp[2]) != 1) {
-      isClean = false;
-    }
-
-    if (isClean) {
+    if (blockGeometryStructure.getMaterial(xFtemp[0], xFtemp[1], xFtemp[2]) == 1) {
       iClean.push_back(iMissing_[i]);
       xFclean.push_back(xFtemp[0]);
       yFclean.push_back(xFtemp[1]);
       zFclean.push_back(xFtemp[2]);
       distancesClean.push_back(distances_[i]);
     }
-    else if (mode == 1) { //Include dirty nodes into bc
+    else { 
       iDirty.push_back(iMissing_[i]);
       xFdirty.push_back(xFtemp[0]);
       yFdirty.push_back(xFtemp[1]);
@@ -404,68 +385,41 @@ ZeroVelocityGradPostProcessor3D(int x_, int y_, int z_,
     }
   }
 
-  //Xb material
-  int xBmat = 6;
-
   //Determine stencil points for pressure tensor gradients
-  if ((blockGeometryStructure.getMaterial(x + 1, y, z) == 1) ||
-       (blockGeometryStructure.getMaterial(x + 1, y, z) == xBmat)) {
+  if (blockGeometryStructure.getMaterial(x + 1, y, z) == 1) {
     pStencilX[0] = x + 1;
     pStencilX[1] = x;
   }
-  else if ((blockGeometryStructure.getMaterial(x - 1, y, z) == 1) ||
-  (blockGeometryStructure.getMaterial(x - 1, y, z) == xBmat)) {
+  else if (blockGeometryStructure.getMaterial(x - 1, y, z) == 1) {
     pStencilX[0] = x;
     pStencilX[1] = x - 1;
   }
   else 
     std::cout << "GradBC Warning: No suitable stencil point in x" << std::endl;
-  if ((blockGeometryStructure.getMaterial(x, y + 1, z) == 1) ||
-     (blockGeometryStructure.getMaterial(x, y + 1, z) == xBmat)) {
+  if (blockGeometryStructure.getMaterial(x, y + 1, z) == 1) {
     pStencilY[0] = y + 1;
     pStencilY[1] = y;
   }
-  else if ((blockGeometryStructure.getMaterial(x, y - 1, z) == 1) ||
-           (blockGeometryStructure.getMaterial(x, y - 1, z) == xBmat)) {
+  else if (blockGeometryStructure.getMaterial(x, y - 1, z) == 1) {
     pStencilY[0] = y;
     pStencilY[1] = y - 1;
   }
   else 
     std::cout << "GradBC Warning: No suitable stencil point in y" << std::endl;
-  if ((blockGeometryStructure.getMaterial(x, y, z + 1) == 1) ||
-      (blockGeometryStructure.getMaterial(x, y, z + 1) == xBmat)) {
+  if (blockGeometryStructure.getMaterial(x, y, z + 1) == 1) {
     pStencilZ[0] = z + 1;
     pStencilZ[1] = z;
   }
-  else if ((blockGeometryStructure.getMaterial(x, y, z - 1) == 1) ||
-           (blockGeometryStructure.getMaterial(x, y, z - 1) == xBmat)) {
+  else if (blockGeometryStructure.getMaterial(x, y, z - 1) == 1) {
     pStencilZ[0] = z;
     pStencilZ[1] = z - 1;
   }
   else 
     std::cout << "GradBC Warning: No suitable stencil point in z" << std::endl;
 
-  //Set nMissing based on mode
-  if (mode == 1)
-    nMissing = iClean.size();
-  else
-    nMissing = iClean.size() + iDirty.size();
-}
-
-template<typename T, typename DESCRIPTOR>
-std::vector<int> ZeroVelocityGradPostProcessor3D<T, DESCRIPTOR>::
-getNext(int x, int y, int z)
-{
-      bool isPeriodic = true;
-      if (isPeriodic && (x < 0 || x >= blockGeometryStructure.getNx() ||
-          y < 0 || y >= blockGeometryStructure.getNy() ||
-          z < 0 || z >= blockGeometryStructure.getNz())) {
-        x = (x + blockGeometryStructure.getNx()) % blockGeometryStructure.getNx(); 
-        y = (y + blockGeometryStructure.getNy()) % blockGeometryStructure.getNy(); 
-        z = (z + blockGeometryStructure.getNz()) % blockGeometryStructure.getNz();
-      }
-
-      return std::vector<int> {x, y, z};
+  nMissing = iClean.size();
+  if (nMissing == 0)
+    std::cout << "Warning: No suitable velocity interpolation nodes" << std::endl;
 }
 
 template<typename T, typename DESCRIPTOR>
@@ -490,8 +444,6 @@ process(BlockLattice3D<T,DESCRIPTOR>& blockLattice)
 {
 using namespace olb::util::tensorIndices3D;
 
-//std::cout << "PROCESS1" << std::endl;
-
 //Compute target density and velocity
 T rhoTarget = 1.; //Initialised as sum of weights
 T uTarget[3] = {0.,0.,0.};
@@ -500,15 +452,12 @@ T ui[3];
 T invCs2 = descriptors::invCs2<T, DESCRIPTOR>();
 T cs2 = 1. / invCs2;
 
-//std::cout << cs2 << std::endl;
-
 //Target density
 for (unsigned i = 0; i < iClean.size(); ++i) {
   rhoTarget += blockLattice.get(x - descriptors::c<DESCRIPTOR>(iClean[i],0),
     y - descriptors::c<DESCRIPTOR>(iClean[i],1), 
     z - descriptors::c<DESCRIPTOR>(iClean[i],2))
     [util::opposite<DESCRIPTOR>(iClean[i])];
-    //std::cout << "CLEAN " << iClean[i] << std::endl;
 }
 
 for (unsigned i = 0; i < iDirty.size(); ++i) {
@@ -516,44 +465,26 @@ for (unsigned i = 0; i < iDirty.size(); ++i) {
     y - descriptors::c<DESCRIPTOR>(iDirty[i],1), 
     z - descriptors::c<DESCRIPTOR>(iDirty[i],2))
     [util::opposite<DESCRIPTOR>(iDirty[i])];
-    //std::cout << "DIRTY " << iDirty[i] << std::endl;
 }
 
-//std::cout << "PROCESS2" << std::endl;
 for (unsigned i = 0; i < iNotMissing.size(); ++i) { 
-  //std::cout << "NOT " << iNotMissing[i] << std::endl;
   rhoTarget += blockLattice.get(x, y, z)[iNotMissing[i]];
 }
 
-//Target velocity - only option 1 works for now...
+//Target velocity 
 for (unsigned i = 0; i < iClean.size(); ++i) {
-    //std::cout << xFclean[i] << " " << yFclean[i] << " " << zFclean[i] << std::endl;
     invDist = distancesClean[i] / (distancesClean[i] + 1);
     blockLattice.get(xFclean[i], yFclean[i], zFclean[i]).computeU(ui);
-    //std::cout << ui[0] << " " << ui[1] << " " << ui[2] << std::endl;
     uTarget[0] += invDist * ui[0];
     uTarget[1] += invDist * ui[1];
     uTarget[2] += invDist * ui[2];
 }
 
-//std::cout << iDirty.size() << std::endl;
-//for (unsigned i = 0; i < iDirty.size(); ++i) {
-//    invDist = distancesDirty[i] / (distancesDirty[i] + 1);
-//    //std::cout << invDist << std::endl;
-//
-//    uTarget[0] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[0];
-//    uTarget[1] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[1];
-//    uTarget[2] += invDist * blockLattice.get(xFdirty[i], yFdirty[i], zFdirty[i]).template getField<descriptors::VELOCITY>()[2];
-//}
-
-//std::cout << "PROCESS5" << std::endl;
 T invNmissing = 1. / nMissing;
 uTarget[0] = uTarget[0] * invNmissing;
 uTarget[1] = uTarget[1] * invNmissing;
 uTarget[2] = uTarget[2] * invNmissing;
 
-//std::cout << uTarget[0] << " " << uTarget[1] << " " << uTarget[2] << std::endl;
-//std::cout << "PROCESS6" << std::endl;
 //Compute pressure tensor components - use previous time step velocities 
 T pi[util::TensorVal<DESCRIPTOR>::n];
 T cs2Beta = cs2 / blockLattice.getDynamics(x, y, z)->getOmega();   
@@ -589,10 +520,6 @@ pi[yz] = uTarget[1] * uTarget[2] - cs2Beta * (dy_uz + dz_uy);
   for (unsigned i = 0; i < iClean.size(); ++i) {
     Vector<int, 3> ci = descriptors::c<DESCRIPTOR>(iClean[i]);
 
-  //  std::cout << "grad " << pi[xx] << " " << pi[yy] << " " << pi[zz] << " " << pi[xy] << " " << pi[xz] << " " << pi[yz] << " "
-  //<< uTarget[0] << " " << uTarget[1] << " " << uTarget[2] << " " << ci[0] << " " << ci[1] << " " << ci[2] << " " <<
-  //rhoTarget << " " << cs2 << " " << invCs2 <<  " " << descriptors::t<T,DESCRIPTOR>(iMissing[i]) << std::endl;
-
     blockLattice.get(x, y, z)[iClean[i]] = descriptors::t<T,DESCRIPTOR>(iClean[i]) * ( rhoTarget * 
       (1. + invCs2 * (uTarget[0] * ci[0] + uTarget[1] * ci[1] + uTarget[2] * ci[2]) +
       0.5 * invCs2 * invCs2 * 
@@ -607,10 +534,6 @@ pi[yz] = uTarget[1] * uTarget[2] - cs2Beta * (dy_uz + dz_uy);
 for (unsigned i = 0; i < iDirty.size(); ++i) {
     Vector<int, 3> ci = descriptors::c<DESCRIPTOR>(iDirty[i]);
 
-  //  std::cout << "grad " << pi[xx] << " " << pi[yy] << " " << pi[zz] << " " << pi[xy] << " " << pi[xz] << " " << pi[yz] << " "
-  //<< uTarget[0] << " " << uTarget[1] << " " << uTarget[2] << " " << ci[0] << " " << ci[1] << " " << ci[2] << " " <<
-  //rhoTarget << " " << cs2 << " " << invCs2 <<  " " << descriptors::t<T,DESCRIPTOR>(iMissing[i]) << std::endl;
-
     blockLattice.get(x, y, z)[iDirty[i]] = descriptors::t<T,DESCRIPTOR>(iDirty[i]) * ( rhoTarget * 
       (1. + invCs2 * (uTarget[0] * ci[0] + uTarget[1] * ci[1] + uTarget[2] * ci[2]) +
       0.5 * invCs2 * invCs2 * 
@@ -621,7 +544,6 @@ for (unsigned i = 0; i < iDirty.size(); ++i) {
        pi[xz] * ci[0] * ci[2] + 
        pi[yz] * ci[1] * ci[2]))) - 1.); //(fi - ti) needs to be stored
   }
-
 }
 
 //////// SM - QuadraticBouzidiBoundaryPostProcessorGenerator ////////////////////////////////
@@ -749,7 +671,7 @@ VelocityBounceBackPostProcessorGenerator3D<T,DESCRIPTOR>::clone() const
 template<typename T, typename DESCRIPTOR>
 ZeroVelocityGradPostProcessorGenerator3D<T,DESCRIPTOR>::
 ZeroVelocityGradPostProcessorGenerator3D(int x_, int y_, int z_, std::vector<T> distances_,
-  std::vector<unsigned> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
+  std::vector<int> iMissing_, BlockGeometryStructure3D<T>& blockGeometryStructure_)
   : PostProcessorGenerator3D<T,DESCRIPTOR>(x_, x_, y_, y_, z_, z_),
     x(x_), y(y_), z(z_), distances(distances_), iMissing(iMissing_), blockGeometryStructure(blockGeometryStructure_) 
 { }

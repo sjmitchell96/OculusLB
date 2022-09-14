@@ -224,6 +224,7 @@ void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addSecondOrderZeroVelocityBou
                           bulkMaterials);
 }
 
+//SM - GRAD boundary
 template<typename T, typename DESCRIPTOR>
 void sOffLatticeBoundaryCondition3D<T,DESCRIPTOR>::addZeroVelocityGradBoundary(
   FunctorPtr<SuperIndicatorF3D<T>>&& boundaryIndicator,

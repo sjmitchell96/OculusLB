@@ -55,7 +55,7 @@ public:
   void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addThreePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances,
-                                         std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
+                                         std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure) override;
   void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
   void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) override;
 
@@ -77,8 +77,8 @@ public:
   void addSecondOrderZeroVelocityBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
   //void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int x, int y, int z, int iPop, T dist, std::vector<T> distances, int nLinks, std::vector<int> iLinks, std::vector<int> iBulk) override;
-  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing);
-  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
+  void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<int> iMissing);
+  //void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator);
   void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ, IndicatorF3D<T>& geometryIndicator, std::vector<int> bulkMaterials = std::vector<int>(1,1));
   void addZeroVelocityGradBoundary(BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator) override;
 
@@ -201,7 +201,7 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addThre
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addMultiPointZeroVelocityBoundary(
-  int x, int y, int z, std::vector<T> distances, std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
+  int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
 {
   PostProcessorGenerator3D<T, DESCRIPTOR>* postProcessor =
     BoundaryManager::getMultiPointZeroVelocityBoundaryProcessor
@@ -574,144 +574,230 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addSeco
 //SM - Grad boundary
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
-  BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<unsigned> iMissing)
+  BlockGeometryStructure3D<T>& blockGeometryStructure, int xB, int yB, int zB, std::vector<T> distances, std::vector<int> iMissing)
 {
 
-//RESTRUCTURE NEXT
-//CHECK ALL ADJACENT MISSING NODES, TO FIND IF CLEAN OR DIRTY
-//IF CLEAN, ADD TO ICLEAN ETC. AS USUAL
-//IF DIRTY, ADD TO IDIRTY ETC. AS USUAL
-
-//WILL NEED SECOND LOOP OVER ALL XB (HIGHER FUNCTION), TO ADD CONNECTIVITY
-//SINCE CAN'T BE GUARANTEED THAT ADJACENT PP EXISTS YET!
-//SO WRITE FUNCTION TO FILL PP CONNECTIVITY VECTORS (WITH CONDITIONAL STATEMENT, SO ONLY IF OPT2 CHOSEN)
-
-//ALSO DON'T FORGET TO IMPROVE PI STENCIL! (GRAD PAPER 2)
-
- //OLD
-
- //int xs[3];
- int iPop;
- bool isPeriodic = true;
- //bool isFluid;
- Vector<int, 3> cf;
-   
-    //if xb is ghost
-    if (isPeriodic && (
-      xB == 0 || xB == blockGeometryStructure.getNx() - 1 ||
-      yB == 0 || yB == blockGeometryStructure.getNy() - 1 ||
-      zB == 0 || zB == blockGeometryStructure.getNz() - 1 )) {
-
-        for (unsigned i = 0; i < iMissing.size(); ++i) {
-          iPop = iMissing[i];
-          addOnePointZeroVelocityBoundary(xB, yB, zB, util::opposite<DESCRIPTOR>(iPop), distances[i]);
-        } 
-      }
-    else {
-      //Check if grad post processor already exists for this boundary node
-      //std::vector<PostProcessor3D<T, DESCRIPTOR>*>& postProcessors = this->getPostProcessors();
-      //bool counted = false;
-      //unsigned pSize = postProcessors.size();
-      //std::vector<int> pos = {0,0,0}; 
-      //for(unsigned i = 0; i < pSize; ++i) {
-      //  pos = postProcessors[pSize -1 -i]->getPosition();
-      //  if (pos[0] == xB && pos[1] == yB && pos[2] == zB) {
-      //      counted = true;
-      //      break;
-      //  }
-      //}
-      //if (!counted) {
-
-        //clean / dirty sort here!
-
+//ALSO DON'T FORGET TO IMPROVE PI STENCIL!? (GRAD PAPER 2)
         addMultiPointZeroVelocityBoundary(xB, yB, zB, distances, iMissing, blockGeometryStructure);
-        //std::cout << "ADDED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
-      }
-      //else {
-        //std::cout << "IGNORED " << xB << " " << yB << " " << zB << " " << blockGeometryStructure.getMaterial(xB, yB, zB) << std::endl;
-      //}
-    //}
 } 
-
+/*
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
   IndicatorF3D<T>& geometryIndicator, BlockIndicatorF3D<T>& bulkIndicator)
-{  
+{
+  //Hash table of processed xB
+  std::set<std::vector<int>> procXb; 
 
+  //Loop over xS links
+  for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+    const Vector<int,3> ci = descriptors::c<DESCRIPTOR>(iPop);
+    const int iXb = iX + ci[0]; 
+    const int iYb = iY + ci[1];
+    const int iZb = iZ + ci[2];
 
-  //std::cout << blockGeometryStructure.getMaterial(iX, iY, iZ) << std::endl;
-  //std::cout << bulkIndicator(iX, iY, iZ) << std::endl;
+    std::cout << "xs" << std::endl;
 
-  //Update: Input is now Xb cells!
-  if (blockGeometryStructure.isInside(iX,iY,iZ) && bulkIndicator(iX, iY, iZ)) {
-    
-    T physR[3];
-    blockGeometryStructure.getPhysR(physR,iX,iY,iZ);
-    T voxelSize=blockGeometryStructure.getDeltaR();
-    Vector<T,3> physC(physR);
-    std::vector<T> distances;
-    std::vector<unsigned> iMissing;
-
-    for (int jPop = 1; jPop < DESCRIPTOR::q; ++jPop) {
-      const Vector<int,3> cs = descriptors::c<DESCRIPTOR>(jPop);
-      const int iXs = iX + cs[0]; //Solid node
-      const int iYs = iY + cs[1];
-      const int iZs = iZ + cs[2]; 
-      T dist = -1;
-
-      if (blockGeometryStructure.isInside(iXs,iYs,iZs) && !bulkIndicator(iXs, iYs, iZs)) {
+    // If  xB
+    if (blockGeometryStructure.isInside(iXb,iYb,iZb) && bulkIndicator(iXb,iYb,iZb)) {
+      bool unProc = false;
+      //Search for xB coords in set
+      //Set unProc to true if not found
+      std::cout << "isXb" << std::endl;
+      unProc = !procXb.count(std::vector<int>{iXb,iYb,iZb});              
+      if(unProc) {
         
-        Vector<T,3> direction(voxelSize*cs[0],voxelSize*cs[1],voxelSize*cs[2]);
-        T cPhysNorm = voxelSize*sqrt(cs[0]*cs[0]+cs[1]*cs[1]+cs[2]*cs[2]);
+        std::cout << unProc << std::endl;
+        //Add to table of processed xBs
+        procXb.insert(std::vector<int>{iXb,iYb,iZb});    
 
-        if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob())) {
-          clout << "Distance not found initially" << std::endl;
-          T epsX = voxelSize*cs[0]*this->_epsFraction;
-          T epsY = voxelSize*cs[1]*this->_epsFraction;
-          T epsZ = voxelSize*cs[2]*this->_epsFraction;
+        std::cout << "inserted" << std::endl;
 
-          Vector<T,3> physC2(physC);
-          physC2[0] -= epsX;
-          physC2[1] -= epsY;
-          physC2[2] -= epsZ;
-          Vector<T,3> direction2(direction);
-          direction2[0] += 2.*epsX;
-          direction2[1] += 2.*epsY;
-          direction2[2] += 2.*epsZ;
-                    
-          if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
-            clout << "ERROR: no boundary found at (" << iX << "," << iY << "," << iZ <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << jPop
-                  << std::endl;
-          }
-          T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
-          if (distNew < 0.5) {
-            dist = 0;
-            clout << "DISTANCE WARNING" << std::endl;
-          }
-          else {
-            dist = 0.5 * cPhysNorm;
-            clout << "WARNING: distance at (" << iX << "," << iY << "," << iZ <<") ~ ("
-                  << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
-                  << "in direction " << jPop << ": "
-                  << distNew
-                  << " rounded to "
-                  << dist/cPhysNorm
-                  << std::endl;
-          }
-        }
-        distances.push_back(dist/cPhysNorm);
-        iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
-      } // bulkMaterials if j
-    } //jPop loop
-      addZeroVelocityGradBoundary(blockGeometryStructure, iX, iY, iZ, distances, iMissing);
-  }   // bulkMaterials if i
-  else
-    std::cout << "WARNING - cell is not bulk " << iX << " " << iY << " " << iZ << std::endl;
+        std::vector<T> distances;
+        std::vector<int> iMissing;
+
+        //Loop over xB links
+        for (int jPop = 1; jPop < DESCRIPTOR::q ; ++jPop) {
+          const Vector<int,3> cj = descriptors::c<DESCRIPTOR>(jPop);
+          const int iXs = iXb + cj[0]; 
+          const int iYs = iYb + cj[1];
+          const int iZs = iZb + cj[2];
+          T physR[3];
+          blockGeometryStructure.getPhysR(physR,iXb,iYb,iZb);
+          T voxelSize=blockGeometryStructure.getDeltaR();
+          Vector<T,3> physC(physR);
+          T dist = -1;
+          Vector<T,3> direction(voxelSize*cj[0],voxelSize*cj[1],voxelSize*cj[2]);
+          T cPhysNorm = voxelSize*sqrt(cj[0]*cj[0]+cj[1]*cj[1]+cj[2]*cj[2]);
+
+          //If xS
+          if (blockGeometryStructure.isInside(iXs,iYs,iZs) && !bulkIndicator(iXs,iYs,iZs)) {
+ 
+            //Get distance Xb -> xS
+            if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
+              T epsX = voxelSize*cj[0]*this->_epsFraction;
+              T epsY = voxelSize*cj[1]*this->_epsFraction;
+              T epsZ = voxelSize*cj[2]*this->_epsFraction;
+
+              Vector<T,3> physC2(physC);
+              physC2[0] += epsX;
+              physC2[1] += epsY;
+              physC2[2] += epsZ;
+              Vector<T,3> direction2(direction);
+              direction2[0] -= 2.*epsX;
+              direction2[1] -= 2.*epsY;
+              direction2[2] -= 2.*epsZ;
+
+              if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+                clout << "ERROR: no boundary found at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
+                      << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                      << "in direction " << util::opposite<DESCRIPTOR >(jPop)
+                      << std::endl;
+              }
+              T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+              if (distNew < 0.5) {
+                dist = 0;
+              }
+              else {
+                dist = 0.5 * cPhysNorm;
+                clout << "WARNING: distance at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
+                      << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                      << "in direction " << util::opposite<DESCRIPTOR >(jPop) << ": "
+                      << distNew
+                      << " rounded to "
+                      << dist/cPhysNorm
+                      << std::endl;
+              }
+            }
+            distances.push_back(dist/cPhysNorm);
+            iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
+          }// if Xs
+        }// for jpop
+      //Pass xB, and distances, missing
+      std::cout << "pass" << std::endl;
+      addZeroVelocityGradBoundary(blockGeometryStructure, iXb, iYb, iZb, distances, iMissing);
+      } // if unproc
+    } // if xB
+  } // for iPop 
+}
+*/
+
+//for superLattice 
+template<typename T, typename DESCRIPTOR, class BoundaryManager>
+void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
+  BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator)
+{
+
+  //Get blockgeometryatructure 
+  BlockGeometryStructure3D<T>& blockGeometryStructure = bulkIndicator.getBlockGeometryStructure();
+
+  //combine this with next (two up) function, so that xB hash table method works!
+  if ( !boundaryIndicator.isEmpty() ) {
+    const Vector<int,3> min = boundaryIndicator.getMin();
+    const Vector<int,3> max = boundaryIndicator.getMax();
+
+    //Hash table of processed xB
+    std::set<std::vector<int>> procXb;
+
+    for (int iX = min[0]; iX <= max[0]; ++iX) {
+      for (int iY = min[1]; iY <= max[1]; ++iY) {
+        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
+          if (boundaryIndicator(iX,iY,iZ)) {
+            //addZeroVelocityGradBoundary(boundaryIndicator.getBlockGeometryStructure(), iX, iY, iZ,
+             //                       geometryIndicator, bulkIndicator);
+ 
+            //Loop over xS links
+            for (int iPop = 1; iPop < DESCRIPTOR::q ; ++iPop) {
+              const Vector<int,3> ci = descriptors::c<DESCRIPTOR>(iPop);
+              const int iXb = iX + ci[0]; 
+              const int iYb = iY + ci[1];
+              const int iZb = iZ + ci[2];
+
+              // If  xB
+              if (blockGeometryStructure.isInside(iXb,iYb,iZb) && bulkIndicator(iXb,iYb,iZb)) {
+                bool unProc = false;
+                //Search for xB coords in set
+                //Set unProc to true if not found
+                unProc = !procXb.count(std::vector<int>{iXb,iYb,iZb});              
+                if(unProc) {
+        
+                  //Add to table of processed xBs
+                  procXb.insert(std::vector<int>{iXb,iYb,iZb});    
+
+                  std::vector<T> distances;
+                  std::vector<int> iMissing;
+
+                  //Loop over xB links
+                  for (int jPop = 1; jPop < DESCRIPTOR::q ; ++jPop) {
+                    const Vector<int,3> cj = descriptors::c<DESCRIPTOR>(jPop);
+                    const int iXs = iXb + cj[0]; 
+                    const int iYs = iYb + cj[1];
+                    const int iZs = iZb + cj[2];
+                    T physR[3];
+                    blockGeometryStructure.getPhysR(physR,iXb,iYb,iZb);
+                    T voxelSize=blockGeometryStructure.getDeltaR();
+                    Vector<T,3> physC(physR);
+                    T dist = -1;
+                    Vector<T,3> direction(voxelSize*cj[0],voxelSize*cj[1],voxelSize*cj[2]);
+                    T cPhysNorm = voxelSize*sqrt(cj[0]*cj[0]+cj[1]*cj[1]+cj[2]*cj[2]);
+
+                    //If xS
+                    if (blockGeometryStructure.isInside(iXs,iYs,iZs) && !bulkIndicator(iXs,iYs,iZs)) {
+ 
+                      //Get distance Xb -> xS
+                      if (!geometryIndicator.distance(dist,physC,direction,blockGeometryStructure.getIcGlob() ) ) {
+                        T epsX = voxelSize*cj[0]*this->_epsFraction;
+                        T epsY = voxelSize*cj[1]*this->_epsFraction;
+                        T epsZ = voxelSize*cj[2]*this->_epsFraction;
+
+                        Vector<T,3> physC2(physC);
+                        physC2[0] += epsX;
+                        physC2[1] += epsY;
+                        physC2[2] += epsZ;
+                        Vector<T,3> direction2(direction);
+                        direction2[0] -= 2.*epsX;
+                        direction2[1] -= 2.*epsY;
+                        direction2[2] -= 2.*epsZ;
+
+                        if ( !geometryIndicator.distance(dist,physC2,direction2,blockGeometryStructure.getIcGlob())) {
+                          clout << "ERROR: no boundary found at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
+                          << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                          << "in direction " << util::opposite<DESCRIPTOR >(jPop)
+                          << std::endl;
+                        }
+                        T distNew = (dist - sqrt(epsX*epsX+epsY*epsY+epsZ*epsZ))/cPhysNorm;
+                        if (distNew < 0.5) {
+                          dist = 0;
+                        }
+                        else {
+                          dist = 0.5 * cPhysNorm;
+                          clout << "WARNING: distance at (" << iXb << "," << iYb << "," << iZb <<") ~ ("
+                                << physR[0] << "," << physR[1] << "," << physR[2] <<"), "
+                                << "in direction " << util::opposite<DESCRIPTOR >(jPop) << ": "
+                                << distNew
+                                << " rounded to "
+                                << dist/cPhysNorm
+                                << std::endl;
+                        }
+                      }
+                      distances.push_back(dist/cPhysNorm);
+                      iMissing.push_back(util::opposite<DESCRIPTOR >(jPop));
+                    }// if Xs
+                  }// for jpop
+                  //Pass xB, and distances, missing
+                  addZeroVelocityGradBoundary(blockGeometryStructure, iXb, iYb, iZb, distances, iMissing);
+                } // if unproc
+              } // if xB
+            } // for iPop 
+
+          } //if xs
+        } //for iz
+      } //for iy
+    } //for ix
+  } //if boundary not empty
 }
 
+//Block override
 template<typename T, typename DESCRIPTOR, class BoundaryManager>
 void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
   BlockGeometryStructure3D<T>& blockGeometryStructure, int iX, int iY, int iZ,
@@ -721,27 +807,6 @@ void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZero
   addZeroVelocityGradBoundary(blockGeometryStructure, iX, iY, iZ,
                           geometryIndicator,
                           bulkIndicator);
-}
-
-template<typename T, typename DESCRIPTOR, class BoundaryManager>
-void OffBoundaryConditionInstantiator3D<T, DESCRIPTOR, BoundaryManager>::addZeroVelocityGradBoundary(
-  BlockIndicatorF3D<T>& boundaryIndicator, BlockIndicatorF3D<T>& bulkIndicator, IndicatorF3D<T>& geometryIndicator)
-{
-  if ( !boundaryIndicator.isEmpty() ) {
-    const Vector<int,3> min = boundaryIndicator.getMin();
-    const Vector<int,3> max = boundaryIndicator.getMax();
-
-    for (int iX = min[0]; iX <= max[0]; ++iX) {
-      for (int iY = min[1]; iY <= max[1]; ++iY) {
-        for (int iZ = min[2]; iZ <= max[2]; ++iZ) {
-          if (boundaryIndicator(iX,iY,iZ)) {
-            addZeroVelocityGradBoundary(boundaryIndicator.getBlockGeometryStructure(), iX, iY, iZ,
-                                    geometryIndicator, bulkIndicator);
-          }
-        }
-      }
-    }
-  }
 }
 
 template<typename T, typename DESCRIPTOR, class BoundaryManager>

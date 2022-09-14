@@ -54,7 +54,7 @@ public:
   getTwoPointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances, //SM - redundant but needed to compile
-    std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
+    std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
   static Dynamics<T,DESCRIPTOR>*
   getOffDynamics(T location[DESCRIPTOR::d]);
   static Dynamics<T,DESCRIPTOR>*
@@ -112,7 +112,7 @@ template<typename T, typename DESCRIPTOR, class MixinDynamics>
 PostProcessorGenerator3D<T,DESCRIPTOR>*
 BouzidiBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances,
-  std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
+  std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
 {
   return new ZeroVelocityGradPostProcessorGenerator3D
          <T, DESCRIPTOR>(x, y, z, distances, iMissing, blockGeometryStructure);
@@ -146,7 +146,7 @@ public:
   getThreePointZeroVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances,
-    std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
+    std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
   getOnePointVelocityBoundaryProcessor(int x, int y, int z, int iPop, T dist);
   static PostProcessorGenerator3D<T,DESCRIPTOR>*
@@ -189,7 +189,7 @@ template<typename T, typename DESCRIPTOR, class MixinDynamics>
 PostProcessorGenerator3D<T,DESCRIPTOR>*
 GradBoundaryManager3D<T,DESCRIPTOR,MixinDynamics>::
 getMultiPointZeroVelocityBoundaryProcessor(int x, int y, int z, std::vector<T> distances,
-  std::vector<unsigned> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
+  std::vector<int> iMissing, BlockGeometryStructure3D<T>& blockGeometryStructure)
 {
   return new ZeroVelocityGradPostProcessorGenerator3D
          <T, DESCRIPTOR>(x, y, z, distances, iMissing, blockGeometryStructure);

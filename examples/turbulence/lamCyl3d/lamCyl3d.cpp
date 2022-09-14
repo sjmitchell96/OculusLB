@@ -67,7 +67,7 @@ typedef double T;
 //#define WALE
 //#define Smagorinsky
 #define KBC
-//#define sponge 
+#define sponge 
 
 //Boundary condition choice
 //#define Bouzidi 
@@ -175,11 +175,6 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
 
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
-
-  #ifdef Grad
-  IndicatorLayer3D<T> cylinderLayer(indicatorCylinder, deltaX);
-  sGeometry.rename(1,6,cylinderLayer);
-  #endif
 
   sGeometry.checkForErrors();
   sGeometry.print();
@@ -512,7 +507,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,6,indicatorCylinder,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorCylinder,std::vector<int>{1} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorCylinder,std::vector<int>{1} );
   #else
     //material=5,7 --> fullway bounceBack dynamics
     sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
@@ -722,7 +718,7 @@ int main( int argc, char* argv[] ) {
 
   //Domain and simulation parameters
   const int N = 2; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 0;	//Number of refinement levels (current max = 4)
+  const int nRefinement = 2;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 75.*diameter; //Length of domain in physical units (m)
   const T lDomainPhysy = 50.0*diameter;
   const T lDomainPhysz = span; //

@@ -55,7 +55,7 @@ public:
   virtual void addTwoPointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addThreePointZeroVelocityBoundary(int x, int y, int z, int iPop, T dist) =0; //SM
   virtual void addMultiPointZeroVelocityBoundary(int x, int y, int z, std::vector<T> distances, //SM
-                                                 std::vector<unsigned> iMissing,
+                                                 std::vector<int> iMissing,
                                                  BlockGeometryStructure3D<T>& blockGeometryStructure) =0;
   virtual void addOnePointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
   virtual void addTwoPointVelocityBoundary(int x, int y, int z, int iPop, T dist) =0;
@@ -68,7 +68,7 @@ public:
   virtual void addSecondOrderZeroVelocityBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
                                        int x, int y, int z, int iPop, T dist) =0;
   virtual void addZeroVelocityGradBoundary(BlockGeometryStructure3D<T>& blockGeometryStructure,
-                                       int x, int y, int z, std::vector<T> distances, std::vector<unsigned> iMissing) =0;
+                                       int x, int y, int z, std::vector<T> distances, std::vector<int> iMissing) =0;
   virtual void defineU(int iX, int iY, int iZ, int iPop, const T u[DESCRIPTOR::d]) =0;
 
   virtual void addOffDynamics(BlockIndicatorF3D<T>& indicator) =0;
