@@ -275,6 +275,16 @@ public:
   void iniEquilibrium(SuperGeometry3D<T>& sGeometry, int material,
                       AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u);
 
+  // SM - Initialise by first-order (regularised) approximation 
+  void iniFirstOrderApprox(SuperGeometry3D<T>& sGeometry, 
+                      FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+                      AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+                      std::list<int>& bulkMaterials);
+  /// Initialize by equilibrium on a domain with a particular material number
+  void iniFirstOrderApprox(SuperGeometry3D<T>& sGeometry, int material,
+                      AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+                      std::list<int>& bulkMaterials);
+
   /// Apply collision step to a rectangular domain
   void collide(T x0, T x1, T y0, T y1, T z0, T z1);
   /// Apply collision step to the whole domain

@@ -27,6 +27,7 @@
 #ifndef BLOCK_LATTICE_STRUCTURE_3D_H
 #define BLOCK_LATTICE_STRUCTURE_3D_H
 
+#include <list>
 #include <vector>
 #include "cell.h"
 #include "blockData3D.h"
@@ -146,6 +147,15 @@ public:
   /// Initialize by equilibrium on a domain with a particular material number
   virtual void iniEquilibrium(BlockGeometryStructure3D<T>& blockGeometry, int material,
                               AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u);
+
+  virtual void iniFirstOrderApprox(BlockGeometryStructure3D<T>& blockGeometry,
+                              BlockIndicatorF3D<T>& indicator,
+                              AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+                              std::list<int> bulkMaterials);
+  /// Initialize by first order approx on a domain with a particular material number
+  virtual void iniFirstOrderApprox(BlockGeometryStructure3D<T>& blockGeometry, int material,
+                              AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+                              std::list<int> bulkMaterials);
 
   // pure virtual member functions
   virtual Cell<T,DESCRIPTOR>& get(int iX, int iY, int iZ) =0;

@@ -246,6 +246,101 @@ void BlockLatticeStructure3D<T,DESCRIPTOR>::iniEquilibrium(
   iniEquilibrium(indicator, rho, u);
 }
 
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::iniFirstOrderApprox(
+  BlockGeometryStructure3D<T>& blockGeometry,
+  BlockIndicatorF3D<T>& indicator,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+  std::list<int> bulkMaterials)
+{
+  using namespace olb::util::tensorIndices3D;
+
+  T physR[3] = { };
+  int latticeR[3] = {};
+  T uTmp[3] = { };
+  T rhoTmp = T();
+  T velGradTmp[9] = {}; 
+  std::list<int> matTemp = {1};
+
+  //Create block velocity gradient functor
+  BlockLatticeVelocity3D<T, DESCRIPTOR> vel(*this);
+  BlockFiniteDifference3D<T> finDiff(blockGeometry, vel, matTemp);
+  BlockLatticeVelocityGradientFD3D<T, DESCRIPTOR> velGrad(*this, finDiff);
+ 
+  //First loop to define velocity
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          u(uTmp, physR);
+          rho(&rhoTmp, physR);
+          get(iX, iY, iZ).iniEquilibrium(rhoTmp, uTmp);
+        }
+      }
+    }
+  }
+ 
+  //Second loop to compute velocity gradient and redefine populations
+  for (int iX = 0; iX < getNx(); ++iX) {
+    for (int iY = 0; iY < getNy(); ++iY) {
+      for (int iZ = 0; iZ < getNz(); ++iZ) {
+        if (indicator(iX, iY, iZ)) {
+          indicator.getBlockGeometryStructure().getPhysR(physR, iX, iY, iZ);
+          u(uTmp, physR);
+          rho(&rhoTmp, physR);
+
+          //Compute pi
+          latticeR[0] = iX;
+          latticeR[1] = iY;
+          latticeR[2] = iZ;
+
+          velGrad(velGradTmp, latticeR);  
+
+          T dx_ux = velGradTmp[0];
+          T dy_ux = velGradTmp[1];
+          T dz_ux = velGradTmp[2];
+          T dx_uy = velGradTmp[3];
+          T dy_uy = velGradTmp[4];
+          T dz_uy = velGradTmp[5];
+          T dx_uz = velGradTmp[6];
+          T dy_uz = velGradTmp[7];
+          T dz_uz = velGradTmp[8];
+          T omega = get(iX, iY, iZ).getDynamics()->getOmega();
+          T sToPi = - rhoTmp / descriptors::invCs2<T,DESCRIPTOR>() / omega;
+          T piNeq[util::TensorVal<DESCRIPTOR >::n];
+          piNeq[xx] = (T)2 * dx_ux * sToPi;
+          piNeq[yy] = (T)2 * dy_uy * sToPi;
+          piNeq[zz] = (T)2 * dz_uz * sToPi;
+          piNeq[xy] = (dx_uy + dy_ux) * sToPi;
+          piNeq[xz] = (dx_uz + dz_ux) * sToPi;
+          piNeq[yz] = (dy_uz + dz_uy) * sToPi;
+
+          // Computation of the particle distribution functions
+          // according to the regularized formula
+          T uSqr = util::normSqr<T,DESCRIPTOR::d>(uTmp);
+          for (int iPop = 0; iPop < DESCRIPTOR::q; ++iPop)
+            get(iX, iY, iZ)[iPop] = get(iX, iY, iZ).getDynamics() -> computeEquilibrium(iPop,rhoTmp,uTmp,uSqr) +
+                         firstOrderLbHelpers<T,DESCRIPTOR>::fromPiToFneq(iPop, piNeq);
+
+          //std::cout << piNeq[0] << " " << piNeq[1] << " " << piNeq[2] << " " << piNeq[3] << " " << piNeq[4] << " " << piNeq[5] << std::endl;
+        }
+      }
+    }
+  }
+}
+
+
+template<typename T, typename DESCRIPTOR>
+void BlockLatticeStructure3D<T,DESCRIPTOR>::iniFirstOrderApprox(
+  BlockGeometryStructure3D<T>& blockGeometry, int material,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+  std::list<int> bulkMaterials)
+{
+  BlockIndicatorMaterial3D<T> indicator(blockGeometry, material);
+  iniFirstOrderApprox(blockGeometry, indicator, rho, u, bulkMaterials);
+}
+
 ////////// FREE FUNCTIONS //////////
 
 template<typename T, typename DESCRIPTOR>

@@ -601,6 +601,7 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
 	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
+	    SuperLatticeYplus3D<T,DESCRIPTOR>& sYplus,
 	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP) {
 
   OstreamManager clout( std::cout,"getVTK" );
@@ -617,6 +618,7 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtmWriter.addFunctor(velocity);
   vtmWriter.addFunctor(pressure);
   vtmWriter.addFunctor(wssp);
+  vtmWriter.addFunctor(sYplus);
   vtmWriter.addFunctor(sAveragedWSSP);
 
   if (iT==0) {
@@ -797,12 +799,13 @@ int main( int argc, char* argv[] ) {
 	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
+	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> sYplus;
 	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
     T,DESCRIPTOR>>> wssp;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
 
   //Helper lambdas for initialisation and management of data
-  auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP,
+  auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP, auto& sYplus,
 	   auto& wssp, auto& sAveragedWSSP,
 	   IndicatorCylinder3D<T>& indicatorCylinder) {
 			auto& sGeometry = grid.getSuperGeometry();
@@ -813,6 +816,8 @@ int main( int argc, char* argv[] ) {
         type::value_type sVelType; 
       typedef typename std::remove_reference<decltype(sP)>::
         type::value_type sPtype;
+      typedef typename std::remove_reference<decltype(sYplus)>::
+        type::value_type sYplusType;
       typedef typename std::remove_reference<decltype(wssp)>::
         type::value_type wsspType;
       typedef typename std::remove_reference<decltype(sAveragedWSSP)>::
@@ -822,6 +827,8 @@ int main( int argc, char* argv[] ) {
         sLattice, converter)));
 			sP.push_back(sPtype(new typename sPtype::element_type(
         sLattice, converter)));
+      sYplus.push_back(sYplusType(new typename sYplusType::element_type(
+        sLattice,converter, sGeometry,indicatorCylinder,7)));
 			wssp.push_back(wsspType(new typename wsspType::element_type(
         sLattice,converter, sGeometry,7,indicatorCylinder)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
@@ -845,11 +852,12 @@ int main( int argc, char* argv[] ) {
 	};
  
   auto writeTaVTK = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
-	  auto& wsspVector,
+	  auto& wsspVector, auto& sYplusVector,
 		auto& sAveragedWSSPVector, int& i_grid){
 			auto& wssp= *wsspVector[i_grid];
+			auto& sYplus= *sYplusVector[i_grid];
 			auto& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
-			getVTK(grid, id, iT, wssp,
+			getVTK(grid, id, iT, wssp, sYplus,
         sAveragedWSSP);
 			i_grid++;
       id = "cylinder3d_"+std::to_string(i_grid);
@@ -868,7 +876,7 @@ int main( int argc, char* argv[] ) {
   int i_grid = 0;
 
 	//Pass functor vectors and create new averaged functors for each grid 
-  coarseGrid.forEachGrid(initialiseVTK, sVel, sP,
+  coarseGrid.forEachGrid(initialiseVTK, sVel, sP, sYplus,
     wssp, sAveragedWSSP, cylinder);
 
 	// === 4th Step: Main Loop with Timer ===
@@ -904,7 +912,7 @@ int main( int argc, char* argv[] ) {
     if ( iT % vtkIter == 0 ) {
 			i_grid = 0;	
       coarseGrid.forEachGrid(writeTaVTK,"cylinder3d_"+std::to_string(i_grid),
-        iT, wssp, sAveragedWSSP, i_grid);
+        iT, wssp, sYplus, sAveragedWSSP, i_grid);
 		}
 
 		// Save checkpoint

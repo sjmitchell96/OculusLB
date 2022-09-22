@@ -207,7 +207,8 @@ template<typename T>
 std::vector<int> BlockGeometryStatistics3D<T>::getType(int iX, int iY, int iZ, bool anyNormal)
 {
 
-  update();
+  //SM - disable geometry stats update here - unnecessary and big cost bottleneck
+  //update();
   std::vector<int> discreteNormal(4, 0);
   std::vector<int> discreteNormal2(4, 0);
   std::vector<int> nullVector(4, 0);

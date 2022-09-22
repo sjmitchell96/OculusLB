@@ -414,6 +414,42 @@ void SuperLattice3D<T,DESCRIPTOR>::iniEquilibrium(
   iniEquilibrium(sGeometry.getMaterialIndicator(material), rho, u);
 }
 
+//SM - initialise first order approx
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::iniFirstOrderApprox(
+  SuperGeometry3D<T>& sGeometry,
+  FunctorPtr<SuperIndicatorF3D<T>>&& indicator,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+  std::list<int>& bulkMaterials)
+{
+
+  //CREATE superLatticeVelocityGradientFD3D here
+
+  //SuperLatticeVelocityGradientFD3D<T, DESCRIPTOR> sVelGrad(sGeometry, *this, bulkMaterials);
+
+  for (int iC = 0; iC < this->_loadBalancer.size(); ++iC) {
+    _extendedBlockLattices[iC].iniFirstOrderApprox(
+      sGeometry.getExtendedBlockGeometry(iC),
+      indicator->getExtendedBlockIndicatorF(iC), rho, u,
+      bulkMaterials //create new block lattices here instead!
+       );
+
+  //Or create blcokLatticeVelocity Gradient within bL.iniFirstOrderApprox()
+
+  }
+  this->_communicationNeeded = true;
+}
+
+template<typename T, typename DESCRIPTOR>
+void SuperLattice3D<T,DESCRIPTOR>::iniFirstOrderApprox(
+  SuperGeometry3D<T>& sGeometry, int material,
+  AnalyticalF3D<T,T>& rho, AnalyticalF3D<T,T>& u,
+  std::list<int>& bulkMaterials)
+{
+  iniFirstOrderApprox(sGeometry, sGeometry.getMaterialIndicator(material), rho, u, bulkMaterials);
+}
+
+
 template<typename T, typename DESCRIPTOR>
 void SuperLattice3D<T, DESCRIPTOR>::collide()
 {

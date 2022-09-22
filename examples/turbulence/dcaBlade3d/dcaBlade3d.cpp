@@ -70,23 +70,25 @@ typedef double T;
 #define sponge 
 
 //Boundary condition choice
-#define Bouzidi 
-//#define Grad
+//#define Bouzidi 
+#define Grad
 
 #ifdef WALE
 #define DESCRIPTOR WALED3Q19Descriptor
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
 #elif defined (KBC)
-#if defined (sponge)
+#ifdef Grad
+#ifdef sponge
+#define DESCRIPTOR D3Q27descriptorKBCGradSponge
+#else
+#define DESCRIPTOR D3Q27descriptorKBCGrad
+#endif
+#elif defined(sponge)
 #define DESCRIPTOR D3Q27descriptorKBCSponge
 #else
 #define DESCRIPTOR D3Q27descriptorKBC
 #endif
-#endif
-
-#ifdef Grad
-#define DESCRIPTOR D3Q27descriptorKBCGrad
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -217,20 +219,20 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
 
-  const Vector<T,2> hn6 = {0.01 * chord, 0.01 * chord}; 
+  const Vector<T,2> hn6 = {0.01 * chord, 0.01 * chord}; //unused in baseline!
   const Vector<T,2> hp6 = {0.01 * chord, 0.01 * chord}; // '' positive
 
-  const Vector<T,2> hn5 = {0.03 * chord, 0.03 * chord}; 
-  const Vector<T,2> hp5 = {0.03 * chord, 0.03 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.025 * chord, 0.025 * chord}; 
+  const Vector<T,2> hp5 = {0.025 * chord, 0.025 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.07 * chord, 0.07 * chord};
-  const Vector<T,2> hp4 = {0.6 * chord, 0.07 * chord};
+  const Vector<T,2> hn4 = {0.075 * chord, 0.075 * chord};
+  const Vector<T,2> hp4 = {0.075 * chord, 0.075 * chord};
 
-  const Vector<T,2> hn3 = {0.15 * chord, 0.15 * chord};
-  const Vector<T,2> hp3 = {1.2 * chord, 0.15 * chord};
+  const Vector<T,2> hn3 = {0.175 * chord, 0.175 * chord};
+  const Vector<T,2> hp3 = {1.5 * chord, 0.175 * chord};
 
-  const Vector<T,2> hn2 = {0.31 * chord, 0.31 * chord}; //Outermost
-  const Vector<T,2> hp2 = {4.8 * chord, 0.31 * chord};
+  const Vector<T,2> hn2 = {0.375 * chord, 0.375 * chord}; //Outermost
+  const Vector<T,2> hp2 = {6.0 * chord, 0.375 * chord};
 
   const Vector<T,2> hn1 = {2.0 * chord, 2.0 * chord}; 
   const Vector<T,2> hp1 = {16.0 * chord, 2.0 * chord}; // '' positive
@@ -551,7 +553,6 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 		    IndicatorBladeDca3D<T>& indicatorBlade,
 		    const bool& bouzidiOn,
         const T& thetaBC) {
-  std::cout << "PREPAREL" << std::endl;
   OstreamManager clout(std::cout, "prepareLattice");
   clout << "Prepare lattice ..." << std::endl;
 
@@ -573,20 +574,28 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
           omega, instances::getBulkMomenta<T,DESCRIPTOR>(), 0.1)));
   #elif defined(KBC)
     #if defined(Grad)
+      #if defined(sponge)
+        Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+        grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+          new KBCGradSpongeDynamics<T,DESCRIPTOR>(
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #else
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #endif
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCSpongeDynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+          //new KBCdynamics<T,DESCRIPTOR>(
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #else
      Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCdynamics<T,DESCRIPTOR>(
-            omega, instances::getBulkMomenta<T,DESCRIPTOR>())));
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
     #endif
   #endif
 
@@ -635,51 +644,53 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade,std::vector<int>{1,6} );
-    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorBlade,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorBlade,std::vector<int>{1} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorBlade,std::vector<int>{1} );
   #else
     //material=5,7 --> fullway bounceBack dynamics
     sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry, 7, &instances::getBounceBack<T, DESCRIPTOR>() );
   #endif
 
-  //Define and initialise viscosity sponge zones
-  //Sponge indicator 1 - y-z outlet
-  const T physChord = 0.051;
-  const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {34. * physChord - deltaX /2000, - deltaX / 2,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend = {2. * physChord + deltaX/1000,
-    16 * physChord + deltaX,
-    0.2 * physChord + 8 * deltaX};
-  IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
-  //Orientation
-  const Vector<T,3> spongeOrientation = {1., 0., 0.};
-  //Min and max tau limits
-  const T tauSpongeBase = 1. / omega;
-  const T tauSpongeMax = 1.;
-  std::vector<int> spongeMaterials = {1,2,3,4,6};
+  #ifdef sponge
+    //Define and initialise viscosity sponge zones
+    //Sponge indicator 1 - y-z outlet
+    const T physChord = 0.051;
+    const T deltaX = converter.getPhysDeltaX();
+    const Vector<T,3> spongeOrigin = {34. * physChord - deltaX /2000, - deltaX / 2,
+      - 4 * deltaX};
+    const Vector<T,3> spongeExtend = {2. * physChord + deltaX/1000,
+      16 * physChord + deltaX,
+      0.2 * physChord + 8 * deltaX};
+    IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
+    //Orientation
+    const Vector<T,3> spongeOrientation = {1., 0., 0.};
+    //Min and max tau limits
+    const T tauSpongeBase = 1. / omega;
+    const T tauSpongeMax = 1.;
+    std::vector<int> spongeMaterials = {1,2,3,4,6};
 
-  sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
-  createViscositySponge3D(outletSponge);
+    sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
+    createViscositySponge3D(outletSponge);
+ 
+    outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
+    //Sponge indicator 2 - x-z 
+    const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 14. * physChord - deltaX / 2000,
+      - 4 * deltaX};
+    const Vector<T,3> spongeExtend2 = {36. * physChord + deltaX,
+      2. * physChord + deltaX / 1000,
+      0.2 * physChord + 8 * deltaX};
+    IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
+    //Orientation
+    const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
 
-  //Sponge indicator 2 - x-z 
-  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 14. * physChord - deltaX / 2000,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend2 = {36. * physChord + deltaX,
-    2. * physChord + deltaX / 1000,
-    0.2 * physChord + 8 * deltaX};
-  IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
-  //Orientation
-  const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
+    outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
-
-  sLattice.initialiseSponges();
+    sLattice.initialiseSponges();
+  #endif
 
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
@@ -722,7 +733,8 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
-	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp//,
+	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
+      SuperLatticeYplus3D<T,DESCRIPTOR>& sYplus
 	    /*SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP*/) {
 
   OstreamManager clout( std::cout,"getVTK" );
@@ -740,6 +752,7 @@ void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
   vtmWriter.addFunctor(velocity);
   vtmWriter.addFunctor(pressure);
   vtmWriter.addFunctor(wssp);
+  vtmWriter.addFunctor(sYplus);
   //vtmWriter.addFunctor(sAveragedWSSP);
 
   if (iT==0) {
@@ -802,8 +815,8 @@ int main( int argc, char* argv[] ) {
   const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 50; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 6;	//Number of refinement levels (current max = 5)
+  const int N = 14; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 1;	//Number of refinement levels (current max = 5)
   const T lDomainPhysx = 36.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 16.*chord;
   const T lDomainPhysz = 0.2*chord; //
@@ -825,7 +838,7 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter	       = 500; 
+  const int vtkIter	       = 100; 
   const int statIter       = 100; 
   const int checkIter 	   = 500;
   const int bladeForceIter = 1;
@@ -891,12 +904,14 @@ int main( int argc, char* argv[] ) {
 	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
+	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> sYplus;
 	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
     T,DESCRIPTOR>>> wssp;
 	//std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
 
+
   //Helper lambdas for initialisation and management of data
-  auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP,
+  auto initialiseVTK = [](Grid3D<T,DESCRIPTOR>& grid, auto& sVel, auto& sP, auto& sYplus,
 	  auto& wssp,/* auto& sAveragedWSSP,*/
 	  IndicatorBladeDca3D<T>& indicatorBlade) {
 			auto& sGeometry = grid.getSuperGeometry();
@@ -907,6 +922,8 @@ int main( int argc, char* argv[] ) {
         type::value_type sVelType; 
       typedef typename std::remove_reference<decltype(sP)>::
         type::value_type sPtype;
+      typedef typename std::remove_reference<decltype(sYplus)>::
+        type::value_type sYplusType;
       typedef typename std::remove_reference<decltype(wssp)>::
         type::value_type wsspType;
       //typedef typename std::remove_reference<decltype(sAveragedWSSP)>::
@@ -916,6 +933,8 @@ int main( int argc, char* argv[] ) {
         sLattice, converter)));
 			sP.push_back(sPtype(new typename sPtype::element_type(
         sLattice, converter)));
+      sYplus.push_back(sYplusType(new typename sYplusType::element_type(
+        sLattice, converter, sGeometry, indicatorBlade, 7)));
 			wssp.push_back(wsspType(new typename wsspType::element_type(
         sLattice,converter, sGeometry,7,indicatorBlade)));
 			//sAveragedWSSP.push_back(taType(new typename taType::element_type(
@@ -939,10 +958,11 @@ int main( int argc, char* argv[] ) {
 	//};
  
   auto writeTaVTK = [](Grid3D<T,DESCRIPTOR>& grid, std::string&& id, int& iT,
-	  auto& wsspVector,/* auto& sAveragedWSSPVector,*/ int& i_grid){
+	  auto& wsspVector, auto& sYplusVector,/* auto& sAveragedWSSPVector,*/ int& i_grid){
 			auto& wssp= *wsspVector[i_grid];
+			auto& sYplus= *sYplusVector[i_grid];
 			//auto& sAveragedWSSP = *sAveragedWSSPVector[i_grid];
-			getVTK(grid, id, iT, wssp/*,
+			getVTK(grid, id, iT, wssp, sYplus/*,
         sAveragedWSSP*/);
 			i_grid++;
       id = "dcaBlade3d_"+std::to_string(i_grid);
@@ -961,7 +981,7 @@ int main( int argc, char* argv[] ) {
   int i_grid = 0;
 
 	//Pass functor vectors and create new averaged functors for each grid 
-  coarseGrid.forEachGrid(initialiseVTK, sVel, sP,
+  coarseGrid.forEachGrid(initialiseVTK, sVel, sP, sYplus,
     wssp/*, sAveragedWSSP*/, blade);
 
 	// === 4th Step: Main Loop with Timer ===
@@ -998,7 +1018,7 @@ int main( int argc, char* argv[] ) {
     if ( iT % vtkIter == 0 ) {
 			i_grid = 0;	
       coarseGrid.forEachGrid(writeTaVTK,"dcaBlade3d_"+std::to_string(i_grid),
-        iT, wssp/*, sAveragedWSSP*/, i_grid);
+        iT, wssp, sYplus/*, sAveragedWSSP*/, i_grid);
 		}
 
 		// Save checkpoint
