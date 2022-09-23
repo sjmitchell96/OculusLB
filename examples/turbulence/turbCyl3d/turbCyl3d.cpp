@@ -70,23 +70,25 @@ typedef double T;
 #define sponge 
 
 //Boundary condition choice
-#define Bouzidi 
-//#define Grad
+//#define Bouzidi 
+#define Grad
 
 #ifdef WALE
 #define DESCRIPTOR WALED3Q19Descriptor
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
 #elif defined (KBC)
-#if defined (sponge)
+#ifdef Grad
+#ifdef sponge
+#define DESCRIPTOR D3Q27descriptorKBCGradSponge
+#else
+#define DESCRIPTOR D3Q27descriptorKBCGrad
+#endif
+#elif defined(sponge)
 #define DESCRIPTOR D3Q27descriptorKBCSponge
 #else
 #define DESCRIPTOR D3Q27descriptorKBC
 #endif
-#endif
-
-#ifdef Grad
-#define DESCRIPTOR D3Q27descriptorKBCGrad
 #endif
 
 // Stores data from stl file in geometry in form of material numbers
@@ -174,11 +176,6 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
 
-  #ifdef Grad
-  IndicatorLayer3D<T> cylinderLayer(indicatorCylinder, deltaX);
-  sGeometry.rename(1,6,cylinderLayer);
-  #endif
-
   sGeometry.checkForErrors();
   sGeometry.print();
   clout << "Prepare Geometry ... OK" << std::endl;
@@ -203,17 +200,17 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {0.1 * diameter, 0.1 * diameter}; 
-  const Vector<T,2> hp4 = {0.5 * diameter, 0.1 * diameter}; // '' positive
+  const Vector<T,2> hn4 = {0.2 * diameter, 0.5 * diameter}; 
+  const Vector<T,2> hp4 = {2.0 * diameter, 0.5 * diameter}; // '' positive
 
-  const Vector<T,2> hn3 = {0.3 * diameter, 0.3 * diameter};
-  const Vector<T,2> hp3 = {6.0 * diameter, 0.3 * diameter};
+  const Vector<T,2> hn3 = {0.6 * diameter, 1.5 * diameter};
+  const Vector<T,2> hp3 = {6.0 * diameter, 1.5 * diameter};
 
-  const Vector<T,2> hn2 = {0.7 * diameter, 0.7 * diameter};
-  const Vector<T,2> hp2 = {12.0 * diameter, 0.7 * diameter};
+  const Vector<T,2> hn2 = {1.4 * diameter, 3.5 * diameter};
+  const Vector<T,2> hp2 = {14.0 * diameter, 3.5 * diameter};
 
-  const Vector<T,2> hn1 = {1.5 * diameter, 1.5 * diameter}; //Outermost
-  const Vector<T,2> hp1 = {16.0 * diameter, 1.5 * diameter};
+  const Vector<T,2> hn1 = {3.0 * diameter, 7.5 * diameter}; //Outermost
+  const Vector<T,2> hp1 = {22.0 * diameter, 7.5 * diameter};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -443,10 +440,17 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
           omega, instances::getBulkMomenta<T,DESCRIPTOR>(), 0.1)));
   #elif defined(KBC)
     #if defined(Grad)
+      #if defined(sponge)
+        Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+        grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+          new KBCGradSpongeDynamics<T,DESCRIPTOR>(
+            omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #else
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
           new KBCGradDynamics<T,DESCRIPTOR>(
             omega, instances::getKBCBulkMomenta<T,DESCRIPTOR>())));
+      #endif
     #elif defined(sponge)
       Dynamics<T,DESCRIPTOR>& bulkDynamics = 
         grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
@@ -503,8 +507,8 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #elif defined(Grad)
     sLattice.defineDynamics( sGeometry,5,&instances::getNoDynamics<T,DESCRIPTOR>() );
     sLattice.defineDynamics( sGeometry,7,&instances::getNoDynamics<T,DESCRIPTOR>() );
-    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorCylinder,std::vector<int>{1,6} );
-    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorCylinder,std::vector<int>{1,6} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,5,indicatorCylinder,std::vector<int>{1} );
+    offBc.addZeroVelocityGradBoundary( sGeometry,7,indicatorCylinder,std::vector<int>{1} );
   #else
     //material=5,7 --> fullway bounceBack dynamics
     sLattice.defineDynamics( sGeometry, 5, &instances::getBounceBack<T, DESCRIPTOR>() );
@@ -514,48 +518,51 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   //Define and initialise viscosity sponge zones
   //Sponge indicator
-  const T physChord = 1.00;
-  const T deltaX = converter.getPhysDeltaX();
-  const Vector<T,3> spongeOrigin = {18. * physChord - deltaX /2000, - deltaX / 2,
-    - 4. * deltaX};
-  const Vector<T,3> spongeExtend = {2. * physChord + deltaX / 1000,
-    10. * physChord + deltaX,
-    3. * physChord + 8. * deltaX};
-  IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
-  //Orientation
-  const Vector<T,3> spongeOrientation = {1., 0., 0.};
-  //Min and max tau limits
-  const T tauSpongeBase = 1. / omega;
-  const T tauSpongeMax = 1.;
-  std::vector<int> spongeMaterials = {1,2,3,4,6};
 
-  sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
-  createViscositySponge3D(outletSponge);
+  #ifdef sponge
+    const T physChord = 1.00;
+    const T deltaX = converter.getPhysDeltaX();
+    const Vector<T,3> spongeOrigin = {18. * physChord - deltaX /2000, - deltaX / 2,
+      - 4. * deltaX};
+    const Vector<T,3> spongeExtend = {2. * physChord + deltaX / 1000,
+      10. * physChord + deltaX,
+      3. * physChord + 8. * deltaX};
+    IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
+    //Orientation
+    const Vector<T,3> spongeOrientation = {1., 0., 0.};
+    //Min and max tau limits
+    const T tauSpongeBase = 1. / omega;
+    const T tauSpongeMax = 1.;
+    std::vector<int> spongeMaterials = {1,2,3,4,6};
 
-  outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
+    sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
+    createViscositySponge3D(outletSponge);
 
-/*
-  //Sponge indicator 2 - x-z 
-  const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
-    - 4 * deltaX};
-  const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
-    4. * physChord + deltaX / 1000,
-    8 * physChord + 8 * deltaX};
-  IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
-  //Orientation
-  const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
+    outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
 
-  //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
-  //createViscositySponge3D(outletSponge2);
+  /*
+    //Sponge indicator 2 - x-z 
+    const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 12. * physChord - deltaX / 2000,
+      - 4 * deltaX};
+    const Vector<T,3> spongeExtend2 = {32. * physChord + deltaX,
+      4. * physChord + deltaX / 1000,
+      8 * physChord + 8 * deltaX};
+    IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
+    //Orientation
+    const Vector<T,3> spongeOrientation2 = {0., 1., 0.};
 
-  //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-  //  tauSpongeBase, tauSpongeMax, spongeMaterials);
+    //sViscositySponge3D<T,DESCRIPTOR>& outletSponge2 =  grid.getViscositySponge();
+    //createViscositySponge3D(outletSponge2);
 
-  outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
-    tauSpongeBase, tauSpongeMax, spongeMaterials);
-*/
-  sLattice.initialiseSponges();
+    //outletSponge2.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+    //  tauSpongeBase, tauSpongeMax, spongeMaterials);
+
+    outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
+      tauSpongeBase, tauSpongeMax, spongeMaterials);
+  */
+    sLattice.initialiseSponges();
+  #endif
 
   // Initial conditions - characteristic physical velocity and density for inflow
   AnalyticalConst3D<T,T> rhoF {1.};
@@ -703,9 +710,9 @@ int main( int argc, char* argv[] ) {
 
   //Cylinder parameters
   const T diameter = 1.00;
-  const T span = 3. * diameter;
-  const Vector<T,3> cylinderOrigin = {5.0 * diameter + 0.00045,
-                                      5.0 * diameter + 0.00045,
+  const T span = 4. * diameter;
+  const Vector<T,3> cylinderOrigin = {10.0 * diameter + 0.00045,
+                                      15.0 * diameter + 0.00045,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
@@ -713,20 +720,20 @@ int main( int argc, char* argv[] ) {
 
 
   //Domain and simulation parameters
-  const int N = 22; //14        // resolution of the model (coarse cells per chord)
+  const int N = 5; //14        // resolution of the model (coarse cells per chord)
   const int nRefinement = 4;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 20.*diameter; //Length of domain in physical units (m)
-  const T lDomainPhysy = 10.*diameter;
+  const T lDomainPhysx = 60.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 30.*diameter;
   const T lDomainPhysz = span; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = diameter; //Physical reference length (m)
 
   //Flow conditions
   const T Re = 3900.;       // Reynolds number
-  const T Mach = 0.12;
+  const T Mach = 0.0585;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
   const T physuC = 1.; //Physical characteristic velocity
-  const T rho = 1;	//Density
+  const T rho = 1.;	//Density
   const T physNu = physuC * physL / Re;//m2/s
 
   //Options for blade surface boundary condition
@@ -734,7 +741,7 @@ int main( int argc, char* argv[] ) {
 
   //Time-loop options
   const int vtkIter   	   = 500; //Every 10% of max physical time
-  const int statIter  	   = 10;
+  const int statIter  	   = 100;
   const int checkIter 	   = 500;
   const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;

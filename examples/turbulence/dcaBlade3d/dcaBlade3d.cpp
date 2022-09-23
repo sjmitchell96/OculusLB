@@ -189,11 +189,6 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
 
-  #ifdef Grad
-  IndicatorLayer3D<T> bladeLayer(indicatorBlade, deltaX);
-  sGeometry.rename(1,6,bladeLayer);
-  #endif
-
   sGeometry.checkForErrors();
   sGeometry.print();
   clout << "Prepare Geometry ... OK" << std::endl;
@@ -838,8 +833,8 @@ int main( int argc, char* argv[] ) {
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter	       = 100; 
-  const int statIter       = 100; 
+  const int vtkIter	       = 10; 
+  const int statIter       = 10; 
   const int checkIter 	   = 500;
   const int bladeForceIter = 1;
   const int timeAvgIter    = 500;
