@@ -214,20 +214,20 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
 
-  const Vector<T,2> hn6 = {0.01 * chord, 0.01 * chord}; //unused in baseline!
-  const Vector<T,2> hp6 = {0.01 * chord, 0.01 * chord}; // '' positive
+  const Vector<T,2> hn6 = {0.0125 * chord, 0.0125 * chord}; //unused in baseline!
+  const Vector<T,2> hp6 = {0.0125 * chord, 0.0125 * chord}; // '' positive
 
-  const Vector<T,2> hn5 = {0.025 * chord, 0.025 * chord}; 
-  const Vector<T,2> hp5 = {0.025 * chord, 0.025 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.0375 * chord, 0.0375 * chord}; 
+  const Vector<T,2> hp5 = {0.0375 * chord, 0.0375 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.075 * chord, 0.075 * chord};
-  const Vector<T,2> hp4 = {0.075 * chord, 0.075 * chord};
+  const Vector<T,2> hn4 = {0.0875 * chord, 0.0875 * chord};
+  const Vector<T,2> hp4 = {0.0875 * chord, 0.0875 * chord};
 
-  const Vector<T,2> hn3 = {0.175 * chord, 0.175 * chord};
-  const Vector<T,2> hp3 = {1.5 * chord, 0.175 * chord};
+  const Vector<T,2> hn3 = {0.1875 * chord, 0.1875 * chord};
+  const Vector<T,2> hp3 = {1.5 * chord, 0.1875 * chord};
 
-  const Vector<T,2> hn2 = {0.375 * chord, 0.375 * chord}; //Outermost
-  const Vector<T,2> hp2 = {6.0 * chord, 0.375 * chord};
+  const Vector<T,2> hn2 = {0.3875 * chord, 0.3875 * chord}; //Outermost
+  const Vector<T,2> hp2 = {6.0 * chord, 0.3875 * chord};
 
   const Vector<T,2> hn1 = {2.0 * chord, 2.0 * chord}; 
   const Vector<T,2> hp1 = {16.0 * chord, 2.0 * chord}; // '' positive
@@ -782,7 +782,7 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
 
   SuperLatticePhysDragBlade3D<T,DESCRIPTOR> drag(sLattice, superGeometry,
 		                                 std::vector<int>{5,7},
-						 converter,0.5*span*chord); //physical span is half geometric!
+						 converter,(span - 4. * chord)*chord); //physical span is half geometric!
   T bladeForce[3];
   int input1[0];
   drag(bladeForce,input1);
@@ -807,7 +807,7 @@ int main( int argc, char* argv[] ) {
   const T xp = 0.02538; //Intersect point
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
   const T thetaBC = 10.00; //Inlet flow angle
-  const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
+  const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 2.0 * chord}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
   const int N = 14; //14        // resolution of the model (coarse cells per chord)
@@ -865,7 +865,7 @@ int main( int argc, char* argv[] ) {
   IndicatorCuboid3D<T> coarseDomain(extend, origin);
 
   // Indicator for blade
-  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, 2. * span, r1, r2, xp,
+  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, 4. * chord + span, r1, r2, xp,
     theta);
 
   // Construct a background coarse grid

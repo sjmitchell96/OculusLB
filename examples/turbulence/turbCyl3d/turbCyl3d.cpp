@@ -253,11 +253,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
     coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendY,
 				 innerExtendXZ);
 
-    Vector<T,3> refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
-	                                              2. * coarseDeltaX,
+    Vector<T,3> refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX,
+	                                              1.9 * coarseDeltaX,
 	                                              - 2. * coarseDeltaX};
-    Vector<T,3> refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-	                                              4. * coarseDeltaX,
+    Vector<T,3> refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+	                                              3.8 * coarseDeltaX,
 	                                              - 4. * coarseDeltaX};
     IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
     coarseGrid.getSuperGeometry().reset(refined);
@@ -300,9 +300,9 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 				 innerExtendXZ);
 
       refinedOrigin = origin + 
-        Vector<T,3> {2. * coarseDeltaX, 1.9 * coarseDeltaX, - 2. * coarseDeltaX};
+        Vector<T,3> {1.9 * coarseDeltaX, 1.9 * coarseDeltaX, - 2. * coarseDeltaX};
       refinedExtend = extend - 
-        Vector<T,3> {4. * coarseDeltaX, 3.9 * coarseDeltaX, - 4. * coarseDeltaX};
+        Vector<T,3> {3.8 * coarseDeltaX, 3.8 * coarseDeltaX, - 4. * coarseDeltaX};
       IndicatorCuboid3D<T> refined2(refinedExtend, refinedOrigin);
       fineGrid.getSuperGeometry().reset(refined2);
 
@@ -347,11 +347,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 		            	    innerOrigin + innerExtendY,
           				    innerExtendXZ);
 
-       	refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX, 
-		                              2. * coarseDeltaX,
+       	refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX, 
+		                              1.9 * coarseDeltaX,
 					      - 2. * coarseDeltaX};
-	      refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-	                                      4. * coarseDeltaX,
+	      refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+	                                      3.8 * coarseDeltaX,
 					      - 4. * coarseDeltaX};
 	      IndicatorCuboid3D<T> refined3(refinedExtend, refinedOrigin);
 	      fineGrid2.getSuperGeometry().reset(refined3);
@@ -400,11 +400,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 			              innerOrigin + innerExtendY,
 				      innerExtendXZ);
 
-      	  refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
-		                                2. * coarseDeltaX,
+      	  refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX,
+		                                1.9 * coarseDeltaX,
 					       	- 2. * coarseDeltaX};
-	        refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-		                                4. * coarseDeltaX,
+	        refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+		                                3.8 * coarseDeltaX,
 			                      	- 4. * coarseDeltaX};
 	        IndicatorCuboid3D<T> refined4(refinedExtend, refinedOrigin);
 	        fineGrid3.getSuperGeometry().reset(refined4);
@@ -522,11 +522,11 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   #ifdef sponge
     const T physChord = 1.00;
     const T deltaX = converter.getPhysDeltaX();
-    const Vector<T,3> spongeOrigin = {18. * physChord - deltaX /2000, - deltaX / 2,
+    const Vector<T,3> spongeOrigin = {56. * physChord - deltaX /2000, - deltaX / 2,
       - 4. * deltaX};
-    const Vector<T,3> spongeExtend = {2. * physChord + deltaX / 1000,
-      10. * physChord + deltaX,
-      3. * physChord + 8. * deltaX};
+    const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
+      30. * physChord + deltaX,
+      4. * physChord + 8. * deltaX};
     IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
     //Orientation
     const Vector<T,3> spongeOrientation = {1., 0., 0.};
@@ -721,7 +721,7 @@ int main( int argc, char* argv[] ) {
 
   //Domain and simulation parameters
   const int N = 5; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+  const int nRefinement = 2;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 60.*diameter; //Length of domain in physical units (m)
   const T lDomainPhysy = 30.*diameter;
   const T lDomainPhysz = span; //
