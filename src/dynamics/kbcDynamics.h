@@ -55,8 +55,6 @@ public:
   /// Set local relaxation parameter
   void setOmega(T omega) override;
 private:
-  //Some methods here for computing other collision parameters?
-
   T _omega; ///Relaxation parameter
   T _beta; //Relaxation parameter in EMRT form
 };
