@@ -454,6 +454,36 @@ bool SuperLatticePhysVelocity3D<T, DESCRIPTOR>::operator()(T output[], const int
 }
 
 template<typename T, typename DESCRIPTOR>
+SuperLatticePhysVelocityMagnitude3D<T, DESCRIPTOR>::SuperLatticePhysVelocityMagnitude3D(
+  SuperLattice3D<T, DESCRIPTOR>& sLattice, const UnitConverter<T,DESCRIPTOR>& converter, bool print)
+  : SuperLatticePhysF3D<T, DESCRIPTOR>(sLattice, converter, 1), _print(print)
+{
+  this->getName() = "physVelocity";
+  const int maxC = this->_sLattice.getLoadBalancer().size();
+  this->_blockF.reserve(maxC);
+  for (int iC = 0; iC < maxC; iC++) {
+    this->_blockF.emplace_back(
+      new BlockLatticePhysVelocityMagnitude3D<T, DESCRIPTOR>(
+        this->_sLattice.getExtendedBlockLattice(iC),
+        this->_sLattice.getOverlap(),
+        this->_converter,
+        _print)
+    );
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
+bool SuperLatticePhysVelocityMagnitude3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  if (this->_sLattice.getLoadBalancer().rank(input[0]) == singleton::mpi().getRank()) {
+    const int loc = this->_sLattice.getLoadBalancer().loc(input[0]);
+    return this->getBlockF(loc)(output,&input[1]);
+  } else {
+    return false;
+  }
+}
+
+template<typename T, typename DESCRIPTOR>
 SuperLatticePhysExternal3D<T, DESCRIPTOR>::SuperLatticePhysExternal3D(
   SuperLattice3D<T, DESCRIPTOR>& sLattice, T convFactorToPhysUnits,
   int offset, int size)

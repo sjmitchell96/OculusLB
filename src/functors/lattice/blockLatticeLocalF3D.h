@@ -189,6 +189,20 @@ public:
   bool operator() (T output[], const int input[]) override;
 };
 
+/// functor returns pointwise phys velocity magnitude on local lattice
+template <typename T, typename DESCRIPTOR>
+class BlockLatticePhysVelocityMagnitude3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
+private:
+  const int  _overlap;
+  const bool _print;
+public:
+  BlockLatticePhysVelocityMagnitude3D(BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
+                             int overlap,
+                             const UnitConverter<T,DESCRIPTOR>& converter,
+                             bool print=false);
+  bool operator() (T output[], const int input[]) override;
+};
+
 template <typename T, typename DESCRIPTOR>
 class BlockLatticePhysExternalVelocity3D final : public BlockLatticePhysF3D<T,DESCRIPTOR> {
 public:

@@ -202,6 +202,17 @@ private:
   bool _print;
 };
 
+/// functor to get pointwise phys velocity magnitude on local lattice
+template <typename T, typename DESCRIPTOR>
+class SuperLatticePhysVelocityMagnitude3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
+public:
+  SuperLatticePhysVelocityMagnitude3D(SuperLattice3D<T,DESCRIPTOR>& sLattice,
+                             const UnitConverter<T,DESCRIPTOR>& converter, bool print=false);
+  bool operator() (T output[], const int input[]) override;
+private:
+  bool _print;
+};
+
 template <typename T, typename DESCRIPTOR>
 class SuperLatticePhysExternalPorosity3D final : public SuperLatticePhysF3D<T,DESCRIPTOR> {
 public:

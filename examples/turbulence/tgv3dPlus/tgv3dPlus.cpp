@@ -62,7 +62,8 @@ typedef double T;
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
-#define DNS
+#define KBC
+//#define DNS
 
 #define finiteDiff //for N<256
 
@@ -70,10 +71,10 @@ typedef double T;
 #define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
 #elif defined (WALE)
 #define DESCRIPTOR WALED3Q19Descriptor
+#elif defined (KBC)
+#define DESCRIPTOR D3Q27descriptorKBC
 #else
-//#define DESCRIPTOR D3Q19<>
-#define DESCRIPTOR D3Q27<>
-//#define DESCRIPTOR D3Q27descriptorKBC
+#define DESCRIPTOR D3Q19<>
 #endif
 
 // Global constants
@@ -269,8 +270,6 @@ void getDNSValues()
   }
 }
 
-
-
 void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                 SuperGeometry3D<T>& superGeometry, Timer<double>& timer,
@@ -318,41 +317,42 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     int input[3];
     T output[1];
 
-#if defined (finiteDiff)
-    std::list<int> matNumber;
-    matNumber.push_back(1);
-    SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
-#if !defined (DNS)
-    SuperLatticePhysEffectiveDissipationFD3D<T, DESCRIPTOR> effectiveDiss(superGeometry, sLattice, matNumber,
-                                                                          converter, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
-#endif
-#else
-    SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
-#if !defined (DNS)
-    SuperLatticePhysEffevtiveDissipation3D<T, DESCRIPTOR> effectiveDiss(sLattice, converter, smagoConst, *(dynamic_cast<LESDynamics<T,DESCRIPTOR>*>(bulkDynamics)));
-#endif
-#endif
+    //Fuctors for average dissipation rate from enstrophy
+    #if defined (finiteDiff)
+      std::list<int> matNumber;
+      matNumber.push_back(1);
+      SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
+    #else
+      SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
+    #endif
     SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
     integralDiss(output, input);
     T diss_mol = output[0];
     diss_mol /= volume;
-    T diss_eff = diss_mol;
 
-#if !defined (DNS)
-    SuperIntegral3D<T> integralEffectiveDiss(effectiveDiss, superGeometry, 1);
-    integralEffectiveDiss(output, input);
-    diss_eff = output[0];
-    diss_eff /= volume;
-#endif
+    //Functors for KE 
+    SuperLatticePhysVelocityMagnitude3D<T, DESCRIPTOR> velocityMag(sLattice, converter);
+    SuperIntegral3D<T> integralVelocityMag(velocityMag, superGeometry, 1);
+    integralVelocityMag(output, input);
+    T kineticEnergy = 0.5 * output[0];
+    kineticEnergy /= volume;
 
-    T diss_eddy = diss_eff - diss_mol;
+
     if(plotDNS==true) {
      int step = converter.getPhysTime(iT) / gnuplotSave + 0.5;
-     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff, values_DNS[step][1]}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate" ,"Brachet et al."}, "bottom right");
+     gplot.setData(converter.getPhysTime(iT), {diss_mol, values_DNS[step][1]}, {"molecular dissipation rate","Brachet et al."}, "bottom right");
     } else {
-     gplot.setData(converter.getPhysTime(iT), {diss_mol, diss_eddy, diss_eff}, {"molecular dissipation rate", "eddy dissipation rate", "effective dissipation rate"}, "bottom right");
+     gplot.setData(converter.getPhysTime(iT), {diss_mol}, {"molecular dissipation rate"}, "bottom right");
     }
     gplot.writePNG();
+
+  //Write average dissipation rate and KE to .csv 
+  ofstream myfile;
+  std::string filename {"tmp/dissipationOutput.csv"};
+  myfile.open(filename,fstream::app);
+  myfile << iT << "	" << diss_mol << "	" << kineticEnergy << std::endl;
+  myfile.close();
+
   }
 
   /// write pdf at last time step
@@ -369,17 +369,6 @@ int main(int argc, char* argv[])
   olbInit(&argc, &argv);
   singleton::directories().setOutputDir("./tmp/");
   OstreamManager clout( std::cout,"main" );
-
-/*
-  UnitConverterFromResolutionAndRelaxationTime<T,DESCRIPTOR> converter(
-    int {int(std::nearbyint(N/(2*pi)))},        // resolution: number of voxels per charPhysL
-    (T)   0.507639, // latticeRelaxationTime: relaxation time, have to be greater than 0.5!
-    (T)   1,        // charPhysLength: reference length of simulation geometry
-    (T)   1,        // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
-    (T)   1./Re,    // physViscosity: physical kinematic viscosity in __m^2 / s__
-    (T)   1.0       // physDensity: physical density in __kg / m^3__
-  );
-*/
 
   UnitConverter<T,DESCRIPTOR> converter(
     (T)   2. * pi * charPhysL / (N - 1),       // Physical delta_x in __m
@@ -420,7 +409,6 @@ int main(int argc, char* argv[])
   bulkDynamics.reset(new RLBdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(DNS)
   bulkDynamics.reset(new BGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>()));
-  //bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getKBCBulkMomenta<T, DESCRIPTOR>()));
 #elif defined(WALE)
   bulkDynamics.reset(new WALEBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst));
@@ -433,8 +421,9 @@ int main(int argc, char* argv[])
 #elif defined(ConsistentStrainSmagorinsky)
   bulkDynamics.reset(new ConStrainSmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst));
-#else //DNS Simulation
-
+#elif defined(KBC)
+  bulkDynamics.reset(new KBCdynamics<T, DESCRIPTOR>(omega, instances::getKBCBulkMomenta<T, DESCRIPTOR>()));
+#else 
   bulkDynamics.reset(new SmagorinskyBGKdynamics<T, DESCRIPTOR>(omega, instances::getBulkMomenta<T, DESCRIPTOR>(),
       smagoConst));
 #endif

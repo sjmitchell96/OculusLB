@@ -433,6 +433,39 @@ bool BlockLatticePhysVelocity3D<T, DESCRIPTOR>::operator()(T output[], const int
   return true;
 }
 
+template<typename T, typename DESCRIPTOR>
+BlockLatticePhysVelocityMagnitude3D<T, DESCRIPTOR>::BlockLatticePhysVelocityMagnitude3D(
+  BlockLatticeStructure3D<T, DESCRIPTOR>& blockLattice,
+  int overlap,
+  const UnitConverter<T,DESCRIPTOR>& converter,
+  bool print)
+  : BlockLatticePhysF3D<T, DESCRIPTOR>(blockLattice, converter, 1),
+    _overlap(overlap),
+    _print(print)
+{
+  this->getName() = "physVelocity";
+}
+
+template<typename T, typename DESCRIPTOR>
+bool BlockLatticePhysVelocityMagnitude3D<T, DESCRIPTOR>::operator()(T output[], const int input[])
+{
+  if (_print) {
+    std::cout << input[0] << " " << input[1] << " " << input[2] << " | "
+              << singleton::mpi().getRank() << std::endl;
+  }
+
+  T rho;
+  T u[3];
+  this->_blockLattice.get(
+    input[0]+_overlap, input[1]+_overlap, input[2]+_overlap).computeRhoU(rho, u);
+
+  u[0] = this->_converter.getPhysVelocity(u[0]);
+  u[1] = this->_converter.getPhysVelocity(u[1]);
+  u[2] = this->_converter.getPhysVelocity(u[2]);
+  output[0] = u[0] * u[0] + u[1] * u[1] + u[2] * u[2];
+  return true;
+}
+
 template <typename T, typename DESCRIPTOR>
 BlockLatticePhysExternalPorosity3D<T,DESCRIPTOR>::BlockLatticePhysExternalPorosity3D(
   BlockLatticeStructure3D<T,DESCRIPTOR>& blockLattice,
