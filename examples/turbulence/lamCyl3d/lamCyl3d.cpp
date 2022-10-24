@@ -494,9 +494,9 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   auto bulkIndicator = sGeometry.getMaterialIndicator({1, 2, 3, 4, 6});
   sLattice.defineDynamics(bulkIndicator, &bulkDynamics);
 
-  // Define boundary conditions
-  bc.addVelocityBoundary(sGeometry, 3, omega);
-  bc.addPressureBoundary(sGeometry, 4, omega); 
+  // Define boundary conditions - not needed for feq setup
+  //bc.addVelocityBoundary(sGeometry, 3, omega);
+  //bc.addPressureBoundary(sGeometry, 4, omega); 
 
   #if defined(Bouzidi)
     // material=5, 7 --> no dynamics + bouzidi zero velocity
@@ -594,11 +594,9 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
     AnalyticalConst3D<T,T> inRhoConst(inRho);
     AnalyticalConst3D<T,T> inVelConst(inVel);
 
-    //sLattice.defineU(sGeometry, 2, inVelConst);
-    //sLattice.defineU(sGeometry, 3, inVelConst);
-    //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
     sLattice.iniEquilibrium(sGeometry, 2, inRhoConst, inVelConst);
     sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
+    sLattice.iniEquilibrium(sGeometry, 4, inRhoConst, inVelConst);
 }
 
 // Output results to vtk files
@@ -902,7 +900,7 @@ int main( int argc, char* argv[] ) {
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();
 
-    //setBoundaryValues(coarseGrid,iT);
+    setBoundaryValues(coarseGrid,iT);
 
     // === 7th Step: Computation and Output of the Results ===
 		//Add ensemble to time-averaged functors
