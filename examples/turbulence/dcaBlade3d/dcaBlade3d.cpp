@@ -189,6 +189,7 @@ void prepareGeometry( Grid3D<T,DESCRIPTOR>& grid,
   // Removes all not needed boundary voxels outside the surface
   sGeometry.clean();
 
+
   sGeometry.checkForErrors();
   sGeometry.print();
   clout << "Prepare Geometry ... OK" << std::endl;
@@ -214,23 +215,23 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
 
-  const Vector<T,2> hn6 = {0.0125 * chord, 0.0125 * chord}; //unused in baseline!
-  const Vector<T,2> hp6 = {0.0125 * chord, 0.0125 * chord}; // '' positive
+  const Vector<T,2> hn6 = {0.018 * chord, 0.018 * chord}; //unused in baseline!
+  const Vector<T,2> hp6 = {0.018 * chord, 0.018 * chord}; // '' positive
 
-  const Vector<T,2> hn5 = {0.0375 * chord, 0.0375 * chord}; 
-  const Vector<T,2> hp5 = {0.0375 * chord, 0.0375 * chord}; // '' positive
+  const Vector<T,2> hn5 = {0.054 * chord, 0.054 * chord}; 
+  const Vector<T,2> hp5 = {0.054 * chord, 0.054 * chord}; // '' positive
 
-  const Vector<T,2> hn4 = {0.0875 * chord, 0.0875 * chord};
-  const Vector<T,2> hp4 = {0.0875 * chord, 0.0875 * chord};
+  const Vector<T,2> hn4 = {0.126 * chord, 0.126 * chord};
+  const Vector<T,2> hp4 = {0.126 * chord, 0.126 * chord};
 
-  const Vector<T,2> hn3 = {0.1875 * chord, 0.1875 * chord};
-  const Vector<T,2> hp3 = {1.5 * chord, 0.1875 * chord};
+  const Vector<T,2> hn3 = {0.27 * chord, 1.0 * chord};
+  const Vector<T,2> hp3 = {3.0 * chord, 1.0 * chord};
 
-  const Vector<T,2> hn2 = {0.3875 * chord, 0.3875 * chord}; //Outermost
-  const Vector<T,2> hp2 = {6.0 * chord, 0.3875 * chord};
+  const Vector<T,2> hn2 = {0.558 * chord, 2.0 * chord}; //Outermost
+  const Vector<T,2> hp2 = {14.0 * chord, 2.0 * chord};
 
-  const Vector<T,2> hn1 = {2.0 * chord, 2.0 * chord}; 
-  const Vector<T,2> hp1 = {16.0 * chord, 2.0 * chord}; // '' positive
+  const Vector<T,2> hn1 = {1.134 * chord, 4.0 * chord}; 
+  const Vector<T,2> hp1 = {28.0 * chord, 4.0 * chord}; // '' positive
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -624,8 +625,9 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
   // Define boundary conditions
   //onbc.addSlipBoundary(sGeometry, 2);// SLIP BC
   //bc.addOutletBoundary(sGeometry, 4, {1, 2, 3, 4, 6});
-  bc.addPressureBoundary(sGeometry, 4, omega);
-  bc.addVelocityBoundary(sGeometry, 3, omega);
+  //OLD BC:
+  //bc.addPressureBoundary(sGeometry, 4, omega);
+  //bc.addVelocityBoundary(sGeometry, 3, omega);
 
   //NEXT RECONFIGURE BCS TO INLET OUTLET
 
@@ -652,10 +654,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
     //Sponge indicator 1 - y-z outlet
     const T physChord = 0.051;
     const T deltaX = converter.getPhysDeltaX();
-    const Vector<T,3> spongeOrigin = {34. * physChord - deltaX /2000, - deltaX / 2,
+    const Vector<T,3> spongeOrigin = {56. * physChord - deltaX /2000, - deltaX / 2,
       - 4 * deltaX};
-    const Vector<T,3> spongeExtend = {2. * physChord + deltaX/1000,
-      16 * physChord + deltaX,
+    const Vector<T,3> spongeExtend = {4. * physChord + deltaX/1000,
+      40 * physChord + deltaX,
       0.2 * physChord + 8 * deltaX};
     IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
     //Orientation
@@ -672,10 +674,10 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
       tauSpongeBase, tauSpongeMax, spongeMaterials);
 
     //Sponge indicator 2 - x-z 
-    const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 14. * physChord - deltaX / 2000,
+    const Vector<T,3> spongeOrigin2 = {0. * physChord - deltaX /2, 36. * physChord - deltaX / 2000,
       - 4 * deltaX};
-    const Vector<T,3> spongeExtend2 = {36. * physChord + deltaX,
-      2. * physChord + deltaX / 1000,
+    const Vector<T,3> spongeExtend2 = {60. * physChord + deltaX,
+      4. * physChord + deltaX / 1000,
       0.2 * physChord + 8 * deltaX};
     IndicatorCuboid3D<T> spongeRegion2(spongeExtend2, spongeOrigin2);
     //Orientation
@@ -724,6 +726,7 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT, const T& thetaBC) {
 
   //sLattice.defineRhoU(sGeometry, 3, inRhoConst, inVelConst);
   sLattice.iniEquilibrium(sGeometry, 3, inRhoConst, inVelConst);
+  sLattice.iniEquilibrium(sGeometry, 4, inRhoConst, inVelConst);
 }
 
 // Output results to vtk files
@@ -782,7 +785,7 @@ void getBladeForce(Grid3D<T,DESCRIPTOR>& grid,
 
   SuperLatticePhysDragBlade3D<T,DESCRIPTOR> drag(sLattice, superGeometry,
 		                                 std::vector<int>{5,7},
-						 converter,(span - 4. * chord)*chord); //physical span is half geometric!
+						 converter,0.5*span*chord); //physical span is half geometric!
   T bladeForce[3];
   int input1[0];
   drag(bladeForce,input1);
@@ -806,14 +809,14 @@ int main( int argc, char* argv[] ) {
   const T r2 = 0.00015; //LE/TE radius
   const T xp = 0.02538; //Intersect point
   const T theta = 0.00; //Pitch (+ve = anticlockwise)
-  const T thetaBC = 10.00; //Inlet flow angle
-  const Vector<T,3> bladeOrigin = {8.5 * chord + chord / 12800., 8. * chord + chord / 12800., - 2.0 * chord}; //Origin of blade (make sure it's off-node!)
+  const T thetaBC = 8.00; //Inlet flow angle
+  const Vector<T,3> bladeOrigin = {10.5 * chord + chord / 12800., 20. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 14; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 1;	//Number of refinement levels (current max = 5)
-  const T lDomainPhysx = 36.*chord; //Length of domain in physical units (m)
-  const T lDomainPhysy = 16.*chord;
+  const int N = 30; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 6;	//Number of refinement levels (current max = 5)
+  const T lDomainPhysx = 60.*chord; //Length of domain in physical units (m)
+  const T lDomainPhysy = 40.*chord;
   const T lDomainPhysz = 0.2*chord; //
   const T physL = chord; //Physical reference length (m)
 
@@ -826,15 +829,15 @@ int main( int argc, char* argv[] ) {
   const T physNu = physuC * physL / Re;//m2/s
   const T normFactor = physL / physuC;  //Factor for physical -> convective time (s)
 
-  const T maxNormT = 10; //Max normalised 'convective' time
+  const T maxNormT = 100; //Max normalised 'convective' time
   const T maxPhysT = maxNormT * normFactor; // max. simulation time in s, SI unit
 
   //Options for blade surface boundary condition
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter	       = 10; 
-  const int statIter       = 10; 
+  const int vtkIter	   = 500; 
+  const int statIter       = 100; 
   const int checkIter 	   = 500;
   const int bladeForceIter = 1;
   const int timeAvgIter    = 500;
@@ -865,7 +868,7 @@ int main( int argc, char* argv[] ) {
   IndicatorCuboid3D<T> coarseDomain(extend, origin);
 
   // Indicator for blade
-  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, 4. * chord + span, r1, r2, xp,
+  IndicatorBladeDca3D<T> blade(bladeOrigin,chord, thickness, 2. * span, r1, r2, xp,
     theta);
 
   // Construct a background coarse grid
@@ -999,7 +1002,7 @@ int main( int argc, char* argv[] ) {
     // === 6th Step: Collide and Stream Execution ===
     coarseGrid.collideAndStream();
 
-    //setBoundaryValues(coarseGrid,iT,thetaBC);
+    setBoundaryValues(coarseGrid,iT,thetaBC);
 
     // === 7th Step: Computation and Output of the Results ===
 		//Add ensemble to time-averaged functors
