@@ -200,17 +200,17 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
-  const Vector<T,2> hn4 = {2.5 * diameter, 1.5 * diameter}; 
-  const Vector<T,2> hp4 = {6.5 * diameter, 1.5 * diameter}; // '' positive
+  const Vector<T,2> hn4 = {0.5 * diameter, 0.5 * diameter}; 
+  const Vector<T,2> hp4 = {0.5 * diameter, 0.5 * diameter}; // '' positive
 
-  const Vector<T,2> hn3 = {0.5 * diameter, 0.5 * diameter};
-  const Vector<T,2> hp3 = {0.5 * diameter, 0.5 * diameter};
+  const Vector<T,2> hn3 = {1.5 * diameter, 1.5 * diameter};
+  const Vector<T,2> hp3 = {4 * diameter, 1.5 * diameter};
 
-  const Vector<T,2> hn2 = {1.5 * diameter, 1.0 * diameter};
-  const Vector<T,2> hp2 = {3.5 * diameter, 1.0 * diameter};
+  const Vector<T,2> hn2 = {3.5 * diameter, 3.5 * diameter};
+  const Vector<T,2> hp2 = {12 * diameter, 3.5 * diameter};
 
-  const Vector<T,2> hn1 = {2.5 * diameter, 1.5 * diameter}; //Outermost
-  const Vector<T,2> hp1 = {6.5 * diameter, 1.5 * diameter};
+  const Vector<T,2> hn1 = {7.5 * diameter, 7.5 * diameter}; //Outermost
+  const Vector<T,2> hp1 = {36 * diameter, 7.5 * diameter};
 
   if(n >= 1) {
     // Refinement around the wing box - level 1
@@ -253,11 +253,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
     coarseGrid.addCoarseCoupling(fineGrid, innerOrigin + innerExtendY,
 				 innerExtendXZ);
 
-    Vector<T,3> refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
-	                                              2. * coarseDeltaX,
+    Vector<T,3> refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX,
+	                                              1.9 * coarseDeltaX,
 	                                              - 2. * coarseDeltaX};
-    Vector<T,3> refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-	                                              4. * coarseDeltaX,
+    Vector<T,3> refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+	                                              3.8 * coarseDeltaX,
 	                                              - 4. * coarseDeltaX};
     IndicatorCuboid3D<T> refined(refinedExtend, refinedOrigin);
     coarseGrid.getSuperGeometry().reset(refined);
@@ -300,9 +300,9 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 				 innerExtendXZ);
 
       refinedOrigin = origin + 
-        Vector<T,3> {2. * coarseDeltaX, 1.9 * coarseDeltaX, - 2. * coarseDeltaX};
+        Vector<T,3> {1.9 * coarseDeltaX, 1.9 * coarseDeltaX, - 2. * coarseDeltaX};
       refinedExtend = extend - 
-        Vector<T,3> {4. * coarseDeltaX, 3.9 * coarseDeltaX, - 4. * coarseDeltaX};
+        Vector<T,3> {3.8 * coarseDeltaX, 3.8 * coarseDeltaX, - 4. * coarseDeltaX};
       IndicatorCuboid3D<T> refined2(refinedExtend, refinedOrigin);
       fineGrid.getSuperGeometry().reset(refined2);
 
@@ -347,11 +347,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 		            	    innerOrigin + innerExtendY,
           				    innerExtendXZ);
 
-       	refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX, 
-		                              2. * coarseDeltaX,
+       	refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX, 
+		                              1.9 * coarseDeltaX,
 					      - 2. * coarseDeltaX};
-	      refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-	                                      4. * coarseDeltaX,
+	      refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+	                                      3.8 * coarseDeltaX,
 					      - 4. * coarseDeltaX};
 	      IndicatorCuboid3D<T> refined3(refinedExtend, refinedOrigin);
 	      fineGrid2.getSuperGeometry().reset(refined3);
@@ -400,11 +400,11 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 			              innerOrigin + innerExtendY,
 				      innerExtendXZ);
 
-      	  refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
-		                                2. * coarseDeltaX,
+      	  refinedOrigin = origin + Vector<T,3> {1.9 * coarseDeltaX,
+		                                1.9 * coarseDeltaX,
 					       	- 2. * coarseDeltaX};
-	        refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
-		                                4. * coarseDeltaX,
+	        refinedExtend = extend - Vector<T,3> {3.8 * coarseDeltaX,
+		                                3.8 * coarseDeltaX,
 			                      	- 4. * coarseDeltaX};
 	        IndicatorCuboid3D<T> refined4(refinedExtend, refinedOrigin);
 	        fineGrid3.getSuperGeometry().reset(refined4);
@@ -518,14 +518,15 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   //Define and initialise viscosity sponge zones
   //Sponge indicator
+
   #ifdef sponge
     const T physChord = 1.00;
     const T deltaX = converter.getPhysDeltaX();
-    const Vector<T,3> spongeOrigin = {71. * physChord - deltaX /2000, - deltaX / 2,
+    const Vector<T,3> spongeOrigin = {56. * physChord - deltaX /2000, - deltaX / 2,
       - 4. * deltaX};
     const Vector<T,3> spongeExtend = {4. * physChord + deltaX / 1000,
-      50. * physChord + deltaX,
-      8. * physChord + 8. * deltaX};
+      30. * physChord + deltaX,
+      3. * physChord + 8. * deltaX};
     IndicatorCuboid3D<T> spongeRegion(spongeExtend, spongeOrigin);
     //Orientation
     const Vector<T,3> spongeOrientation = {1., 0., 0.};
@@ -536,7 +537,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
     sViscositySponge3D<T,DESCRIPTOR>& outletSponge =  grid.getViscositySponge();
     createViscositySponge3D(outletSponge);
-  
+
     outletSponge.addSineSponge(sGeometry, spongeRegion, spongeOrientation,
       tauSpongeBase, tauSpongeMax, spongeMaterials);
 
@@ -559,7 +560,7 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
     outletSponge.addSineSponge(sGeometry, spongeRegion2, spongeOrientation2,
       tauSpongeBase, tauSpongeMax, spongeMaterials);
-*/
+  */
     sLattice.initialiseSponges();
   #endif
 
@@ -588,10 +589,6 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 	auto& sLattice	= grid.getSuperLattice();
 
     Vector<T,3> inVel {converter.getCharLatticeVelocity(), 0., 0.};
-    //inVel[0] = converter.getCharLatticeVelocity();
-    if (iT > 200 && iT < 400) {
-      inVel[1] = converter.getCharLatticeVelocity();
-    }
     T inRho = 1.0;
     
     AnalyticalConst3D<T,T> inRhoConst(inRho);
@@ -607,7 +604,7 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 // Output results to vtk files
 void getVTK(Grid3D<T,DESCRIPTOR>& grid, const std::string& prefix, int iT,
 	    SuperLatticePhysWallShearStressAndPressure3D<T,DESCRIPTOR>& wssp,
-      SuperLatticeYplus3D<T,DESCRIPTOR>& sYplus,
+	    SuperLatticeYplus3D<T,DESCRIPTOR>& sYplus,
 	    SuperLatticeTimeAveragedF3D<T>& sAveragedWSSP) {
 
   OstreamManager clout( std::cout,"getVTK" );
@@ -709,9 +706,9 @@ int main( int argc, char* argv[] ) {
 
   //Cylinder parameters
   const T diameter = 1.00;
-  const T span = 8.0 * diameter;
-  const Vector<T,3> cylinderOrigin = {25.0 * diameter - 0.00045,
-                                      25.0 * diameter - 0.0045,
+  const T span = 3. * diameter;
+  const Vector<T,3> cylinderOrigin = {10.0 * diameter + 0.00045,
+                                      15.0 * diameter + 0.00045,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,
@@ -719,29 +716,29 @@ int main( int argc, char* argv[] ) {
 
 
   //Domain and simulation parameters
-  const int N = 2; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 3;	//Number of refinement levels (current max = 4)
-  const T lDomainPhysx = 75.*diameter; //Length of domain in physical units (m)
-  const T lDomainPhysy = 50.0*diameter;
+  const int N = 5; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+  const T lDomainPhysx = 60.*diameter; //Length of domain in physical units (m)
+  const T lDomainPhysy = 30.*diameter;
   const T lDomainPhysz = span; //
   const T maxPhysT = 100; // max. simulation time in s, SI unit
   const T physL = diameter; //Physical reference length (m)
 
   //Flow conditions
-  const T Re = 100.;       // Reynolds number
+  const T Re = 100;       // Reynolds number
   const T Mach = 0.035;
   const T uC = Mach * 1./std::pow(3,0.5); //Lattice characteristic velocity
-  const T physuC = 12; //Physical characteristic velocity
-  const T rho = 1.2;	//Density
+  const T physuC = 1.; //Physical characteristic velocity
+  const T rho = 1.;	//Density
   const T physNu = physuC * physL / Re;//m2/s
 
   //Options for blade surface boundary condition
   const bool bouzidiOn = true; //true = bouzidi, false = fullway bb
 
   //Time-loop options
-  const int vtkIter   	   = 100; //Every 10% of max physical time
-  const int statIter  	   = 10;
-  const int checkIter 	   = 10000;
+  const int vtkIter   	   = 500; //Every 10% of max physical time
+  const int statIter  	   = 100;
+  const int checkIter 	   = 500;
   const int cylinderForceIter = 1;
   const int timeAvgIter    = 1000;
   const std::string checkpoint = "odd"; //load even or odd checkpoint
@@ -805,7 +802,7 @@ int main( int argc, char* argv[] ) {
 	//Functor vectors for 3D VTK
 	std::vector<std::unique_ptr<SuperLatticePhysVelocity3D<T,DESCRIPTOR>>> sVel;
 	std::vector<std::unique_ptr<SuperLatticePhysPressure3D<T,DESCRIPTOR>>> sP;
-  std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> sYplus;
+	std::vector<std::unique_ptr<SuperLatticeYplus3D<T,DESCRIPTOR>>> sYplus;
 	std::vector<std::unique_ptr<SuperLatticePhysWallShearStressAndPressure3D<
     T,DESCRIPTOR>>> wssp;
 	std::vector<std::unique_ptr<SuperLatticeTimeAveragedF3D<T>>> sAveragedWSSP;
@@ -833,10 +830,10 @@ int main( int argc, char* argv[] ) {
         sLattice, converter)));
 			sP.push_back(sPtype(new typename sPtype::element_type(
         sLattice, converter)));
-			wssp.push_back(wsspType(new typename wsspType::element_type(
-        sLattice,converter, sGeometry,7,indicatorCylinder)));
       sYplus.push_back(sYplusType(new typename sYplusType::element_type(
         sLattice,converter, sGeometry,indicatorCylinder,7)));
+			wssp.push_back(wsspType(new typename wsspType::element_type(
+        sLattice,converter, sGeometry,7,indicatorCylinder)));
 			sAveragedWSSP.push_back(taType(new typename taType::element_type(
         *wssp.back())));
 	};

@@ -589,10 +589,6 @@ void setBoundaryValues(Grid3D<T,DESCRIPTOR>& grid, int iT) {
 	auto& sLattice	= grid.getSuperLattice();
 
     Vector<T,3> inVel {converter.getCharLatticeVelocity(), 0., 0.};
-    //inVel[0] = converter.getCharLatticeVelocity();
-    if (iT > 200 && iT < 400) {
-      inVel[1] = converter.getCharLatticeVelocity();
-    }
     T inRho = 1.0;
     
     AnalyticalConst3D<T,T> inRhoConst(inRho);
