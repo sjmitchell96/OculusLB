@@ -67,7 +67,6 @@ constexpr Fraction t<3, 27>[27] = {
   {1, 216}, {1, 216}, {1, 216}, {1, 216}
 };
 
-
 }; //namespace kbc_data
 
 template<typename T, unsigned D, unsigned Q>

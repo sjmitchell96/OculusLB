@@ -70,10 +70,7 @@ struct kbcLbHelpers<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>> {
 
   typedef descriptors::D3Q27<descriptors::tag::KBC, FIELDS...> L;
    
-//  std::cout << "SPECIALIZED KBC COLLIDE" << std::endl;
-
   //Compute feq
-    //Subexpressions
   T subexpr1 = std::sqrt(1. + 3. * u[0] * u[0]);
   T subexpr2 = std::sqrt(1. + 3. * u[1] * u[1]);
   T subexpr3 = std::sqrt(1. + 3. * u[2] * u[2]);
@@ -219,9 +216,6 @@ struct kbcLbHelpers<T, descriptors::D3Q27<descriptors::tag::KBC, FIELDS...>> {
   T ds21 = ds8;
   T ds22 = ds9;
 
-//std :: cout << "df" << df[0] << " " << df[5] << " " << df[10] << " " << df[15] << " " << df[20] << " " << df[25] << std::endl;
-//std :: cout << "ds" << ds5 << " " << ds15 << " " << ds20 << std::endl;
-
 T dh1 = df[1] - ds1; 
 T dh2 = df[2] - ds2; 
 T dh3 = df[3] - ds3; 
@@ -240,7 +234,6 @@ T dh19 = df[19] - ds19;
 T dh20 = df[20] - ds20; 
 T dh21 = df[21] - ds21; 
 T dh22 = df[22] - ds22; 
-
 
   //Stabiliser (gamma)
   T dhInvFeq[27];
@@ -272,8 +265,6 @@ T dh22 = df[22] - ds22;
   dhInvFeq[25] = df[25] /fEq[25]; 
   dhInvFeq[26] = df[26] /fEq[26]; 
 
-//  std :: cout << "dh" << dh[0] << " " << dh[5] << " " << dh[10] << " " << dh[15] << " " << dh[20] << " " << dh[25] << std::endl;
-
   T entProd1 = ds1 * dhInvFeq[1] + ds2 * dhInvFeq[2] +
                ds3 * dhInvFeq[3] + ds4 * dhInvFeq[4] + ds5 * dhInvFeq[5] +
                ds6 * dhInvFeq[6] + ds7 * dhInvFeq[7] + ds8 * dhInvFeq[8] +
@@ -296,11 +287,7 @@ T dh22 = df[22] - ds22;
   if (entProd2 != 0) {
 
     T invBeta = 1. / beta;
-  
     T gamma = invBeta - (2. - invBeta) * (entProd1 / entProd2);
-
-//    std::cout << "beta" << beta << std::endl;
-//    std::cout << "gamma" << gamma << std::endl;
 
     //Collide
     cell[0] -= beta * (gamma * df[0]);
@@ -330,10 +317,7 @@ T dh22 = df[22] - ds22;
     cell[24] -= beta * (gamma * df[24]);
     cell[25] -= beta * (gamma * df[25]);
     cell[26] -= beta * (gamma * df[26]);
-
-//    std::cout << "SPECIALIZED COLLISION END" << std::endl;
   }
-
   T uSqr = util::normSqr<T,3>(u);
   return uSqr;
   }
