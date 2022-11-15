@@ -813,8 +813,8 @@ int main( int argc, char* argv[] ) {
   const Vector<T,3> bladeOrigin = {10.5 * chord + chord / 12800., 20. * chord + chord / 12800., - 0.5 * span}; //Origin of blade (make sure it's off-node!)
 
   //Domain and simulation parameters
-  const int N = 30; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 6;	//Number of refinement levels (current max = 5)
+  const int N = 10; //14        // resolution of the model (coarse cells per chord)
+  const int nRefinement = 1;	//Number of refinement levels (current max = 5)
   const T lDomainPhysx = 60.*chord; //Length of domain in physical units (m)
   const T lDomainPhysy = 40.*chord;
   const T lDomainPhysz = 0.2*chord; //

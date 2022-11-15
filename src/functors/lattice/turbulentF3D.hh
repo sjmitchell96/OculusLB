@@ -493,8 +493,8 @@ bool BlockFiniteDifference3D<T>::operator() (T output[], const int input[])
     T fOutput[_targetDim];
     _blockFunctor(fOutput,input);
 
-    //SM - change switch condition from 3 to 4
-    if (input[i] < 4) {
+    //SM - change switch condition from 3 to 4?
+    if (input[i] < 3) {
       if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get(fInput_2p[0], fInput_2p[1], fInput_2p[2])) == _matNumber.end()) {
         T fOutput_p[_targetDim];
         _blockFunctor(fOutput_p,fInput_p);
@@ -510,7 +510,7 @@ bool BlockFiniteDifference3D<T>::operator() (T output[], const int input[])
           fdGrad[j][i]=fd::boundaryGradient(fOutput[j], fOutput_p[j], fOutput_2p[j]);
         }
       }
-    } else if (input[i] > _n[i]-4) {
+    } else if (input[i] > _n[i]-3) {
       if (std::find(_matNumber.begin(), _matNumber.end(), _blockGeometry.get(fInput_2n[0], fInput_2n[1], fInput_2n[2])) == _matNumber.end()) {
         T fOutput_n[_targetDim];
         _blockFunctor(fOutput_n,fInput_n);

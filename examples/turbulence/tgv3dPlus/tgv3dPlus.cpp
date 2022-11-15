@@ -58,11 +58,11 @@ typedef double T;
 // Choose your turbulent model of choice
 //#define RLB
 //#define Smagorinsky
-//#define WALE
+#define WALE
 //#define ConsistentStrainSmagorinsky
 //#define ShearSmagorinsky
 //#define Krause
-#define KBC
+//#define KBC
 //#define DNS
 
 #define finiteDiff //for N<256
@@ -70,11 +70,11 @@ typedef double T;
 #ifdef ShearSmagorinsky
 #define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
 #elif defined (WALE)
-#define DESCRIPTOR WALED3Q19Descriptor
+#define DESCRIPTOR WALED3Q27Descriptor
 #elif defined (KBC)
 #define DESCRIPTOR D3Q27descriptorKBC
 #else
-#define DESCRIPTOR D3Q19<>
+#define DESCRIPTOR D3Q27<>
 #endif
 
 // Global constants
@@ -84,16 +84,16 @@ const T volume = pow(2. * pi, 3.); // volume of the 2pi periodic box
 
 // Parameters for the simulation setup
 const T maxPhysT = 10;    // max. simulation time in s, SI unit
-const int N = 128;               // resolution of the model (Nodes per domain length)
+const int N = 64;               // resolution of the model (Nodes per domain length)
 const T charPhysU = 1.0;
 const T charPhysL = 1.0;
 const T physDt = charPhysL / (250 * charPhysU);
 const T charPhysRho = 1.0;
 
-T Re = 1600;               // defined as 1/kinematic viscosity
-T smagoConst = 0.1;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
-T vtkSave = 0.25;         // time interval in s for vtk output
-T gnuplotSave = 0.01;      // time interval in s for gnuplot output
+T Re = 800;               // defined as 1/kinematic viscosity
+T smagoConst = 0.5;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
+T vtkSave = 2.0;         // time interval in s for vtk output
+T gnuplotSave = physDt;      // time interval in s for gnuplot output
 
 bool plotDNS = true;      //available for Re=800, Re=1600, Re=3000 (maxPhysT<=10)
 vector<vector<T>> values_DNS;
@@ -122,7 +122,7 @@ public:
     output[2] = 0.0;
 
     return true;
-  };
+  3;
 };
 
 template <typename T, typename _DESCRIPTOR>
@@ -200,11 +200,11 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
 
   //sLattice.defineRhoU(superGeometry, 1, rho, uSol);
 
-  std::list<int> bulkMat;
-  bulkMat.push_back(1);
-  sLattice.iniFirstOrderApprox(superGeometry, 1, rhoSol, uSol, bulkMat);
+  //std::list<int> bulkMat;
+  //bulkMat.push_back(1);
+  //sLattice.iniFirstOrderApprox(superGeometry, 1, rhoSol, uSol, bulkMat);
 
-  //sLattice.iniEquilibrium(superGeometry, 1, rho, uSol);
+  sLattice.iniEquilibrium(superGeometry, 1, rhoSol, uSol);
 
   sLattice.initialize();
 }

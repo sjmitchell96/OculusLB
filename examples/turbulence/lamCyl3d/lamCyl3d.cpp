@@ -705,8 +705,8 @@ int main( int argc, char* argv[] ) {
   //Cylinder parameters
   const T diameter = 1.00;
   const T span = 3. * diameter;
-  const Vector<T,3> cylinderOrigin = {10.0 * diameter + 0.00045,
-                                      15.0 * diameter + 0.00045,
+  const Vector<T,3> cylinderOrigin = {10.0 * diameter,
+                                      15.0 * diameter,
                                       -0.5 * span}; 
   const Vector<T,3> cylinderExtend = {0.0 * diameter,
                                       0.0 * diameter,

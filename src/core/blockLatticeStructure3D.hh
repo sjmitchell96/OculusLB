@@ -174,14 +174,18 @@ void BlockLatticeStructure3D<T,DESCRIPTOR>::definePopulations(
   definePopulations(indicator, Pop);
 }
 
+//SM - modified for multithreading
 template<typename T, typename DESCRIPTOR>
 template<typename FIELD>
 void BlockLatticeStructure3D<T,DESCRIPTOR>::defineField(
   BlockIndicatorF3D<T>& indicator, AnalyticalF3D<T,T>& field)
 {
-  T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
-  T physR[3] = { };
+  //T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
+  //T physR[3] = { };
+  # pragma omp parallel for
   for (int iX = 0; iX < getNx(); ++iX) {
+    T* fieldTmp = new T[DESCRIPTOR::template size<FIELD>()];
+    T physR[3] = { };
     for (int iY = 0; iY < getNy(); ++iY) {
       for (int iZ = 0; iZ < getNz(); ++iZ) {
         if (indicator(iX, iY, iZ)) {
@@ -191,8 +195,9 @@ void BlockLatticeStructure3D<T,DESCRIPTOR>::defineField(
         }
       }
     }
-  }
   delete[] fieldTmp;
+  }
+  //delete[] fieldTmp;
 }
 
 template<typename T, typename DESCRIPTOR>
