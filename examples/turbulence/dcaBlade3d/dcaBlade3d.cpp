@@ -214,6 +214,8 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
   
   //Heights around wing box for each refinement level
   //x,y heights in negative direction //Innermost
+  const Vector<T,2> hn7 = {0.018 * chord, 0.018 * chord}; //unused in baseline!
+  const Vector<T,2> hp7 = {0.018 * chord, 0.018 * chord}; // '' positive
 
   const Vector<T,2> hn6 = {0.018 * chord, 0.018 * chord}; //unused in baseline!
   const Vector<T,2> hp6 = {0.018 * chord, 0.018 * chord}; // '' positive
@@ -535,6 +537,61 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
 			                          	- 4. * coarseDeltaX};
 	            IndicatorCuboid3D<T> refined6(refinedExtend, refinedOrigin);
 	            fineGrid5.getSuperGeometry().reset(refined6);
+
+               ///////
+              if (n >= 7) {
+                	            // Refinement around the wing box - level 5 (current innermost)
+              const T deltaX5 = fineGrid5.getConverter().getPhysDeltaX();
+	              coarseDeltaX = deltaX5;
+			
+	            Vector<T,3> fineOrigin7 = {bladeBoxOrigin[0] - hn7[0],
+		                         bladeBoxOrigin[1] - hn7[1],
+				                     domainOrigin[2]-deltaX0-deltaX1-deltaX2-deltaX3-deltaX4-deltaX5};
+	            Vector<T,3> fineExtend7 = 
+	            {chord + hp7[0] + hn7[0], thickness + hp7[1] + hn7[1],
+                   domainExtend[2] + deltaX0 + deltaX1 + deltaX2 + deltaX3 + deltaX4 + deltaX5};
+
+          	  auto& fineGrid7 = fineGrid6.refine(fineOrigin7, fineExtend7,
+		    		             false, false, true, false);
+	            prepareGeometry(fineGrid7, domainOrigin, domainExtend,
+			            indicatorBlade);
+	            origin = fineGrid7.getOrigin() + 
+                   Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+      	      extend = fineGrid7.getExtend() - 
+                Vector<T,3>{0., 0., 0.5 * coarseDeltaX};
+	            extendXZ = {extend[0], 0., extend[2]};
+	            extendYZ = {0., extend[1], extend[2]};
+              fineGrid6.addFineCoupling(fineGrid7, origin, extendXZ);
+	            fineGrid6.addFineCoupling(fineGrid7, origin, extendYZ);
+              extendX = {extend[0], 0., 0.};
+	            extendY = {0., extend[1], 0.};
+              fineGrid6.addFineCoupling(fineGrid7, origin + extendX, extendYZ);
+  	          fineGrid6.addFineCoupling(fineGrid7, origin + extendY, extendXZ);
+
+          	  innerOrigin = origin + Vector<T,3> {coarseDeltaX, coarseDeltaX, 0.};
+              innerExtendXZ = {extend[0] - 2. * coarseDeltaX , 0., extend[2]};
+	            innerExtendYZ = {0., extend[1] - 2. * coarseDeltaX, extend[2]};
+	            fineGrid6.addCoarseCoupling(fineGrid7, innerOrigin, innerExtendXZ);
+              fineGrid6.addCoarseCoupling(fineGrid7, innerOrigin, innerExtendYZ);
+
+          	  innerExtendX = {extend[0] - 2. * coarseDeltaX, 0., 0.};
+	            innerExtendY = {0., extend[1] - 2. * coarseDeltaX, 0.};
+	            fineGrid6.addCoarseCoupling(fineGrid7,
+			                  innerOrigin + innerExtendX,
+				          innerExtendYZ);
+	            fineGrid6.addCoarseCoupling(fineGrid7,
+			                  innerOrigin + innerExtendY,
+				          innerExtendXZ);
+
+          	  refinedOrigin = origin + Vector<T,3> {2. * coarseDeltaX,
+		                                    2. * coarseDeltaX,
+				    	       	- 2. * coarseDeltaX};
+	            refinedExtend = extend - Vector<T,3> {4. * coarseDeltaX,
+		                                    4. * coarseDeltaX,
+			                          	- 4. * coarseDeltaX};
+	            IndicatorCuboid3D<T> refined7(refinedExtend, refinedOrigin);
+	            fineGrid6.getSuperGeometry().reset(refined7);
+              } 
             }
           }
   	    }

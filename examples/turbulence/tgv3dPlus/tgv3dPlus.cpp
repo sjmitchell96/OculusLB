@@ -350,7 +350,7 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   ofstream myfile;
   std::string filename {"tmp/dissipationOutput.csv"};
   myfile.open(filename,fstream::app);
-  myfile << iT << "	" << diss_mol << "	" << kineticEnergy << std::endl;
+  myfile << setprecision(15) << iT << "	" << diss_mol << "	" << kineticEnergy << std::endl;
   myfile.close();
 
   }
