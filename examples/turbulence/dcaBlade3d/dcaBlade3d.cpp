@@ -541,7 +541,7 @@ void setupRefinement(Grid3D<T,DESCRIPTOR>& coarseGrid,
                ///////
               if (n >= 7) {
                 	            // Refinement around the wing box - level 5 (current innermost)
-              const T deltaX5 = fineGrid5.getConverter().getPhysDeltaX();
+              const T deltaX5 = fineGrid6.getConverter().getPhysDeltaX();
 	              coarseDeltaX = deltaX5;
 			
 	            Vector<T,3> fineOrigin7 = {bladeBoxOrigin[0] - hn7[0],
