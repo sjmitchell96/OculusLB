@@ -63,7 +63,7 @@ BlockGeometry3D<T>::BlockGeometry3D(BlockGeometry3D const& rhs)
 
 template<typename T>
 BlockGeometry3D<T>& BlockGeometry3D<T>::operator=(BlockGeometry3D const& rhs)
-{
+{  
   this->_nx = rhs._nx;
   this->_ny = rhs._ny;
   this->_nz = rhs._nz;
@@ -126,7 +126,7 @@ int BlockGeometry3D<T>::getNz() const
 template<typename T>
 int& BlockGeometry3D<T>::get(int iX, int iY, int iZ)
 {
-  resetStatistics();
+  //resetStatistics(); SM - STOPS STATS RECALC AT EVERY TIME STEP FOR STATIC MESHES
   return BlockData3D<T,int>::get(iX,iY,iZ,0);
 }
 
@@ -321,7 +321,7 @@ void BlockGeometry3D<T>::reInit(T x0, T y0, T z0, T h, int nX, int nY, int nZ,
 
 template<typename T>
 void BlockGeometry3D<T>::resetStatistics()
-{
+{//std::cout << "sm" <<std::endl;
   for (std::list<bool*>::iterator it = _statisticsUpdateNeeded.begin(); it != _statisticsUpdateNeeded.end(); ++it) {
     **it = true;
   }

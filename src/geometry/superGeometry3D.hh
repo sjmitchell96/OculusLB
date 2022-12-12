@@ -239,7 +239,7 @@ void  SuperGeometry3D<T>::getPhysR(T physR[3], const int latticeR[4]) const
 template<typename T>
 BlockGeometry3D<T>& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC)
 {
-  _statistics.getStatisticsStatus() = true;
+  //_statistics.getStatisticsStatus() = true; SM
   return _extendedBlockGeometries[locIC];
 }
 
@@ -252,7 +252,7 @@ BlockGeometry3D<T> const& SuperGeometry3D<T>::getExtendedBlockGeometry(int locIC
 template<typename T>
 BlockGeometryView3D<T>& SuperGeometry3D<T>::getBlockGeometry(int locIC)
 {
-  _statistics.getStatisticsStatus() = true;
+  //_statistics.getStatisticsStatus() = true; SM
   return _blockGeometries[locIC];
 }
 
@@ -268,7 +268,7 @@ SuperGeometryStatistics3D<T>& SuperGeometry3D<T>::getStatistics()
 {
   if (this->_communicationNeeded) {
     this->communicate();
-    getStatisticsStatus()=true;
+    //getStatisticsStatus()=true; SM
   }
   return _statistics;
 }
@@ -290,7 +290,7 @@ void SuperGeometry3D<T>::updateStatistics(bool verbose)
 {
   if (this->_communicationNeeded) {
     this->communicate(verbose);
-    getStatisticsStatus()=true;
+    //getStatisticsStatus()=true; SM
   }
   _statistics.update(verbose);
   for (unsigned iC=0; iC<_extendedBlockGeometries.size(); iC++) {

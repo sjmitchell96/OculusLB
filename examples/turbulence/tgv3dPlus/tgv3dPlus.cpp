@@ -65,10 +65,8 @@ typedef double T;
 //#define KBC
 //#define DNS
 
-#define finiteDiff //for N<256
-
 #ifdef ShearSmagorinsky
-#define DESCRIPTOR ShearSmagorinskyD3Q19Descriptor
+#define DESCRIPTOR ShearSmagorinskyD3Q27Descriptor
 #elif defined (WALE)
 #define DESCRIPTOR WALED3Q27Descriptor
 #elif defined (KBC)
@@ -93,9 +91,8 @@ const T charPhysRho = 1.0;
 T Re = 800;               // defined as 1/kinematic viscosity
 T smagoConst = 0.5;       // Smagorisky Constant, for ConsistentStrainSmagorinsky smagoConst = 0.033
 T vtkSave = 2.0;         // time interval in s for vtk output
-T gnuplotSave = physDt;      // time interval in s for gnuplot output
+T csvSave = 0.025;      // time interval in s for gnuplot output
 
-bool plotDNS = true;      //available for Re=800, Re=1600, Re=3000 (maxPhysT<=10)
 vector<vector<T>> values_DNS;
 
 template <typename T, typename _DESCRIPTOR>
@@ -122,7 +119,7 @@ public:
     output[2] = 0.0;
 
     return true;
-  3;
+  };
 };
 
 template <typename T, typename _DESCRIPTOR>
@@ -209,67 +206,6 @@ void setBoundaryValues(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   sLattice.initialize();
 }
 
-// Interpolate the data points to the output interval
-void getDNSValues()
-{
-  string file_name;
-  //Brachet, Marc E., et al. "Small-scale structure of the Taylor–Green vortex." Journal of Fluid Mechanics 130 (1983): 411-452; Figure 7
-  if (abs(Re - 800.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
-    file_name= "Re800_Brachet.inp";
-  }
-  else if (abs(Re - 1600.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
-    file_name = "Re1600_Brachet.inp";
-  }
-  else if (abs(Re - 3000.0) < numeric_limits<T>::epsilon() && maxPhysT <= 10.0 + numeric_limits<T>::epsilon()) {
-    file_name = "Re3000_Brachet.inp";
-  }
-  else {
-    std::cout<<"Reynolds number not supported or maxPhysT>10: DNS plot will be disabled"<<std::endl;
-    plotDNS = false;
-    return;
-  }
-  std::ifstream data(file_name);
-  std::string line;
-  std::vector<vector<T>> parsedDat;
-  while (std::getline(data, line)) {
-    std::stringstream lineStream(line);
-    std::string cell;
-    std::vector<T> parsedRow;
-    while (std::getline(lineStream, cell, ' ')) {
-      parsedRow.push_back(atof(cell.c_str()));
-
-    }
-    if (parsedDat.size() > 0 && parsedRow.size() > 1) {
-      parsedRow.push_back((parsedRow[1] - parsedDat[parsedDat.size() - 1][1]) / (parsedRow[0] - parsedDat[parsedDat.size()-1][0]));
-      parsedRow.push_back(parsedDat[parsedDat.size()-1][1] - parsedRow[2] * parsedDat[parsedDat.size()-1][0]);
-    }
-
-    parsedDat.push_back(parsedRow);
-  }
-
-  int steps = maxPhysT / gnuplotSave + 1.5;
-  for (int i=0; i < steps; i++) {
-    std::vector<T> inValues_temp;
-    inValues_temp.push_back(i * gnuplotSave);
-    if (inValues_temp[0] < parsedDat[0][0]) {
-      inValues_temp.push_back(parsedDat[1][2] * inValues_temp[0] + parsedDat[1][3]);
-    }
-    else if (inValues_temp[0] > parsedDat[parsedDat.size()-1][0]) {
-      inValues_temp.push_back(parsedDat[parsedDat.size()-1][2] * inValues_temp[0] +
-                              parsedDat[parsedDat.size()-1][3]);
-    }
-    else {
-
-      for (size_t j=0; j < parsedDat.size()-1; j++)  {
-        if (inValues_temp[0] > parsedDat[j][0] && inValues_temp[0] < parsedDat[j+1][0]) {
-          inValues_temp.push_back(parsedDat[j+1][2] * inValues_temp[0] + parsedDat[j+1][3]);
-        }
-      }
-    }
-    values_DNS.push_back(inValues_temp);
-  }
-}
-
 void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
                 UnitConverter<T,DESCRIPTOR> const& converter, int iT,
                 SuperGeometry3D<T>& superGeometry, Timer<double>& timer,
@@ -289,9 +225,6 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     vtmWriter.write(cuboid);
     vtmWriter.write(rank);
     vtmWriter.createMasterFile();
-    if (plotDNS==true) {
-      getDNSValues();
-    }
   }
   if (iT%converter.getLatticeTime(vtkSave) == 0) {
     SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
@@ -310,21 +243,15 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     sLattice.getStatistics().print(iT,converter.getPhysTime( iT ));
   }
 
-  static Gnuplot<T> gplot("Turbulence_Dissipation_Rate");
-
-  if (iT%converter.getLatticeTime(gnuplotSave) == 0) {
+  if (iT%converter.getLatticeTime(csvSave) == 0) {
 
     int input[3];
     T output[1];
 
     //Fuctors for average dissipation rate from enstrophy
-    #if defined (finiteDiff)
-      std::list<int> matNumber;
-      matNumber.push_back(1);
-      SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
-    #else
-      SuperLatticePhysDissipation3D<T, DESCRIPTOR> diss(sLattice, converter);
-    #endif
+    std::list<int> matNumber;
+    matNumber.push_back(1);
+    SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
     SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
     integralDiss(output, input);
     T diss_mol = output[0];
@@ -337,15 +264,6 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     T kineticEnergy = 0.5 * output[0];
     kineticEnergy /= volume;
 
-
-    if(plotDNS==true) {
-     int step = converter.getPhysTime(iT) / gnuplotSave + 0.5;
-     gplot.setData(converter.getPhysTime(iT), {diss_mol, values_DNS[step][1]}, {"molecular dissipation rate","Brachet et al."}, "bottom right");
-    } else {
-     gplot.setData(converter.getPhysTime(iT), {diss_mol}, {"molecular dissipation rate"}, "bottom right");
-    }
-    gplot.writePNG();
-
   //Write average dissipation rate and KE to .csv 
   ofstream myfile;
   std::string filename {"tmp/dissipationOutput.csv"};
@@ -353,11 +271,6 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
   myfile << setprecision(15) << iT << "	" << diss_mol << "	" << kineticEnergy << std::endl;
   myfile.close();
 
-  }
-
-  /// write pdf at last time step
-  if (iT == converter.getLatticeTime(maxPhysT)-1) {
-    gplot.writePDF();
   }
   return;
 }

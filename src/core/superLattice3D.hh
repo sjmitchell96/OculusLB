@@ -368,6 +368,9 @@ void SuperLattice3D<T,DESCRIPTOR>::defineField(
         const int x1 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMaxLatticeR(material)[0];
         const int y1 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMaxLatticeR(material)[1];
         const int z1 = sGeometry.getExtendedBlockGeometry(iC).getStatistics().getMaxLatticeR(material)[2];
+        #ifdef PARALLEL_MODE_OMP //SM - modified for multithreading
+          #pragma omp parallel for
+        #endif
         for (int iX=x0; iX<=x1; ++iX) {
           for (int iY=y0; iY<=y1; ++iY) {
             for (int iZ=z0; iZ<=z1; ++iZ) {
