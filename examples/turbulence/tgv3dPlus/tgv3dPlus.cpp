@@ -82,7 +82,7 @@ const T volume = pow(2. * pi, 3.); // volume of the 2pi periodic box
 
 // Parameters for the simulation setup
 const T maxPhysT = 10;    // max. simulation time in s, SI unit
-const int N = 64;               // resolution of the model (Nodes per domain length)
+const int N = 32;               // resolution of the model (Nodes per domain length)
 const T charPhysU = 1.0;
 const T charPhysL = 1.0;
 const T physDt = charPhysL / (250 * charPhysU);
@@ -93,7 +93,8 @@ T smagoConst = 0.5;       // Smagorisky Constant, for ConsistentStrainSmagorinsk
 T vtkSave = 2.0;         // time interval in s for vtk output
 T csvSave = 0.025;      // time interval in s for gnuplot output
 
-vector<vector<T>> values_DNS;
+
+bool dissOpt = 1; //0 = Dissipation from enstrophy (modu2), 1 = Dissipation from entsrophy (vort2)
 
 template <typename T, typename _DESCRIPTOR>
 class Tgv3Du : public AnalyticalF3D<T,T> {
@@ -248,14 +249,25 @@ void getResults(SuperLattice3D<T, DESCRIPTOR>& sLattice,
     int input[3];
     T output[1];
 
+    T diss_mol = 0;
     //Fuctors for average dissipation rate from enstrophy
     std::list<int> matNumber;
     matNumber.push_back(1);
-    SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
-    SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
-    integralDiss(output, input);
-    T diss_mol = output[0];
-    diss_mol /= volume;
+    if(dissOpt == 0) {
+      SuperLatticePhysDissipationFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
+      SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
+      integralDiss(output, input);
+      diss_mol = output[0];
+      diss_mol /= volume;
+    }
+    else if(dissOpt == 1) {
+      SuperLatticePhysEnstrophyFD3D<T, DESCRIPTOR> diss(superGeometry, sLattice, matNumber, converter);
+      SuperIntegral3D<T> integralDiss(diss, superGeometry, 1);
+      integralDiss(output, input);
+      diss_mol = output[0];
+      diss_mol /= volume;
+      diss_mol *= converter.getPhysViscosity();  
+    }
 
     //Functors for KE 
     SuperLatticePhysVelocityMagnitude3D<T, DESCRIPTOR> velocityMag(sLattice, converter);
@@ -284,7 +296,7 @@ int main(int argc, char* argv[])
   OstreamManager clout( std::cout,"main" );
 
   UnitConverter<T,DESCRIPTOR> converter(
-    (T)   2. * pi * charPhysL / (N - 1),       // Physical delta_x in __m
+    (T)   2. * pi * charPhysL / (N-1),//(N - 1),       // Physical delta_x in __m
     (T)   physDt, // Physical delta_t in __s
     (T)   charPhysL,        // charPhysLength: reference length of simulation geometry
     (T)   charPhysU,        // charPhysVelocity: maximal/highest expected velocity during simulation in __m / s__
@@ -304,7 +316,6 @@ int main(int argc, char* argv[])
 #endif
 
   CuboidGeometry3D<T> cuboidGeometry(0, 0, 0, converter.getConversionFactorLength(), N, N, N, noOfCuboids);
-
   cuboidGeometry.setPeriodicity(true, true, true);
 
   HeuristicLoadBalancer<T> loadBalancer(cuboidGeometry);

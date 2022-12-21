@@ -670,34 +670,73 @@ void getCylinderForce(Grid3D<T,DESCRIPTOR>& grid,
 void capturePressure(Grid3D<T,DESCRIPTOR>& grid,
                      IndicatorCylinder3D<T>& indicatorCylinder,
                       int iT) {
-	auto& sLattice = grid.getSuperLattice();
-	auto& converter = grid.getConverter();
-	const T dR = converter.getPhysDeltaX();
-	SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
-	AnalyticalFfromSuperF3D<T> interpolatePressure(pressure, true);
-	const T radiusCylinder = indicatorCylinder.getRadius();
+  auto& sLattice = grid.getSuperLattice();
+  auto& converter = grid.getConverter();
+  const T dR = converter.getPhysDeltaX();
+  SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
+  AnalyticalFfromSuperF3D<T> interpolatePressure(pressure, true);
+
+  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
+  AnalyticalFfromSuperF3D<T> interpolateVelocity(velocity, true);
+
+  const T radiusCylinder = indicatorCylinder.getRadius();
   const T cylinderCenterX = indicatorCylinder.getCenter1()[0];
   const T cylinderCenterY = indicatorCylinder.getCenter1()[1];
   const T lz = indicatorCylinder.getCenter2()[2] - indicatorCylinder.getCenter1()[2];
+  const T cylinderCenterZ = indicatorCylinder.getCenter1()[2] + lz / 2;
 
-	ofstream myfile;
-	std::string filename {"tmp/pressure_" + to_string(iT) + ".csv"};
-	myfile.open(filename, fstream::app);
+  ofstream myfile;
+  std::string filename {"tmp/pressure_" + to_string(iT) + ".csv"};
+  myfile.open(filename, fstream::app);
 
-	for(int i = 0; i < 180; ++i) {
-		const T degree = i * 2. * 3.14159 / 180.0;
-		const T point[3] {cylinderCenterX
-						  + (radiusCylinder + 1.5 * dR) * std::cos(degree),
-						  cylinderCenterY
-						  + (radiusCylinder + 1.5 * dR) * std::sin(degree),
-						  lz/2.};
-		T pressureAtPoint {};
-		interpolatePressure(&pressureAtPoint, point);
+  for(int i = 0; i < 180; ++i) {
+        const T degree = i * 2. *  3.14159 / 180.0;
+        const T point[3] {cylinderCenterX
+                          + (radiusCylinder + 1.5 * dR) * std::cos(degree),
+                          cylinderCenterY
+                          + (radiusCylinder + 1.5 * dR) * std::sin(degree),
+                          cylinderCenterZ};
+        T pressureAtPoint {};
+        interpolatePressure(&pressureAtPoint, point);
 
-		myfile << degree << " " << pressureAtPoint << std::endl;
-	}
+        myfile << degree << " " << pressureAtPoint << std::endl;
+        }
+  myfile.close();
+}
 
-   myfile.close();
+void captureInlet(Grid3D<T,DESCRIPTOR>& grid,
+                     IndicatorCylinder3D<T>& indicatorCylinder,
+                      int iT) {
+  auto& sLattice = grid.getSuperLattice();
+  auto& converter = grid.getConverter();
+  SuperLatticePhysPressure3D<T, DESCRIPTOR> pressure(sLattice, converter);
+  AnalyticalFfromSuperF3D<T> interpolatePressure(pressure, true);
+
+  SuperLatticePhysVelocity3D<T, DESCRIPTOR> velocity(sLattice, converter);
+  AnalyticalFfromSuperF3D<T> interpolateVelocity(velocity, true);
+
+  const T radiusCylinder = indicatorCylinder.getRadius();
+  const T cylinderCenterY = indicatorCylinder.getCenter1()[1];
+  const T lz = indicatorCylinder.getCenter2()[2] - indicatorCylinder.getCenter1()[2];
+  const T cylinderCenterZ = indicatorCylinder.getCenter1()[2] + lz / 2;
+
+  //Inlet ref - different file!
+  const T inletX = 1.0 * radiusCylinder;
+  const T inletY = cylinderCenterY;
+  const T inletZ = cylinderCenterZ;
+
+  const T point[3] = {inletX, inletY, inletZ};
+  T pressureAtPoint {};
+  T velocityAtPoint[3] = {};
+  interpolatePressure(&pressureAtPoint, point);
+  interpolateVelocity(velocityAtPoint, point);
+
+  ofstream myfile;
+  std::string filename {"tmp/inlet_" + to_string(iT) + ".csv"};
+  myfile.open(filename, fstream::app);
+
+  myfile << pressureAtPoint << " " << velocityAtPoint[0] << " " << velocityAtPoint[1] << " " << velocityAtPoint[2] << std::endl;
+  myfile.close();
 }
 
 int main( int argc, char* argv[] ) {
@@ -938,6 +977,7 @@ int main( int argc, char* argv[] ) {
 		if (iT % cylinderForceIter == 0) {
 			getCylinderForce(cylinderGrid,cylinderForceFile,cylinder);
       capturePressure(cylinderGrid, cylinder, iT);
+      captureInlet(coarseGrid, cylinder, iT);
 		}
 
   }

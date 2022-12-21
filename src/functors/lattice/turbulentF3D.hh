@@ -1309,7 +1309,8 @@ bool BlockLatticePhysEnstrophyFD3D<T,DESCRIPTOR>::operator() (T output[], const 
     // mod 2019-04-10:
     // this is now the local enstrophy value: 0.5 * vort_\alpha * vort_\alpha.
     // to obtain global enstrophy: integrate and divide by integration volume.
-    output[0] = 0.5 * ( pow(velograd[7] - velograd[5], 2) + pow(velograd[2] - velograd[6], 2) + pow(velograd[3] - velograd[1], 2) );
+    //output[0] = 0.5 * ( pow(velograd[7] - velograd[5], 2) + pow(velograd[2] - velograd[6], 2) + pow(velograd[3] - velograd[1], 2) ); SM - used to be this
+    output[0] = pow(velograd[7] - velograd[5], 2) + pow(velograd[6] - velograd[2], 2) + pow(velograd[3] - velograd[1], 2) ;
     // output[1] = pow(velograd[2] - velograd[6], 2);
     // output[2] = pow(velograd[3] - velograd[1], 2);
   return true;
