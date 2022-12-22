@@ -46,6 +46,9 @@ using WALEForcedD3Q19Descriptor = D3Q19<EFFECTIVE_OMEGA,VELO_GRAD,FORCE>;
 
 using WALEForcedD3Q27Descriptor = D3Q27<EFFECTIVE_OMEGA,VELO_GRAD,FORCE>;
 
+// WALE 3D Grad
+using WALEGradD3Q27Descriptor = D3Q27<EFFECTIVE_OMEGA,VELO_GRAD,VELOCITY>;
+
 
 } // namespace descriptors
 

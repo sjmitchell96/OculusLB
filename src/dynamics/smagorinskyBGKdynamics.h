@@ -99,6 +99,23 @@ protected:
   virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_);
 };
 
+//SM Smagornisky WITH GRAD BOUNDARY
+template<typename T, typename DESCRIPTOR>
+class SmagorinskyGradBGKdynamics : public SmagorinskyDynamics<T,DESCRIPTOR>, public BGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  SmagorinskyGradBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_,
+                         T smagoConst_);
+  /// Collision step
+  void collide(Cell<T,DESCRIPTOR>& cell, LatticeStatistics<T>& statistics_) override;
+  /// Get local smagorinsky relaxation parameter of the dynamics
+  T getEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
+
+protected:
+  /// Computes the local smagorinsky relaxation parameter
+  virtual T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell);
+};
+
 /// Implementation of a LES BGK with non local effective tau calculation through external field
 template<typename T, typename DESCRIPTOR>
 class ExternalTauEffLESBGKdynamics : public SmagorinskyBGKdynamics<T,DESCRIPTOR> {
@@ -285,6 +302,21 @@ class WALEForcedBGKdynamics : public SmagorinskyForcedBGKdynamics<T,DESCRIPTOR> 
 public:
   /// Constructor
   WALEForcedBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_);
+
+protected:
+  /// Computes a constant prefactor in order to speed up the computation
+  T computePreFactor() override;
+  /// Computes the local smagorinsky relaxation parameter
+  T computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_) override;
+};
+
+/// SM - WALE w/ GRAD boundary
+/// Implementation of the BGK collision step
+template<typename T, typename DESCRIPTOR>
+class WALEGradBGKdynamics : public SmagorinskyGradBGKdynamics<T,DESCRIPTOR> {
+public:
+  /// Constructor
+  WALEGradBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_);
 
 protected:
   /// Computes a constant prefactor in order to speed up the computation

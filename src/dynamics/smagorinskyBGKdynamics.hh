@@ -536,6 +536,60 @@ T SmagorinskyForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCR
   return omega_new;
 }
 
+///////////////////////// SM - GRAD SMAGO BGK //////////////////////////////////
+template<typename T, typename DESCRIPTOR>
+SmagorinskyGradBGKdynamics<T,DESCRIPTOR>::SmagorinskyGradBGKdynamics(T omega_,
+    Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_)
+  : SmagorinskyDynamics<T,DESCRIPTOR>(smagoConst_),
+    BGKdynamics<T,DESCRIPTOR>(omega_,momenta_)
+{ }
+
+template<typename T, typename DESCRIPTOR>
+void SmagorinskyGradBGKdynamics<T,DESCRIPTOR>::collide(Cell<T,DESCRIPTOR>& cell,
+    LatticeStatistics<T>& statistics )
+{
+
+  //GRAD MODS ----
+
+  T newOmega = computeEffectiveOmega(cell);
+  T rho, u[DESCRIPTOR::d];
+  this->_momenta.computeRhoU(cell, rho, u);
+
+  //Store u
+  cell.template defineField<descriptors::VELOCITY>(u);
+
+  T uSqr = lbHelpers<T,DESCRIPTOR>::bgkCollision(cell, rho, u, newOmega);
+  statistics.incrementStats(rho, uSqr);
+}
+
+template<typename T, typename DESCRIPTOR>
+T SmagorinskyGradBGKdynamics<T,DESCRIPTOR>::getEffectiveOmega(Cell<T,DESCRIPTOR>& cell)
+{
+  T newOmega = computeEffectiveOmega(cell);
+  return newOmega;
+}
+
+template<typename T, typename DESCRIPTOR>
+T SmagorinskyGradBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell)
+{
+  T rho, u[DESCRIPTOR::d], pi[util::TensorVal<DESCRIPTOR >::n];
+  this->_momenta.computeAllMomenta(cell, rho, u, pi);
+  T PiNeqNormSqr = pi[0]*pi[0] + 2.0*pi[1]*pi[1] + pi[2]*pi[2];
+  if (util::TensorVal<DESCRIPTOR >::n == 6) {
+    PiNeqNormSqr += pi[2]*pi[2] + pi[3]*pi[3] + 2*pi[4]*pi[4] +pi[5]*pi[5];
+  }
+  T PiNeqNorm    = sqrt(PiNeqNormSqr);
+  /// Molecular realaxation time
+  T tau_mol = 1. /this->getOmega();
+  /// Turbulent realaxation time
+  T tau_turb = 0.5*(sqrt(tau_mol*tau_mol + this->getPreFactor()/rho*PiNeqNorm) - tau_mol);
+  /// Effective realaxation time
+  T tau_eff = tau_mol+tau_turb;
+  T omega_new= 1./tau_eff;
+  return omega_new;
+
+}
+
 ///////////////////////// External TAU EFF LES BGK /////////////////////////////
 template<typename T, typename DESCRIPTOR>
 ExternalTauEffLESBGKdynamics<T,DESCRIPTOR>::ExternalTauEffLESBGKdynamics(T omega_, Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_)
@@ -883,6 +937,108 @@ T WALEForcedBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>&
   return omega_new;
 
 }
+
+//////////////// SM - WALE GRAD //////////////////////////////////////////////
+/** \param vs2_ speed of sound
+ *  \param momenta_ a Momenta object to know how to compute velocity momenta
+ *  \param momenta_ a Momenta object to know how to compute velocity momenta
+ */
+template<typename T, typename DESCRIPTOR>
+WALEGradBGKdynamics<T,DESCRIPTOR>::WALEGradBGKdynamics(T omega_,
+    Momenta<T,DESCRIPTOR>& momenta_, T smagoConst_)
+  : SmagorinskyGradBGKdynamics<T,DESCRIPTOR>(omega_, momenta_, smagoConst_)
+{
+  this->preFactor =  this->getSmagoConst()*this->getSmagoConst();
+}
+
+template<typename T, typename DESCRIPTOR>
+T WALEGradBGKdynamics<T,DESCRIPTOR>::computePreFactor()
+{
+  return (T)this->getSmagoConst()*this->getSmagoConst();
+}
+
+template<typename T, typename DESCRIPTOR>
+T WALEGradBGKdynamics<T,DESCRIPTOR>::computeEffectiveOmega(Cell<T,DESCRIPTOR>& cell_)
+{
+  // velocity gradient tensor
+  T g[3][3];
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      g[i][j] = *(cell_.template getFieldPointer<descriptors::VELO_GRAD>()+(i*3 + j));
+    }
+  }
+  // strain rate tensor
+  T s[3][3];
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      s[i][j] = (g[i][j] + g[j][i]) / 2.;
+    }
+  }
+  // traceless symmetric part of the square of the velocity gradient tensor
+  T G[3][3];
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      G[i][j] = 0.;
+    }
+  }
+
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      for ( int k = 0; k < 3; k++) {
+        G[i][j] += (g[i][k]*g[k][j] + g[j][k]*g[k][i]) / 2.;  // The change
+      }
+    }
+  }
+
+  T trace = 0.;
+  for ( int i = 0; i < 3; i++) {
+    trace += (1./3.) * g[i][i] * g[i][i];
+  }
+
+  for ( int i = 0; i < 3; i++) {
+    G[i][i] -= trace;
+  }
+
+
+  // inner product of the traceless symmetric part of the square of the velocity gradient tensor
+  T G_ip = 0;
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      G_ip = G[i][j] * G[i][j];
+    }
+  }
+
+  // inner product of the strain rate
+  T s_ip = 0;
+  for ( int i = 0; i < 3; i++) {
+    for ( int j = 0; j < 3; j++) {
+      s_ip = s[i][j] * s[i][j];
+    }
+  }
+
+  // Turbulent relaxation time
+  T tau_turb = 3. * this->getPreFactor() * (pow(G_ip,1.5) / (pow(s_ip,2.5) + pow(G_ip,1.25)));
+  if ((pow(s_ip,2.5) + pow(G_ip,1.25)) == 0) {
+    tau_turb = 0.;
+  }
+
+  // Physical turbulent viscosity must be equal or higher that zero
+  if (tau_turb < 0.) {
+    tau_turb = 0.;
+  }
+
+  /// Molecular relaxation time
+  T tau_mol = 1. /this->getOmega();
+
+  /// Effective relaxation time
+  T tau_eff = tau_mol + tau_turb;
+  T omega_new = 1. / tau_eff;
+
+  return omega_new;
+
+}
+
+
 
 //////////////// Class ShearKalmanFDSmagorinskyBGKdynamics ///////////////////
 /** \param vs2_ speed of sound

@@ -64,17 +64,21 @@ using namespace std;
 typedef double T;
 
 //Collision choice
-//#define WALE
+#define WALE
 //#define Smagorinsky
-#define KBC
-#define sponge 
+//#define KBC
+//#define sponge 
 
 //Boundary condition choice
 //#define Bouzidi 
 #define Grad
 
 #ifdef WALE
-#define DESCRIPTOR WALED3Q19Descriptor
+#ifdef Grad
+#define DESCRIPTOR WALEGradD3Q27Descriptor
+#else
+#define DESCRIPTOR WALED3Q27Descriptor
+#endif
 #elif defined (Smagorinsky)
 #define DESCRIPTOR D3Q19<>
 #elif defined (KBC)
@@ -429,10 +433,17 @@ void prepareLattice(Grid3D<T,DESCRIPTOR>& grid,
 
   // Initialize dynamics
   #if defined(WALE)
-   Dynamics<T,DESCRIPTOR>& bulkDynamics = 
-    grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
-      new WALEBGKdynamics<T,DESCRIPTOR>(
-        omega, instances::getBulkMomenta<T,DESCRIPTOR>(),0.5))); 
+   #if defined(Grad)
+     Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+      grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+        new WALEGradBGKdynamics<T,DESCRIPTOR>(
+          omega, instances::getBulkMomenta<T,DESCRIPTOR>(),0.5))); 
+   #else
+     Dynamics<T,DESCRIPTOR>& bulkDynamics = 
+      grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
+        new WALEBGKdynamics<T,DESCRIPTOR>(
+          omega, instances::getBulkMomenta<T,DESCRIPTOR>(),0.5))); 
+    #endif
   #elif defined(Smagorinsky)
     Dynamics<T,DESCRIPTOR>& bulkDynamics = 
       grid.addDynamics(std::unique_ptr<Dynamics<T,DESCRIPTOR>>(
@@ -754,7 +765,7 @@ int main( int argc, char* argv[] ) {
 
   //Domain and simulation parameters
   const int N = 5; //14        // resolution of the model (coarse cells per chord)
-  const int nRefinement = 4;	//Number of refinement levels (current max = 4)
+  const int nRefinement = 1;	//Number of refinement levels (current max = 4)
   const T lDomainPhysx = 60.*diameter; //Length of domain in physical units (m)
   const T lDomainPhysy = 30.*diameter;
   const T lDomainPhysz = span; //
